@@ -1,0 +1,123 @@
+Purpose of .hs files
+====================
+
+allReg   - shellscript to create population files; assumes directory 'populations'
+           these files are presumed to exit for the Effect program
+
+Alphabet - implementation of alphabet promitives, based on bitstrings
+
+AutIntersect - not used by the main stuff, but it contains stuff to...
+               (i) translate between NFA/DFA/regexp (morethan one)
+			   (ii) various automata ops, e.g. quotienting by equivalence, removing epsilons fropm a NFA, product automaton
+			   (iii) create graphviz for automata, e.g. with regexps as states
+			   
+Automization - not used by main, but it is an experimental trafo using automata, and the AutIntersect module
+
+Catalogue - the semantic catalogue trafo,
+            it is a catalogue of languages, represented by a minimal-sized RE
+            the catalogue is accessed through a binary search trees whose
+            linear order extends language comparison
+
+CatTime - not sure, separate prog to compute how long it takes to create catalogue?
+
+ClassCount - another stand-alone program, shows how much the trafos remove language diversity
+
+Comparison - implementation of various language comparison ops, mostly
+             lang equality, linear order, sublanguage; also derivatives are in here
+
+Context - the generic transformation engine, also contains all that OK stuff
+
+createCensus, createForest, createTimings, CreateTree  - tiny, to create the census etc from commandline in compiled fashion
+
+DeBruijn - deBruijnify regexp, used for syntax catalogue
+
+Derivative - forwards and backwards derivative of an RE,
+           - based on katagraded expressions
+
+Effect  - this runs the specified transformation
+          on all input files allReg will create
+          and produces a summary of the resulting output size
+
+Expression - typ def of RE, IO for RE, primitives attributes, fold stuff
+
+Factorization - sophisticated factorization trafo, fine for small exps
+
+Function - generic code that is not listy
+
+Fuse - the fusion transformations, i.e. low-level factorization, old-style normalization, some Sigma*-detection
+
+FuseReader - some combination of IO with fusion etc., some kind of foundation for MrE
+
+Generator - creating coalgebras for certain sizes, exhaustive tests for transformations
+            e.g. checkAlgebra, checkSurjectivity
+			
+Gluchkov - more automaton stuff, this creates the Gluchkov automaton for an RE
+
+Gruber - gruber gulan trafos for regexps; starts from text, because our basic machinery does already more than GG
+
+GruberP - gruber gulas trafos, using a dedicated parser as the 'normal parser' may be loglinear
+
+Info - the information type, generalised insects
+
+Laboratory - lots of imports to play with compiled stuff in ghci
+
+LazySmallCheck - you know better than me
+
+Leonardo - a Leonardo heap implementation; although used somewhere this was probably superseded by a different way of doing things
+
+List - our listy stuff
+
+Metrics - some metrics used in testing
+
+MrE - so we do have a MrE, but not very many options
+
+Normalization - old, no longer used, except by other old stuff
+
+Parser - an alternative parser
+
+PreOrderTrees - red-black trees for a preorder, used for catalogues
+
+Pressing - fancy trafos
+
+Properties - of trafos
+
+Queue - general purpose queues, used in Comparison
+
+Refactorization - very fancy trafos
+
+Reg - generating random regexps
+
+RegDistrbution - helper module for Reg, computing the distribution for the generation
+
+RegexpCount - niftier way to count regexps
+
+RegexpMemo - memo tables for regexps, as an idea for a memoized derivative function
+           - currently only used in AutIntersect, and (a bit) in Comparison,
+           - via compDerRE
+
+relab - like Laoratory
+
+Shrinking - trafos with guesswork
+
+SmallCheck - you know...
+
+StarNF - not sure, possible SSNF trafos outside our trafo system
+
+StarPromotion - various heuristics to infer that a RE is total language or make use of that
+
+StarRecognition - some trafo I have forgotten about, finds more r* cases semantically
+
+Stellation - our original star-recog trafo, put after shrinking
+
+SyntaxCatalogue - catalogue with syntactic indexing modulo deBruijn
+
+Tim - toy to test effectiveness of trafos, find bad cases
+
+Tom - Tim's brother
+
+TopShrink - particular combo of trafos
+
+UnionFind - generic implementation of union/find, used in AutIntersect
+UnionFindRE - regexp specific union/find implementation, used in Comparison
+		
+
