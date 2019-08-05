@@ -1,26 +1,57 @@
 module Derivative where
 import Expression
 import Context
+import Alphabet
+import Info
+-- import StarPromotion
+import List
 
 smartCat :: [RE] -> RE
-smartCat = kataCat -- was fuseCat
+smartCat = kataCat
 
 smartAlt :: [RE] -> RE
-smartAlt = kataAlt -- was fuseAlt
+smartAlt = kataAlt
+
+smartOpt = kataOpt
 
 derive :: Char -> RE -> RE
-derive c Lam             =  Emp
-derive c Emp             =  Emp
-derive c (Sym d)         =  if c==d then Lam else Emp
-derive c (Rep re)        =  smartCat [derive c re, Rep re]
-derive c (Opt re)        =  derive c re
-derive c (Alt _ xs)      =  smartAlt [derive c x | x<-xs]
-derive c (Cat _ (x:xs))  |  ewp x
-                         =  smartAlt [dx,dxs]
-                         |  otherwise
-                         =  dx
-                         where  dx   =  smartCat (derive c x : xs)
-                                dxs  =  derive c (mkCat xs)
+derive c e = smartAlt $ map smartCat $ deriveAlts c e []
+
+deriveAlts :: Char -> RE -> [RE] -> [[RE]]
+deriveAlts c (Sym d)    cont   =  [cont | c==d]
+deriveAlts c (Alt i xs) cont   |  elemSet c (fi i)
+                               =  unions [ deriveAlts c x cont | x<-xs ]
+deriveAlts c (Cat i xs) cont   |  elemSet c (fi i)
+                               =  deriveCatList c xs cont
+deriveAlts c (Opt x) cont      =  deriveAlts c x cont
+deriveAlts c (Rep x) cont      =  deriveAlts c x (Rep x:cont)
+deriveAlts c _ _               =  [] -- Lam or Emp, or bad (fi i)
+
+-- can assume: char can be first character
+deriveCatList :: Char -> [RE] -> [RE] -> [[RE]]
+deriveCatList c (x:xs) cont   |  not (elemSet c (fir x)) -- x must be optional
+                              =  tailDerive
+                              |  not (ewp x) || not (firstCharList c xs)
+                              =  headDerive
+                              |  otherwise -- c can be knocked off either way
+                              =  tailDerive `nubMerge` headDerive
+                                 where
+                                 headDerive = deriveAlts c x (xs++cont)
+                                 tailDerive = deriveCatList c xs cont
+
+-- derivation tree for one letter, as a list: is it finite?
+allDers :: Char -> RE -> [RE]
+allDers c x = process x []
+              where
+              process x xs | elem x xs
+                           = xs
+                           | otherwise
+                           = x : process (derive c x) (x:xs)
+
+
+firstCharList :: Char -> [RE] -> Bool
+firstCharList c []     = False
+firstCharList c (x:xs) = elemSet c (fir x) || ewp x && firstCharList c xs
 
 -- derivation from the end
 evired :: RE -> Char -> RE
