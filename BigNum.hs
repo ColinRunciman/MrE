@@ -1,5 +1,7 @@
 module BigNum where
 import Data.Ratio (numerator, denominator, (%))
+import Data.Monoid (mappend)
+
 -- makeshift floating point numbers with larger expos
 data BigNum = BigNum { mantissa :: Double, expo :: Int }
 
