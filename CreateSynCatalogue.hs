@@ -1,0 +1,4 @@
+import SyntaxCatalogue
+
+main  =  createForest
+

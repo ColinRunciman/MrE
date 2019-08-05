@@ -85,7 +85,7 @@ maxSigmaSize  =  length catalogueSizes - 1
 
 -- slightly different to allow for both catalogues
 mapFileName :: String -> Int -> String
-mapFileName sigma n = "MAP-"++sigma++"-"++show n++".txt"
+mapFileName sigma n = "syncatalogue/MAP-"++sigma++"-"++show n++".txt"
 
 createMapFile :: String -> Int -> IO()
 createMapFile sigma n = writeMap sigma n $ poMap sigma n
