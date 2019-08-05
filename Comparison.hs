@@ -309,7 +309,6 @@ compREHyp2nUF fir x y goals hyp
        where
        (xn,yn,hyp')  =  unionTest x y hyp
 
-
 {- derive and evired are now imported from Derivative
 
 derive :: Char -> FuseRE -> FuseRE
