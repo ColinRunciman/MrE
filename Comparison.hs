@@ -15,6 +15,7 @@ import Alphabet
 -- import qualified Data.Map.Strict as Map
 import Queue
 import RegexpMemo
+import Derivative
 
 -- syntactic well-founded order on REs
 smallerComp :: RE -> RE -> Ordering
@@ -308,7 +309,7 @@ compREHyp2nUF fir x y goals hyp
        where
        (xn,yn,hyp')  =  unionTest x y hyp
 
-
+{- This is now done by Derivative module
 derive :: Char -> FuseRE -> FuseRE
 derive c Lam             =  Emp
 derive c Emp             =  Emp
@@ -344,6 +345,7 @@ evired (Cat _ xs) c     =  unsnocF aux xs
 unsnocF :: ([a]->a->b) -> [a] -> b
 unsnocF cont [x] = cont [] x
 unsnocF cont (x:xs) = unsnocF (\ys y->cont (x:ys) y) xs
+-}
 
 -- really a list utility, for sorted lists
 listOrder :: Ord a => [a] -> [a] -> Bool
