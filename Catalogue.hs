@@ -108,7 +108,7 @@ maxSigmaSize :: Int
 maxSigmaSize  =  4
 
 treeFileName :: String -> Int -> String
-treeFileName sigma n = "TREE-"++sigma++"-"++show n++".txt"
+treeFileName sigma n = "semcatalogue/TREE-"++sigma++"-"++show n++".txt"
 
 createTreeFile :: String -> Int -> IO()
 createTreeFile sigma n = writeTree sigma n $ pruneTree ((:[]).pickMinList) $ poTree sigma n
