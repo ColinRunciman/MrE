@@ -1,0 +1,10 @@
+./Effect    > effects/prom
+./Effect -s > effects/stelProm-s
+./Effect -q > effects/fuse-q
+./Effect -m > effects/cataStelProm-m
+./Effect -c > effects/cataProm-c
+./Effect -p > effects/pressProm-p
+./Effect -z > effects/cataPressProm-z
+./Effect -k > effects/kataGrade-k
+./Effect -y > effects/syncataProm-y
+./Effect -l > effects/linear-l
