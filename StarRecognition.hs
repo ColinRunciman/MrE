@@ -3,11 +3,11 @@ import Expression
 import Alphabet
 import qualified Data.Set as S
 import Comparison
-import Derivative
 import StarPromotion
 import Info
 import Context
 import List
+import Derivative
 
 allDerives :: [Char] -> RE -> [RE] -> [RE]
 allDerives [] _ xs = xs
