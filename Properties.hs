@@ -150,4 +150,12 @@ soundMrE x  =  and [soundTrans kataGrade x,
                     soundTrans (press . promote) x,
                     soundTrans syncat x]
 
+nonExpandingMrE :: RE -> Bool
+nonExpandingMrE x  =  and [nonExpandingUnder size kataGrade x,
+                           nonExpandingUnder size fuse x,
+                           nonExpandingUnder size promote x,
+                           nonExpandingUnder size (stellate . promote) x,
+                           nonExpandingUnder size (catalogue . promote) x,
+                           nonExpandingUnder size (press . promote) x,
+                           nonExpandingUnder size syncat x]
 
