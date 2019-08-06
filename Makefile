@@ -3,20 +3,20 @@ progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Tim Tom
 CreateSemCatalogue: Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs PreOrderTrees.hs Pressing.hs Queue.hs RegexpMemo.hs \
-Shrinking.hs StarPromotion.hs StarRecognition.hs UnionFindRE.hs 
+Sanify.hs Shrinking.hs StarPromotion.hs StarRecognition.hs UnionFindRE.hs 
 	ghc -O CreateSemCatalogue
 
 CreateSynCatalogue: Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs RegexpMemo.hs Shrinking.hs StarPromotion.hs \
+Pressing.hs Queue.hs RegexpMemo.hs Sanify.hs Shrinking.hs StarPromotion.hs \
 StarRecognition.hs SyntaxCatalogue.hs UnionFindRE.hs
 	ghc -O CreateSynCatalogue
 
 Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs RegexpMemo.hs \
-Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
-SyntaxCatalogue.hs UnionFindRE.hs semcatalogue syncatalogue
+Sanify.hs Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
+SyntaxCatalogue.hs UnionFindRE.hs semcatalogue syncatalogue populations
 	ghc -O Effect
 
 effects: Effect allEffect populations
@@ -27,7 +27,7 @@ effects: Effect allEffect populations
 MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs RegexpMemo.hs \
-Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
+Sanify.hs Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
 SyntaxCatalogue.hs UnionFindRE.hs semcatalogue syncatalogue
 	ghc -O MrE
 
@@ -52,12 +52,12 @@ syncatalogue: CreateSynCatalogue
 Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs RegexpMemo.hs Shrinking.hs StarPromotion.hs \
-StarRecognition.hs SyntaxCatalogue.hs Tim.hs TopShrink.hs UnionFindRE.hs
+Sanify.hs StarRecognition.hs SyntaxCatalogue.hs Tim.hs TopShrink.hs UnionFindRE.hs
 	ghc -O Tim
 
 Tom: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs RegexpMemo.hs Shrinking.hs StarPromotion.hs \
+Pressing.hs Queue.hs RegexpMemo.hs Sanify.hs Shrinking.hs StarPromotion.hs \
 StarRecognition.hs SyntaxCatalogue.hs Tom.hs TopShrink.hs UnionFindRE.hs
 	ghc -O Tom
 

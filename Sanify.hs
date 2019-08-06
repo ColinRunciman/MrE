@@ -10,9 +10,9 @@ import List
 unGraded :: RE -> Bool
 unGraded (Alt i _) = null $ gr i
 unGraded (Cat i _) = null $ gr i
-unGraded (Rep e)   = isRep e || isOpt e || isLam e || isEmp e || ungraded e
+unGraded (Rep e)   = isRep e || isOpt e || isLam e || isEmp e || unGraded e
 unGraded (Opt e)   = unGraded (Rep e)
-ungraded _         = False
+unGraded _         = False
 
 sanify :: RE -> RE
 sanify  e | unGraded e = homTrans sanHom e

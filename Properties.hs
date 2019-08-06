@@ -4,9 +4,15 @@ import Data.List
 import Data.Maybe
 import Expression
 import Info
+import Catalogue
 import Context
 import Comparison
+import Fuse
 import Pressing
+import Sanify
+import Stellation
+import StarPromotion
+import SyntaxCatalogue
 import LazySmallCheck
 
 -- NB. Don't bother with Emp!
@@ -50,7 +56,9 @@ soundSub :: (RE->RE->Bool) -> (RE,RE) -> Bool
 soundSub s    =  sublang `includes` s
 
 soundTrans :: (RE->RE) -> RE -> Bool
-soundTrans t  =  t `obeys` (===)
+soundTrans t  =  t `obeys` equiv
+  where
+  equiv x y  =  sanify x === sanify y
 
 shrinkingUnder :: Ord a => (RE->a) -> (RE->RE) -> RE -> Bool
 shrinkingUnder m t x  =  m (t x) < m x
@@ -118,6 +126,15 @@ linearTriple _ _ _    = True
 
 -- end of SMK 9/2/2016
 
+-- The transformations used by MrE are sound and non-expanding.
 
+soundMrE :: RE -> Bool
+soundMrE x  =  and [soundTrans kataGrade x,
+                    soundTrans fuse x,
+                    soundTrans promote x,
+                    soundTrans (stellate . promote) x,
+                    soundTrans (catalogue . promote) x,
+                    soundTrans (press . promote) x,
+                    soundTrans syncat x]
 
 
