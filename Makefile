@@ -31,6 +31,15 @@ Sanify.hs Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
 SyntaxCatalogue.hs UnionFindRE.hs semcatalogue syncatalogue
 	ghc -O MrE
 
+laboratory: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs \
+Expression.hs Function.hs Fuse.hs Generator.hs Info.hs Laboratory.hs List.hs \
+Metrics.hs PreOrderTrees.hs Pressing.hs Properties.hs Queue.hs RegexpMemo.hs \
+Sanify.hs Shrinking.hs StarPromotion.hs StarRecognition.hs Stellation.hs \
+SyntaxCatalogue.hs UnionFindRE.hs
+	ghc -O Laboratory.hs
+        touch laboratory
+	chmod +x laboratory
+
 populations: Reg allReg
 	if test -d "populations" ; then rm populations/* ; else mkdir populations ; fi
 	./allReg
