@@ -16,6 +16,7 @@ import Alphabet
 import Queue
 import RegexpMemo
 import Derivative
+import Sanify
 
 -- syntactic well-founded order on REs
 smallerComp :: RE -> RE -> Ordering
@@ -406,5 +407,14 @@ sigmaStarTest x = stt [x] S.empty
                                 = False
                                 | otherwise
                                 = stt ([derive c y|c<-siglist]++ys) (S.insert y ss)
+
+-- safe sublang, and lang
+(<<==) :: RE -> RE -> Bool
+x <<== y = sanify x `sub` sanify y
+
+(====) :: RE -> RE -> Bool
+x ==== y = sanify x === sanify y
+
+
 
 

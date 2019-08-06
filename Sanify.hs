@@ -5,7 +5,6 @@ module Sanify where
 
 import Info
 import Expression
-import Comparison
 import List
 
 unGraded :: RE -> Bool
@@ -51,13 +50,6 @@ sanAlt xs | any ewp xs
             altList (Alt _ xs) = xs
             altList (Opt x)    = altList x
             altList y          = [y]
-
--- safe sublang, and lang
-(<<==) :: RE -> RE -> Bool
-x <<== y = sanify x `sub` sanify y
-
-(====) :: RE -> RE -> Bool
-x ==== y = sanify x === sanify y
 
 
 

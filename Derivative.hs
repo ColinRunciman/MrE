@@ -1,18 +1,17 @@
 module Derivative where
 import Expression
-import Context
+import Sanify
 import Alphabet
 import Info
 -- import StarPromotion
 import List
 
 smartCat :: [RE] -> RE
-smartCat = kataCat
+smartCat = sanCat
 
 smartAlt :: [RE] -> RE
-smartAlt = kataAlt
+smartAlt = sanAlt
 
-smartOpt = kataOpt
 
 derive :: Char -> RE -> RE
 derive c e = smartAlt $ map smartCat $ deriveAlts c e []
@@ -55,21 +54,29 @@ firstCharList c (x:xs) = elemSet c (fir x) || ewp x && firstCharList c xs
 
 -- derivation from the end
 evired :: RE -> Char -> RE
-evired Lam c            =  Emp
-evired Emp c            =  Emp
-evired (Sym d) c        =  if c==d then Lam else Emp
-evired (Rep re) c       =  smartCat [Rep re, evired re c]
-evired (Opt re) c       =  evired re c
-evired (Alt _ xs) c     =  smartAlt [evired x c | x<-xs]
-evired (Cat _ xs) c     =  unsnocF aux xs
-                           where  
-                           aux ys y | ewp y
-                                    = smartAlt [dy,dys]
-                                    | otherwise
-                                    = dy
-                                      where
-                                      dy  = smartCat (ys ++ [evired y c])
-                                      dys = evired (mkCat ys) c
+evired e c = smartAlt $ map smartCat $ eviredAlts c e id
+
+eviredAlts :: Char -> RE -> ([RE]->[RE]) -> [[RE]]
+eviredAlts c (Sym d)    cont   =  [cont [] | c==d]
+eviredAlts c (Alt i xs) cont   |  elemSet c (la i)
+                               =  unions [ eviredAlts c x cont | x<-xs ]
+eviredAlts c (Cat i xs) cont   |  elemSet c (la i)
+                               =  snd $ eviredCatList c xs cont
+eviredAlts c (Opt x) cont      =  eviredAlts c x cont
+eviredAlts c (Rep x) cont      =  eviredAlts c x (cont . (Rep x : ))
+eviredAlts c _ _               =  [] -- Lam or Emp, or bad (la i)
+
+-- can assume: char can be last character
+eviredCatList :: Char -> [RE] -> ([RE]->[RE]) -> (Bool,[[RE]])
+eviredCatList _ []     _      = (True,[])
+eviredCatList c (x:xs) cont   =
+         addTop $ eviredCatList c xs (cont . (x:))
+         where
+         addTop (False,xss) = (False,xss)
+         addTop (True,xss)  | elemSet c (las x)
+                            = (ewp x,eviredAlts c x cont `nubMerge` xss)
+                            | otherwise
+                            = (ewp x,xss)
 
 unsnocF :: ([a]->a->b) -> [a] -> b
 unsnocF cont [x] = cont [] x
