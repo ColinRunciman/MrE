@@ -1,12 +1,11 @@
-module List
-  (plural, lift2SeqAll, linkedBy, linkWith, ordered, strictlyOrdered, orderedBy, strictlyOrderedBy, 
-   merge, nubMerge, nubChains, foldMerge, nubSort, insertSet, nubRemove,
-   anyRest, itemRest, choose1, splits, allSplits, powerSplits, allPowerSplits, uniq, chooseN,
-   none, pairsOf, sublistPairsOf, listProduct, intersectSet, removeFromSet, compareLength,
-   segmentsPred, powerSplitsPred, subsetOrd, segmentsLPred, powerSplitsLPred,
-   maximaBy, minSubListBy, prefixRest, segElemSuf, segPreSuf, isSublistOf, sublists, sublistsBy, segments, chainSort, chains,
-   maxSegmentedBy, subsetRest, interleave, segPartitionBy, rotate, cross, mergeBy,
-   anySegsAll, anyPairedSegsAll, spanEnd, unions, unionsEQ, unionsMulti,unsnoc) where
+module List (
+   unsnoc, linkWith, plural, strictlyOrdered, maximaBy,
+   nubMerge, foldMerge, nubSort, chainSort,
+   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
+   splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
+   compareLength, itemRest, sublists, isSublistOf,
+   subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
+   lift2SeqAll ) where
 
 import Data.Maybe (fromMaybe, isNothing)
 import Data.List (inits, tails, union)
@@ -116,11 +115,6 @@ mergeBy cmp (x:xs) (y:ys)  =  case cmp x y of
                            LT -> x : mergeBy cmp xs (y:ys)
                            _  -> y : mergeBy cmp (x:xs) ys
 
-
--- rotates a list by n positions
-rotate :: Int -> [a] -> [a]
-rotate n xs = drop n xs ++ take n xs
-
 insertSet :: Ord a => a -> [a] -> [a]
 insertSet x [] = [x]
 insertSet x inp@(y:ys) =
@@ -171,22 +165,6 @@ itemRest :: [a] -> [(a,[a])]
 itemRest []     = []
 itemRest (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- itemRest xs]
 
--- The result of choose1 n xs is a list of triples (x,m,xs') such that
--- m >= n and xs !! m == x and xs' == take (m-1) xs ++ drop m xs if m > 0
--- otherwise xs' == drop m xs.
-choose1 :: Int -> [a] -> [(a,Int,[a])]
-choose1 _ [] = []
-choose1 n (x:xs) 
-    | n>0 = rest
-    | otherwise = (x,0,xs) : rest
-      where rest = [ (y,m+1,x:ys) | (y,m,ys) <- choose1 (n-1) xs ]
-
--- list of all n-element choices from the list, in order
-chooseN :: Int -> [a] -> [[a]]
-chooseN 0 _  = [[]]
-chooseN n [] = []
-chooseN n (x:xs) = [ x:ys | ys <- chooseN (n-1) xs ] ++ chooseN n xs
-
 -- All possible divisions of a list into non-empty prefix and suffix.
 splits :: [a] -> [([a],[a])]
 splits []     = []
@@ -234,18 +212,6 @@ powerSplitsLPred p (x:xs) | p [x]
                          = [(ys1,x:ys2)|(ys1,ys2)<-nxs]
                            where
                            nxs = powerSplitsLPred p xs
-
-
--- The result of uniq p xs is a reduced version of xs.  If two or more elements
--- satisfy p, only the first is retained.  All elements not satisfying p are kept.
-uniq :: (a->Bool) -> [a] -> [a]
-uniq p [] = []
-uniq p (x:xs) = if p x then x : filter (not.p) xs
-                else x : uniq p xs
-
--- The result of none p xs is [] if any element satisfies p, but xs otherwise.
-none :: (a->Bool) -> [a] -> [a]
-none p xs = if any p xs then [] else xs
 
 -- The result of prefixRest n xs is list which is empty if n exceeds the length
 -- of xs, or else a singleton list containing (take n xs, drop n xs).
@@ -359,23 +325,9 @@ interleave :: [a] -> [a] -> [a]
 interleave [] ys = ys
 interleave (x:xs) ys = x:interleave ys xs
 
-pairsOf :: [a] -> [(a,a)]
-pairsOf xs  =  [(x1,x2) | x1 <- xs, x2 <- xs]
-
 -- cross product
 cross :: [a] -> [b] -> [(a,b)]
 cross xs ys =  [(x,y) | x<- xs, y<-ys]
-
-sublistPairsOf :: [a] -> [(a,a)]
-sublistPairsOf []      =  []
-sublistPairsOf (x:xs)  =  [(x,x') | x' <- xs] ++ sublistPairsOf xs 
-
--- The result of listProduct xss, where xss = [xs1,...,xsn] is
--- a list of all possible lists [x1,..,xn] where each xi is
--- drawn from the list xsi.
-listProduct :: [[a]] -> [[a]]
-listProduct []        =  [[]]
-listProduct (xs:xss)  =  [x:ys | x <- xs, ys <- listProduct xss]
 
 -- Given a list xs :: [a] of distinct items, and a predicate
 -- p :: a -> a -> Bool, obtain a minimal sublist ys of xs such that
