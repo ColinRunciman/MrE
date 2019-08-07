@@ -1,4 +1,9 @@
-module Alphabet where
+module Alphabet (
+  Alphabet, emptyAlphabet, singletonAlpha, embedAlphabet, alphaLength,
+  unionA, (.||.), charSet,
+  CharSet, emptySet, isEmptySet, embed, embedSet, elemSet, sizeSet, pluralCS,
+  unionS, subsetS, strictSubset, setOrder, showSet, enumerateSet, fromList) where
+
 import Data.Bits
 import Data.Word
 
@@ -121,7 +126,6 @@ isCanonicalCS cs = popCount (cs+1) == 1
 pluralCS :: CharSet -> Bool
 pluralCS cs = not $ isEmptySet ((cs-1) .&. cs)
 
-
 lastIndex :: CharSet -> Int
 lastIndex 0 = -1
 lastIndex 1 = 0
@@ -133,7 +137,4 @@ firstIndex n | odd n
              = 0
              | otherwise
              = 1+firstIndex(div n 2)
-
-
-
 

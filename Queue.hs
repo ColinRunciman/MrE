@@ -1,4 +1,5 @@
-module Queue where
+module Queue (
+  Queue, singletonQ, list2Q, enterListQ, pollQM ) where
 
 data Queue a = Queue [a] [a] deriving Show
 

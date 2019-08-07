@@ -1,4 +1,17 @@
-module Expression where
+module Expression (
+  RE(..), HomTrans(..), RecPred(..), HomInfo(..), KatahomGeneral(..), Renaming,
+  isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt, unAlt, unCat, unOpt, unRep,
+  alt, cat, mkAlt, mkCat, mkAltI, mkCatI, mkAltCG, mkCatCG, concatAlt, concatCat,
+  flatCat,
+  subalts, subcats, subaltsPred, subcatsPred, subaltsLPred, subcatsLPred,
+  altSubseq, catSegment, catSegment2,
+  ewp, swp, alpha, alphaL, alphaEquiv, canonicalRE, isCanonical,
+  swa, fir, las, firAlt, firCat, lasAlt, lasCat,
+  infoAlt, infoCat, altInfo, catInfo,
+  size, listSize,
+  mirror, rename, pickMin, pickMinList,
+  homTrans, checkWith, foldHomInfo, katahomGeneral, upgradeRE, minimalAssert, 
+  (&&&) ) where
 
 import List
 import Data.List
@@ -149,10 +162,6 @@ expinfoCxt c (Opt x) = nocxt c $ addEps (expinfoCxt OptCxt x)
 addEps :: ExpInfo -> ExpInfo
 addEps i = i { nullable=True, expressionSize=expressionSize i+1 }
 
-{-
-alphaClaim i x = if al i /= oldalpha x then error ("bad boy: " ++ (show x) ++ "; old: " ++ oldalpha x ++ ", new: "++ al i) else True
--}
-
 oldalpha  =  foldHom alphaHom 
 alphaHom :: Hom [Char]
 alphaHom = Hom { hemp = [], hlam = [], hsym = (: []),
@@ -203,14 +212,6 @@ acceptAll = RecPred {
     repP= \_ _ ->     True,
     optP= \_ _ ->     True
 }
-
-
-
-outerCxt :: Bool -> Cxt -> Cxt
-outerCxt _ c      |  c>=OptCxt
-                  =  c
-outerCxt True _   =  OptCxt
-outerCxt False _  =  NoCxt
 
 -- NB the order of checking in && cases is important
 -- so that *P predicates can assume checked components
@@ -336,27 +337,6 @@ anywhere p (Rep x)     =  anywhere p x
 anywhere p (Opt x)     =  anywhere p x
 anywhere p _           =  False
 
-{- OBSOLETE?
--- Using "smart constructors" cat and alt instead of Cat and Alt ensures
--- that as a minimum standard:
--- (1) Cat and Alt arguments must be plural lists;
--- (2) items in Cat arguments cannot be Cats;
--- (3) items in Alt arguments cannot be Alts.
--- (4) Alt arguments are sorted
--- (5) The empty-word property is memoized in a Boolean
---     first argument of Cat and Alt.
-
-isStandard :: RE -> Bool
-isStandard = checkWith standardP
-
-standardP :: RecPred
-standardP = acceptAll { altP=altStandardP, catP=catStandardP }
-
-altStandardP _ i xs = plural xs && not (any isAlt xs) && ordered xs && ew i == any ewp xs
-
-catStandardP _ i xs = plural xs && not (any isCat xs) && ew i == all ewp xs
--}
-
 -- 'cat' and 'alt' do flattening and 'alt' orders components
 
 cat :: [RE] -> RE
@@ -456,19 +436,6 @@ infoAlt x y = newInfo5 (ewp x || ewp y) (fir x .|. fir y) (las x .|. las y)
 -- assumption: neither x nor y is the empty language
 infoCat :: RE -> RE -> Info
 infoCat x y = newInfo5 (ewCat x y)(fiCat x y)(laCat x y)(alCat x y)(swCat x y)
-{-
-infoCat x y |  ewp x && ewp y
-            =  newInfo4 True (nubMerge (fir x)(fir y)) (nubMerge (las x)(las y)) nalpha 
-            |  ewp x
-            =  newInfo4 False (nubMerge (fir x)(fir y)) (las y) nalpha
-            |  ewp y
-            =  newInfo4 False (fir x) (nubMerge (las x)(las y)) nalpha        
-            |  otherwise
-            =  newInfo4 False (fir x) (las y) nalpha
-               where
-               nalpha = nubMerge (alpha x)(alpha y)
-               nsw    = swCat x y
--}
 
 swCat :: RE -> RE -> CharSet
 swCat x y = case (ewp x,ewp y) of
@@ -516,14 +483,6 @@ mkCatI _ []   =  Lam
 mkCatI _ [x]  =  x
 mkCatI i xs   =  Cat i{si=listSize xs} xs
 
-{- Deprecated: use catSegment
--- used when this is a segment from a Cat which has this CGMap
-mkCatFrom :: CGMap -> [RE] -> RE
-mkCatFrom  _  [] = Lam
-mkCatFrom _  [x] = x
-mkCatFrom cgm xs = upgradeRE NoCxt (lookupCGMap NoCxt cgm) $ Cat (catInfo xs) xs
--}
-
 catSegment :: RE -> [RE] -> RE
 catSegment (Cat i xs) xs'  =  catSegment' $
                               claim ("segment of "++show xs) (`isInfixOf` xs) xs'
@@ -551,13 +510,6 @@ mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
 -- Note: only correct if input list is Emp-free
 firCat, lasCat :: [RE] -> CharSet
 firCat = fi . catInfo
-{-
-firCat []      = []
-firCat (x:xs)  |  ewp x
-               =  nubMerge (fir x) (firCat xs)
-               |  otherwise
-               =  fir x
--}
 
 lasCat = la . catInfo
 
@@ -594,19 +546,6 @@ a2re :: [[RE]] -> RE
 a2re = alt . reverse . map (cat . reverse)
 
 wrong = error "unreadable RE"
-
-{-
-instance Show RE where
-  show Emp         =  "0"
-  show Lam         =  "1"
-  show (Sym c)     =  [c]
-  show (Alt _ xs)  =  concat (intersperse "+" (map show xs))
-  show (Cat _ xs)  =  concatMap (showBrackIf isAlt) xs
-  show (Rep x)     =  showBrackIf (\x -> isCat x || isAlt x) x ++ "*"
-  show (Opt x)     =  showBrackIf (\x -> isCat x || isAlt x) x ++ "?"
-
-showBrackIf p x = ['(' | q] ++ show x ++ [')' | q] where q = p x
--}
 
 altCxt,optCxt, catCxt :: Int
 altCxt = 0
@@ -803,7 +742,7 @@ degrade = foldHomInfo $ HomInfo {
     hicat = \i xs -> Cat i{gr=[]} xs,
     hirep=Rep, hiopt=Opt }
 
--- KatahomGeneral: not currently used
+-- KatahomGeneral: not currently used other than in Catalogue?
 data KatahomGeneral a =  KatahomGeneral {
     kgemp :: a, kglam :: Cxt -> a, kgsym :: Char -> a,
     kgalt, kgcat :: Cxt -> Info -> [a] -> a,

@@ -1,4 +1,8 @@
-module Info where
+module Info (
+  Info(..), ExpInfo(..), CSet, Grade(..), Cxt(..), CGMap,
+  emptyInfo, lamInfo, charInfo, newInfo, newInfo5, extractInfo,
+  nocxt, nullcxt, noCxtCG, noCxtCG2, outerCxt, ok, lookupCGMap, upgradeCGMap ) where
+
 import Alphabet
 
 data Info = Info {gr :: CGMap, ew :: Bool, 
@@ -62,14 +66,6 @@ noInfo = Info {gr = [], ew = error "undefined ew in info",
 newInfo :: Bool -> Info
 newInfo b = noInfo { ew = b }
 
-{-
-newInfo2 :: Bool -> [Char] -> Info
-newInfo2 b cs = noInfo { ew=b, fi=cs }
--}
-{-
-newInfo4 :: Bool -> [Char] -> [Char] -> [Char] -> Info
-newInfo4 b cs1 cs2 cs3 = noInfo { ew=b, fi=cs1, la=cs2, al=cs3 }
--}
 newInfo5 :: Bool -> CharSet -> CharSet -> Alphabet -> CharSet -> Info
 newInfo5 b cs1 cs2 cs3 cs4 = noInfo { ew=b, fi=cs1, la=cs2, al=cs3, sw=cs4 }
 
@@ -103,6 +99,12 @@ type CGMap = [(Cxt,Grade)]
 
 ok :: Cxt -> Grade -> CGMap -> Bool
 ok c g cgm  =  any (\(c',g') -> c' >= c && g' >= g) cgm
+
+outerCxt :: Bool -> Cxt -> Cxt
+outerCxt _ c      |  c>=OptCxt
+                  =  c
+outerCxt True _   =  OptCxt
+outerCxt False _  =  NoCxt
 
 lookupCGMap :: Cxt -> CGMap -> Grade
 lookupCGMap c cgm = maximum (NoGrade : [ g | (c',g) <- cgm, c' >=c] )
