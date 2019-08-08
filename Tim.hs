@@ -31,7 +31,7 @@ localshrink x = valOf $ katahom (trg localshrinkEX) NoCxt x
 pressBound :: Int
 pressBound = 20 -- up to 40 is OK
 
-localpressEX = mkExtension (altSizeBound pressBound pressPressAltListOne)
+localpressEX = mkExtension (altSizeBound pressBound pressAltListOne)
                            (catSizeBound pressBound pressCatListOne) (target localshrinkEX) Pressed
 
 localpress :: RE -> RE

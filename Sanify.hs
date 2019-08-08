@@ -1,4 +1,5 @@
-module Sanify where
+module Sanify (
+  sanify, sanAlt, sanCat) where
 
 -- very basic transformation, should be done to expressions before === if not katagraded
 -- this will add insects if none existed

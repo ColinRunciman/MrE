@@ -1,4 +1,5 @@
-module Comparison where
+module Comparison (
+  (===), eqr, eqv, subExpr, strictSubExpr, sublang, compRE ) where
 
 import Function
 import List
@@ -11,8 +12,6 @@ import qualified Data.Set as S
 import Data.Maybe
 import Data.Bits
 import Alphabet
--- import Data.Map.Strict ((!))
--- import qualified Data.Map.Strict as Map
 import Queue
 import RegexpMemo
 import Derivative
@@ -86,18 +85,18 @@ basicLEQ x y = basicOrd x y /= GT
 -- TESTS FOR SYNTACTIC SUBEXPRESSIONS (REFLEXIVE AND IRREFLEXIVE)
 
 subExpr :: RE -> RE -> Bool
-subExpr x y            =  x == y || subExpr' x y
+subExpr x y            =  x == y || strictSubExpr x y
 
-subExpr' :: RE -> RE -> Bool
-subExpr' x (Alt _ ys)  =  any (subExpr x) ys ||
-                          or [ x == mkAlt ys'
-                             | ys' <- sublists ys, ys' /= ys, length ys' > 1 ]
-subExpr' x (Cat _ ys)  =  any (subExpr x) ys ||
-                          or [ x == mkCat ys' 
-                             | ys' <- segments ys, ys' /= ys, length ys' > 1 ]
-subExpr' x (Rep y)     =  subExpr x y
-subExpr' x (Opt y)     =  subExpr x y
-subExpr' x y           =  False
+strictSubExpr :: RE -> RE -> Bool
+strictSubExpr x (Alt _ ys)  =  any (subExpr x) ys ||
+                               or [ x == mkAlt ys'
+                                  | ys' <- sublists ys, ys' /= ys, length ys' > 1 ]
+strictSubExpr x (Cat _ ys)  =  any (subExpr x) ys ||
+                               or [ x == mkCat ys' 
+                                  | ys' <- segments ys, ys' /= ys, length ys' > 1 ]
+strictSubExpr x (Rep y)     =  subExpr x y
+strictSubExpr x (Opt y)     =  subExpr x y
+strictSubExpr x y           =  False
 
 -- SUBLANGUAGE TEST
 
@@ -172,13 +171,6 @@ sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 
 (===) :: RE -> RE -> Bool
 x === y  =  compEQ x y
-            -- ? compEQ (normalize x) (normalize y)
-            -- x `sublang` y && y `sublang` x
-{-
-  where
-  x'  =  normalize x
-  y'  =  normalize y
--}
 
 -- new version of compRE
 compRE :: RE -> RE -> Ordering
@@ -310,45 +302,6 @@ compREHyp2nUF fir x y goals hyp
        where
        (xn,yn,hyp')  =  unionTest x y hyp
 
-{- derive and evired are now imported from Derivative
-
-derive :: Char -> FuseRE -> FuseRE
-derive c Lam             =  Emp
-derive c Emp             =  Emp
-derive c (Sym d)         =  if c==d then Lam else Emp
-derive c (Rep re)        =  fuseCat [derive c re, Rep re]
-derive c (Opt re)        =  derive c re
-derive c (Alt _ xs)      =  fuseAlt [derive c x | x<-xs]
-derive c (Cat _ (x:xs))  |  ewp x
-                         =  fuseAlt [dx,dxs]
-                         |  otherwise
-                         =  dx
-                         where  dx   =  fuseCat (derive c x : xs)
-                                dxs  =  derive c (mkCat xs)
-
--- derivation from the end
-evired :: FuseRE -> Char -> FuseRE
-evired Lam c            =  Emp
-evired Emp c            =  Emp
-evired (Sym d) c        =  if c==d then Lam else Emp
-evired (Rep re) c       =  fuseCat [Rep re, evired re c]
-evired (Opt re) c       =  evired re c
-evired (Alt _ xs) c     =  fuseAlt [evired x c | x<-xs]
-evired (Cat _ xs) c     =  unsnocF aux xs
-                           where  
-                           aux ys y | ewp y
-                                    = fuseAlt [dy,dys]
-                                    | otherwise
-                                    = dy
-                                      where
-                                      dy  = fuseCat (ys ++ [evired y c])
-                                      dys = evired (mkCat ys) c
-
-unsnocF :: ([a]->a->b) -> [a] -> b
-unsnocF cont [x] = cont [] x
-unsnocF cont (x:xs) = unsnocF (\ys y->cont (x:ys) y) xs
--}
-
 -- really a list utility, for sorted lists
 listOrder :: Ord a => [a] -> [a] -> Bool
 listOrder [] _      = True
@@ -358,15 +311,6 @@ listOrder (x:xs) (y:ys) =
         LT -> False
         EQ -> listOrder xs ys
         GT -> listOrder (x:xs) ys
-{-
-OBSOLETE
-firstCheck :: RE->RE->Bool
---lastCheck,endCheck :: RE -> RE -> Bool
--- firstCheck r1 r2 = fir r1 `listOrder` fir r2
-firstCheck r1 r2 = fir r1 `setOrder` fir r2
---lastCheck r1 r2 = lasts r1 `listOrder` lasts r2
---endCheck r1 r2 = firstCheck r1 r2 && lastCheck r1 r2
--}
 
 sub :: RE -> RE -> Bool
 sub x y = sublang x y
@@ -380,7 +324,6 @@ equivMin :: FuseRE -> FuseRE -> (Bool,FuseRE)
 equivMin x y  =  (isJust m, fromJust m)
               where  m  =  eqr x y
 
-
 -- this should be more efficient, because
 -- (i)  it uses compRE technology
 -- (ii) the hypothesis is shared
@@ -389,9 +332,7 @@ eqrList :: [FuseRE] -> Maybe FuseRE
 eqrList xs = justIf (rel==EQ) (rootUF uf (head xs))
              where (rel,uf) = solveGoalsUF (makeGoals xs) emptyHyp
 
-
 eqv :: FuseRE -> FuseRE -> Bool
--- eqv  =  compEQ
 eqv x y = isJust $ eqr x y
 
 -- is x===alpha*?

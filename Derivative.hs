@@ -1,9 +1,9 @@
-module Derivative where
+module Derivative (derive, allDerives) where
+
 import Expression
 import Sanify
 import Alphabet
 import Info
--- import StarPromotion
 import List
 
 smartCat :: [RE] -> RE
@@ -11,7 +11,6 @@ smartCat = sanCat
 
 smartAlt :: [RE] -> RE
 smartAlt = sanAlt
-
 
 derive :: Char -> RE -> RE
 derive c e = smartAlt $ map smartCat $ deriveAlts c e []
@@ -82,3 +81,6 @@ unsnocF :: ([a]->a->b) -> [a] -> b
 unsnocF cont [x] = cont [] x
 unsnocF cont (x:xs) = unsnocF (\ys y->cont (x:ys) y) xs
 
+allDerives :: [Char] -> RE -> [RE] -> [RE]
+allDerives [] _ xs = xs
+allDerives (c:cs) re xs = allDerives cs re (derive c re:xs)

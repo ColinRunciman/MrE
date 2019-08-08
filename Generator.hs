@@ -5,23 +5,15 @@ import Info
 import Context
 import Function
 import Comparison
---import Normalization
 import Fuse
 import StarPromotion
 import Pressing
-{-
-import Factorization
-import Refactorization
-import Shrinking
-import Stellation
--}
 import Shrinking
 import List
 import Data.List
 import Control.Monad
 import PreOrderTrees
---import AutIntersect
-import StarRecognition
+
 -- TO DO: move RecPreds into RegularTrans to replace predicates there.
 
 type Alphabet = String

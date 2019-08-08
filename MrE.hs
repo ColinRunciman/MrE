@@ -34,7 +34,7 @@ catalogueStellate = mkTransform (khom (target stelEX2))
 
 -- Note this uses 'Stellar' as a tag, because Pressed is below Catalogued in the order
 pressEX2 :: Extension
-pressEX2 = mkExtension pressPressAltListOne pressCatListOne (target minByCatalogueExtension) Stellar
+pressEX2 = mkExtension pressAltListOne pressCatListOne (target minByCatalogueExtension) Stellar
 cataloguePress = mkTransform (khom (target pressEX2))
 
 

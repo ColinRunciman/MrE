@@ -1,20 +1,17 @@
 module Metrics where
 
+import Data.List(nub,nubBy,minimumBy,union,partition,foldl1',sortBy,sort)
+import Data.Maybe(isJust,fromJust,fromMaybe)
+import Data.Ord (comparing)
+import qualified Data.Set as S
 import Expression
 import Context
 import Fuse
 import StarPromotion
---import Normalization
 import Catalogue
 import Comparison
 import Pressing
---import Refactorization
 import Shrinking
---import Stellation
---import Automization
-import Data.List(nub,nubBy,minimumBy,union,partition,foldl1',sortBy,sort)
-import Data.Maybe(isJust,fromJust,fromMaybe)
-import qualified Data.Set as S
 import List (segments,sublists,maximaBy,nubSort,itemRest,nubMerge)
 import System.IO.Unsafe(unsafePerformIO)
 import Control.Exception(catch,IOException)
@@ -24,7 +21,6 @@ import Control.Monad
 import Function
 import GHC.Exts (groupWith, sortWith)
 import Generator
---import TopologicalSearchTree
 import PreOrderTrees
 
 -- reCount m n gives the number of distinct regular
@@ -242,7 +238,7 @@ hitListFunc xs = [ y | ys <- groupOrder compRE xs, let m=pickMinList ys, y<-ys, 
 ehl           =  essence hitlist
 
 essence :: [RE] -> [RE]
-essence     =  nubBy mirrorAlphaEquiv . maximaBy (flip subExpr')
+essence     =  nubBy mirrorAlphaEquiv . maximaBy (flip strictSubExpr)
 
 minima      =  concat [ [x | x <- xs, size x == m]
                       | xs <- quotBy (===) shrunksObt,
@@ -250,7 +246,7 @@ minima      =  concat [ [x | x <- xs, size x == m]
             where
                cmpSize a b  =  compare (size a) (size b)
 
-minima2      = map snd $ sortBy keyOrder $
+minima2      = map snd $ sortBy (comparing fst) $
                [ (s,x) | x <- shrunksObt, let s=size x,
                          s' <- take 1 $
                                [ size a | Just a<-[lookupPT x compRE pickMinList theTree]] ++ [maxSize],
