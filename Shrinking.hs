@@ -5,6 +5,7 @@ module Shrinking (
 
 import List (itemRest, segPreSuf, splits, powerSplits)
 import Expression
+import OK
 import Comparison
 import Fuse
 import StarPromotion

@@ -1,18 +1,28 @@
-module OK where
+module OK (
+  OK(..),
+  mkOK, changed, unchanged, unsafeChanged, ifchanged,
+  orOK, list2OK, okmap, okmapIf, guardOK, guardApply, fixOK, app, updateEQ,
+  katalift, katalift1 ) where
+
 -- computations of type a
 -- True tag: something noteworthy has happened
 -- False tag: nothing noteworthy has happened
 
 import Data.Functor.Classes
+import Control.Applicative
 
 data OK t = OK { valOf :: t, hasChanged :: Bool } 
 
+{- Library version problem!
 instance Show1 OK where
     showsPrec1 n oka = showsPrec n (valOf oka) . (c:)
         where c = if hasChanged oka then '!' else '.'
+-}
 
-instance Show a => Show (OK a)
-    where showsPrec = showsPrec1
+instance Show a => Show (OK a) where
+    {- showsPrec = showsPrec1 -}
+    showsPrec n oka = showsPrec n (valOf oka) . (c:)
+            where c = if hasChanged oka then '!' else '.'
 
 
 mkOK :: t -> Bool -> OK t
@@ -35,7 +45,6 @@ instance Applicative OK where
 
 okmap2 :: (a->b->c) -> (OK a -> OK b -> OK c)
 okmap2 binOp c1 c2 = mkOK (binOp (valOf c1)(valOf c2)) (hasChanged c1||hasChanged c2)
-
 
 instance Monad OK where
     a >>= f = app f a

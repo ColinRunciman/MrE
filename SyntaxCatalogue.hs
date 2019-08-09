@@ -3,6 +3,7 @@ module SyntaxCatalogue where
 import Info
 import Data.List
 import Data.Maybe
+import OK
 import Context
 import Expression
 import Comparison

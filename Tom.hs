@@ -15,6 +15,7 @@ import Data.Time.Clock
 import System.IO.Unsafe (unsafePerformIO)
 import Numeric
 import Info
+import OK
 import Context
 
 shrinkBound :: Int
@@ -60,10 +61,10 @@ process s  |  e1==e'
   where
   e  =  read s
   e1 =  promote e
-  e2 =  fst $ minByCatalogue e1
+  e2 =  valOf $ minByCatalogue e1
   e3 =  localshrink e2
   e4 =  localpress e3 
-  e5 =  fst $ C.minByCatalogue e1
+  e5 =  valOf $ C.minByCatalogue e1
   e6 =  press e1
   e7 =  topshrink e2 
   e' =  e3 -- change this to e3/e4/whatever for a weaker/stronger trafo

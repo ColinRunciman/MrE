@@ -4,6 +4,7 @@ import Expression
 import Info
 import Context
 import Function
+import OK
 import Comparison
 import Fuse
 import StarPromotion
@@ -113,11 +114,12 @@ createGradedCarrier alpha g p = memo
     size2 = [ Rep re | re <- size1, repP p NoCxt re ] ++ [ Opt re | re <- size1, optP p NoCxt re ]
     from n = sizeat n : from (n+1)
     sizeat n = catat n ++ altat n ++ optat n ++ repat n
-    catat n = [ cac | xs <- pluralList n, let ca=mkCat xs, (cac,True)<-[addContext p g ca ]]
-    altat n = [ alc | -- k<-[1..(n-2)], a<-memo !! k, not(isAlt a),
-                                     -- b<-memo !! (n-k-1), (c,xs)<-simAlt a b,
-                      xs <- pluralSet n (not . isAlt),
-                      let al=mkAlt xs, (alc,True)<-[addContext p g al] ]
+    catat n = [ valOf cac
+              | xs <- pluralList n, let ca=mkCat xs,
+                cac <- [addContext p g ca ], hasChanged cac]
+    altat n = [ valOf alc
+              | xs <- pluralSet n (not . isAlt), let al=mkAlt xs,
+                alc <-[addContext p g al], hasChanged alc ]
     repat n = [ Rep re | re <- memo !! (n-1), not (isOpt re || isRep re), okGradeCxt g RepCxt re ]    
     optat n = [ Opt re | re <- memo !! (n-1), not (ewp re), okGradeCxt g OptCxt re ]
     list n =  [ [x] | x <- memo !! n, not(isCat x) ] ++ pluralList n

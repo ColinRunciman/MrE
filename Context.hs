@@ -1,15 +1,15 @@
-module Context (OK, Extension(..), KataRE, Katahom(..), KataPred(..), RewRule,
-  unchanged, changed, unsafeChanged, hasChanged, ifchanged,
-  mkOK, valOf, orOK, list2OK, okmap, guardOK, fixOK, okGradeCxt, app, guardApply, updateEQ,
+module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RewRule,
+  okGradeCxt,
   mkExtension, mkHomTrans, mkTransform,
   altClosure, catClosure, altClosurePred, catClosurePred,
-  kataAlt, kataCat, kataOpt, katalift, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
+  kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
   isKata, katahom, tpr, trg, altSizeBound, catSizeBound) where
 
 import List
 import Info
 import Expression
 import Function ((===>))
+import OK
 import Data.Maybe
 import Data.List
 
@@ -27,19 +27,6 @@ okGradeCxt g c (Alt i _)  =  ok c g (gr i)
 okGradeCxt g c (Cat i _)  =  ok c g (gr i) && (not (ew i) || c/= RepCxt)
 okGradeCxt g c (Rep e)    =  c < RepCxt && okGradeCxt g RepCxt e && not (ewp e)
 okGradeCxt g c (Opt e)    =  c < OptCxt && okGradeCxt g OptCxt e && not (ewp e)
-
-type OK t = (t,Bool)
--- TO DO: meaning of Bool values
-
--- projection functions and constructor, to make a change of representation less painful
-valOf :: OK t -> t
-valOf = fst
-
-hasChanged :: OK t -> Bool
-hasChanged = snd
-
-mkOK :: t -> Bool -> OK t
-mkOK t x = (t,x)
 
 type RewRule = Cxt -> Info -> [RE] -> OK [RE]
 data Katahom = Katahom { kalt, kcat  :: RewRule, grade :: Grade }
@@ -79,23 +66,6 @@ kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCat $ katalift f xs
 catRuleOK :: RewRule -> RewRule
 catRuleOK r c i xs = okmapIf concatCat $ r c i xs
 
--- unchanged is the unit of the Kleisli composition of the OK monad
-unchanged :: a -> OK a
-unchanged x = (x,False)
-
-changed :: a-> OK a
-changed x = (x,True)
-
-updateEQ :: Eq a => a -> a -> OK a
-updateEQ x y = (y,x/=y)
-
--- >>=, but with args swapped
-app :: (a -> OK b) -> OK a -> OK b
-app f (x,tag) = (b,tag || ntag) where (b,ntag)=f x
-
-ifchanged :: OK a -> (a -> OK b) -> (a -> OK b) -> OK b
-ifchanged (x,b) f g = app (if b then f else g) (x,b)
-
 appch :: (a -> OK a) -> (OK a -> OK a)
 appch f x = ifchanged x f unchanged
 
@@ -110,31 +80,11 @@ aftch f g  =  \x -> f `appch` g x
 chapp :: (a->a-> Bool) -> (a -> OK a) -> (a -> OK a)
 chapp p f x = if p x (valOf call) then call else unchanged x where call = f x
 
-okmap :: (a->b) -> (OK a ->OK b)
-okmap f (x,tag) = (f x,tag)
-
 okmap2 :: (a->b->c) -> (OK a -> OK b -> OK c)
 okmap2 bin o1 o2 = mkOK (bin (valOf o1) (valOf o2)) (hasChanged o1 || hasChanged o2)
 
-okmapIf :: (a->a) -> (OK a -> OK a)
-okmapIf f (x,tag) = if tag then (f x,tag) else (x,tag)
-
 single :: OK a -> OK [a]
 single = okmap (:[])
-
-unsafeChanged :: OK a -> OK a
-unsafeChanged v = changed(valOf v)
-
--- mplus for OK type
-orOK :: OK a -> OK a -> OK a
-orOK a b = if hasChanged a then a else b
-
-guardOK :: Bool -> OK a -> OK a -> OK a
-guardOK False _ x  = x
-guardOK True th el = orOK th el
-
-guardApply :: Bool -> (a->a) -> a -> OK a
-guardApply b f x = if b then changed (f x) else unchanged x
 
 guardMap :: Bool -> (a->a) -> OK a -> OK a
 guardMap b f x = if b then okmap f x else x
@@ -142,28 +92,6 @@ guardMap b f x = if b then okmap f x else x
 -- if predicate is True, flag a change regardless; no need to evaluate it if change has been flagged anyway
 potentialChange :: (a->Bool) -> OK a -> OK a
 potentialChange p x = mkOK vx (hasChanged x || p vx) where vx=valOf x
-
-list2OK :: a -> [a] -> OK a
-list2OK x []    = unchanged x
-list2OK _ (x:_) = changed x
-
-katalift :: (a -> OK b) -> [a] -> OK [b]
-katalift k xs  =  (xs', or bs') where (xs',bs')  =  unzip $ map k xs
-
--- use the first that applies, no-change may still re-attribute x to x'
--- not obsolete? single remaining use, indirectly in Pressing
-katalift1 :: (a -> OK a) -> [a] -> OK [a]
-katalift1 f [] = unchanged []
-katalift1 f (x:xs) |  b
-                   =  changed (x' : xs)
-                   |  otherwise
-                   =  okmap (x' :) $ katalift1 f xs
-                      where
-                      (x',b) = f x
-
--- keep applying the function as long as there is a change
-fixOK :: (a-> OK a) -> a -> OK a
-fixOK f a  = appch (fixOK f) (f a)
 
 -- untrusting katahom, i.e. it does not assume that the rules preserve standardness
 -- or that the original RE was standard

@@ -4,6 +4,7 @@ module Fuse (
 
 import List
 import Expression
+import OK
 import Context
 import Info
 import Function ((===>))

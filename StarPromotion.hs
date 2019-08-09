@@ -4,6 +4,7 @@ module StarPromotion (
 
 import Expression
 import Fuse
+import OK
 import Context
 import Info
 import List
@@ -147,7 +148,9 @@ debunkList al1 (re:ps) | isLam nre
                          where
                          al2 = charSet $ alpha re
                          al3 = charSet $ alpha nre
-                         (nre,b) = debunkRECxt False al1 re
+                         d   = debunkRECxt False al1 re
+                         nre = valOf d
+                         b   = hasChanged d 
 
 debunkRECxt :: Bool -> CharSet -> RE -> OK RE
 debunkRECxt c al1 re | (c||ewp re) && subsetS (charSet (alpha re)) al1
@@ -179,7 +182,9 @@ knubedList al1 xs | isLam ny
                     Just (ys,y) = unsnoc xs
                     al2 = charSet $ alpha y
                     al3 = charSet $ alpha ny
-                    (ny,b) = knubedRE al1 y
+                    k   = knubedRE al1 y
+                    ny  = valOf k
+                    b   = hasChanged k
 
 knubedRECxt :: Bool -> CharSet -> RE -> OK RE
 knubedRECxt c al1 re | (c||ewp re) && subsetS (charSet (alpha re)) al1

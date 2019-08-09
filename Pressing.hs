@@ -8,6 +8,7 @@ import Data.Ord (comparing)
 import Function (claim, justIf, kernel, (===>))
 import List (allSplits, itemRest, lift2SeqAll, plural, splits, unions, subsetRest, segPreSuf, unsnoc)
 import Expression
+import OK
 import Comparison
 import Fuse
 import Context
@@ -64,7 +65,7 @@ subsumePreSuf others xs |  null candidates
                            candidates = [ c
                                         | (pre,suf) <- splits xs,
                                            c <- candsFor pre suf ++ candsFor suf pre ]
-                           candsFor ys zs  =  [mkCat $ fst $ pressCatK RepCxt i zs | all ewp ys &&
+                           candsFor ys zs  =  [mkCat $ valOf $ pressCatK RepCxt i zs | all ewp ys &&
                                                     (fuseCat ys `sublang` fuseRep(fuseAlt(mkCat zs:others)))]
                                               where i = newInfo (all ewp zs)
 
@@ -215,9 +216,10 @@ Opt x *=?=* y        |  isCat x && not (null cand1)
                      (yn,yin) = head cand1
                      cand2 = [(y'',xs) | (Opt y',xs) <- lMostCom' x, Just y''<-[eqr y' y]]
                      (ym,ytl) = head cand2
-                     cand3 = [ [xy] | (z',True) <- [pressCxt NoCxt(fuseBinCat x y)],
-                                 let z=pressOpt z', let xy=fuseAlt[y,z], -- was fuseAlt
-                                size xy<size x+size y+2 ]
+                     cand3 = [ [xy]
+                             | z' <- [pressCxt NoCxt(fuseBinCat x y)], hasChanged z',
+                               let z=pressOpt (valOf z'), let xy=fuseAlt[y,z], -- was fuseAlt
+                               size xy<size x+size y+2 ]
 y *=?=* Opt x        |  isCat x && not (null cand1)
                      =  Just $ pressOptCatList yn ++pressOptCatList(fuseCat ([yn] ++ ytl))
                      |  isCat x && not (null cand2)
@@ -229,9 +231,10 @@ y *=?=* Opt x        |  isCat x && not (null cand1)
                         (yn,ytl) = head cand1
                         cand2 = [ (y'',xs) | (xs,Opt y') <- rMostCom' x, Just y''<-[eqr y' y]]
                         (ym,yin) = head cand2
-                        cand3 = [ [yx] | (z',True) <- [pressCxt NoCxt(fuseBinCat y x)],
-                                 let z=pressOpt(z'), let yx=fuseAlt[z,y], -- was fuseAlt
-                                 size yx<size x+size y+2 ]
+                        cand3 = [ [yx]
+                                | z' <- [pressCxt NoCxt(fuseBinCat y x)], hasChanged z',
+                                  let z=pressOpt(valOf z'), let yx=fuseAlt[z,y], -- was fuseAlt
+                                  size yx<size x+size y+2 ]
 _ *=?=* _            =  Nothing
 
 -- plus2star fusion rules underneath a star
@@ -974,7 +977,7 @@ rollPress xs = updateEQ xs (rollList xs)
 plus2starMap :: Cxt -> [FuseRE] -> OK [PressRE]
 plus2starMap OptCxt xs = katalift (pressfuseCat EwpCxt) xs
                          `orOK` 
-                         list2OK xs [ y':ys | (y,ys)<-itemRest xs, (y',True) <- [pressfuseCat OptCxt y]]
+                         list2OK xs [valOf y':ys | (y,ys)<-itemRest xs, y' <- [pressfuseCat OptCxt y], hasChanged y']
 plus2starMap c xs      = katalift (pressfuseCat c) xs
 -}
 
@@ -985,11 +988,10 @@ plus2starMap c xs      = katalift (pressfuseCat c) xs
 plus2star :: Cxt -> [PressRE] -> OK [FuseRE]
 plus2star c ys   =  repfix $ list2OK ys cands
     where
-    repfix (zs,b) |  b && c==RepCxt && all ewp zs
-                  =  changed [ fst $ pressCxt c (mkAlt zs) ]
-                  |  otherwise
-                  =  (zs,b)
---    x            =  mkCat ys
+    repfix zs    |  hasChanged zs && c==RepCxt && all ewp (valOf zs)
+                 =  changed [ valOf $ pressCxt c (mkAlt (valOf zs)) ]
+                 |  otherwise
+                 =  zs
     r            =  c==RepCxt
     cands        =  leftCands ++ rightCands ++ leftReps ++ rightReps
     leftCands    =  [ p | (hd,tl)<- lMostComList ys, let tl'=fuseCat tl, Just p <-[hd *=?=* tl']]
