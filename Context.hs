@@ -1,4 +1,10 @@
-module Context where
+module Context (OK, Extension(..), KataRE, Katahom(..), KataPred(..), RewRule,
+  unchanged, changed, unsafeChanged, hasChanged, ifchanged,
+  mkOK, valOf, orOK, list2OK, okmap, guardOK, fixOK, okGradeCxt, app, guardApply, updateEQ,
+  mkExtension, mkHomTrans, mkTransform,
+  altClosure, catClosure, altClosurePred, catClosurePred,
+  kataAlt, kataCat, kataOpt, katalift, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
+  isKata, katahom, tpr, trg, altSizeBound, catSizeBound) where
 
 import List
 import Info
@@ -38,10 +44,6 @@ mkOK t x = (t,x)
 type RewRule = Cxt -> Info -> [RE] -> OK [RE]
 data Katahom = Katahom { kalt, kcat  :: RewRule, grade :: Grade }
 
-{-
-altRule :: RewRule -> RewRule
-altRule r c i xs = okmap concatAlt ( r c i xs)
--}
 -- modifies the alt-rule of a Katahom by evaluating the elements in the list first
 -- then flattening the results, then applying the rule, then flatten the result
 altRule :: Katahom -> RewRule
@@ -60,10 +62,6 @@ kataliftAltSafe f xs = potentialChange (/=xs) $ (okmap concatAlt $ katalift f xs
 altRuleOK :: RewRule -> RewRule
 altRuleOK r c i xs = okmapIf concatAlt (r c i xs)
 
-{-
-catRule :: RewRule -> RewRule
-catRule r c i xs = okmap concatCat (r c i xs)
--}
 -- dual to altRule
 catRule :: Katahom -> RewRule
 catRule kh c i xs  |  not (plural xs')
@@ -77,7 +75,6 @@ catRule kh c i xs  |  not (plural xs')
 
 kataliftCatSafe :: (RE->OK RE) -> [RE] -> OK [RE]
 kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCat $ katalift f xs)
-
 
 catRuleOK :: RewRule -> RewRule
 catRuleOK r c i xs = okmapIf concatCat $ r c i xs
@@ -128,7 +125,6 @@ single = okmap (:[])
 unsafeChanged :: OK a -> OK a
 unsafeChanged v = changed(valOf v)
 
-
 -- mplus for OK type
 orOK :: OK a -> OK a -> OK a
 orOK a b = if hasChanged a then a else b
@@ -147,25 +143,9 @@ guardMap b f x = if b then okmap f x else x
 potentialChange :: (a->Bool) -> OK a -> OK a
 potentialChange p x = mkOK vx (hasChanged x || p vx) where vx=valOf x
 
-{-
-not used any more
-concatMapOK :: (a -> OK [b]) -> [a] -> OK [b]
-concatMapOK f []     = unchanged []
-concatMapOK f (x:xs) = (ys++zs,b1||b2)
-    where
-    (ys,b1) = f x
-    (zs,b2) = concatMapOK f xs
--}
-
 list2OK :: a -> [a] -> OK a
 list2OK x []    = unchanged x
 list2OK _ (x:_) = changed x
-
-{-
-maybe2OK :: a -> Maybe a -> OK a
-maybe2OK x Nothing  = unchanged x
-maybe2OK _ (Just x) = changed x
--}
 
 katalift :: (a -> OK b) -> [a] -> OK [b]
 katalift k xs  =  (xs', or bs') where (xs',bs')  =  unzip $ map k xs
@@ -191,16 +171,6 @@ fixOK f a  = appch (fixOK f) (f a)
 -- TO DO: the RootCxt code could be switched on, to permit trafos not to do their own mirror
 --   best to leave it till mirroring is memoized
 katahom :: Katahom -> Cxt -> RE -> OK RE
-{- switched off for now
-katahom kh RootCxt  x      |  size(valOf run2)<size(valOf run1)
-                           =  app (katahom kh RootCxt) run2
-                           |  otherwise
-                           =  run1
-                              where
-                              run1 = katahom kh NoCxt x
-                              -- run2 is not used directly to avoid strange expression order
-                              run2 = okmap mirror $ app (katahom kh NoCxt) (okmap mirror run1)
--}
 katahom kh RootCxt x       =  katahom kh NoCxt x -- to avoid confusing trafos with unfamiliar context
 katahom kh c Emp           =  unchanged Emp
 katahom kh c Lam           =  guardOK (c>=OptCxt) (changed Emp) (unchanged Lam)
@@ -244,19 +214,6 @@ eitherRepOpt redundant inRep body  |  redundant
                                    =  okmap Opt body
                                       where
                                       x = valOf body
-{-
-OBSOLETE
--- check whether this Rep-body gives the total language of its alphabet
--- only applied to Alts and Cats that are not already of minimal form
-totalCheck :: RE -> OK RE
-totalCheck x  |  all (\d->swp d x) al
-              =  updateEQ x (total (fir x))
-              |  otherwise
-              =  unchanged x
-                 where
-                 al = alpha x
--}
-
 -- input is set-like 
 total :: [Char] -> RE
 total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
@@ -319,7 +276,7 @@ tpr :: Extension -> RecPred
 tpr = kpred . target
 
 type ListMap = Info -> [RE] -> OK [RE]
--- would be nice to eliminate need for this
+-- TO DO: eliminate need for this
 altComp :: ListMap -> ListMap -> ListMap
 altComp f g i xs = f ni `app` xso
                    where
@@ -336,7 +293,6 @@ genericRepeatAlt rs c xso  |  hasChanged xso || hasChanged yso
 
 -- Alt part of generic boilerplate
 genericAltK :: Extension -> Cxt -> Info -> [RE] -> OK [ToRE]
--- genericAltK rs c i xs = genericFromAltK rs c i `app` altRuleOK(kalt(src rs)) c i xs
 genericAltK rs c i xs = (genericFromAltK rs c `altComp` altRuleOK(kalt(src rs)) c) i xs
 
 -- generic! only applied on lists that are not only pointwise FromRE, but also as a whole
@@ -349,8 +305,6 @@ genericFromAltK rs c i (Lam:xs)    |  any ewp (valOf xso)
                                    =  okmap (Lam:) xso
                                       where
                                       xso = genericFromAltK rs OptCxt i{ew=False} xs
---genericFromAltK rs OptCxt i xs     |  any ewp xs
---                                   =  genericFromAltList rs EwpCxt i xs
 genericFromAltK rs c i xs          =  genericRepeatAlt rs c (altRuleOK(altStep rs) c i xs)
 
 -- Cat Part of boilerplate
@@ -374,28 +328,13 @@ genericRepeatCat rs c xso  |  hasChanged xso || hasChanged yso
 -- inputs have been evaluated
 genericCatK :: Extension -> Cxt -> Info -> [ToRE] -> OK [ToRE]
 genericCatK rs c i xs = (genericFromCatK rs c `catComp` catRuleOK(kcat(src rs)) c) i xs
---genericCatK rs c i xs = genericFromCatK rs c i `app` catRuleOK(kcat(src rs)) c i xs
 
 genericFromCatK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
 genericFromCatK _  c _ []       =  unchanged []
 genericFromCatK rs c _ [x]      =  single $ katahom (trg rs) c x
 genericFromCatK rs OptCxt i xs  |  all ewp xs && not (ew i)
                                 =  genericFromCatK rs OptCxt i{ew=True} xs
-{- incorrect - symbols can roll! and therefore trigger fusions, e.g. aa*(ba?)?
-genericFromCatK rs NoCxt i xs   |  isSym (head xs) -- no lMostCom', this is generic; no last/init because of rolling
-                                =  okmap addsyms xsotail
-                                   where
-                                   (syms,others) = span isSym xs
-                                   newew         = all ewp others
-                                   xsotail       = genericFromCatK rs NoCxt i{ew=newew, fi=firCat others} others
-                                   addsyms [x]   = [upgradeRE OptCxt (gradeOfCxt NoCxt x) (mkCat (reapp syms x))]
-                                   addsyms xs    = syms ++ xs
-                                   reapp ys (Cat _ zs) = ys ++ zs
-                                   reapp ys x          = ys ++ [x] -}
-genericFromCatK rs c i xs       =  --ifchanged (kataliftCat (katahom (trg rs) NoCxt) xs)
-                                   --    (supplyCatInfo $ genericCatK rs c)
-                                   --    (genericRepeatCat rs c . catRuleOK(catStep rs) c i)
-                                       genericRepeatCat rs c $ catRuleOK(catStep rs) c i xs           
+genericFromCatK rs c i xs       =  genericRepeatCat rs c $ catRuleOK(catStep rs) c i xs           
 
 noChangeRule :: RewRule
 noChangeRule c i xs = unchanged xs
@@ -418,7 +357,6 @@ kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP }
 isKata :: RE -> Bool
 isKata = checkWith kataP
 
-
 -- predicate for bottom-line system, grade Kata
 -- besides checking structural constraints also the info is tested for correctness, except for grading
 kataP :: RecPred
@@ -433,7 +371,6 @@ lamKataP c = c==RootCxt
 -- Symbols are allowed everywhere
 symKataP :: Cxt -> Char -> Bool
 symKataP _ _ = True
-
 
 altElem :: Cxt -> RE -> Bool
 altElem _ (Sym _)   = True
@@ -509,7 +446,6 @@ catSizeBound n r c i xs | si i <= n
                         = r c i xs
                         | otherwise
                         = catClosureLPred (\t->listSize t<=n) r c i xs
-
 
 catClosurePred :: (RE->Bool) -> RewRule -> RewRule
 catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subcatsPred p xs,

@@ -1,4 +1,6 @@
-module Fuse where
+module Fuse (
+  FuseRE, fuse, fuseH, fuseP, fuseKP, fuseAlt, fuseCat, fuseOpt, fuseRep, fuseBinCat,
+  isFused, whiteAltList, normBinAlt, contextFunction ) where
 
 import List
 import Expression
@@ -16,7 +18,6 @@ fuseEX = mkExtension altFuseList catFuseList kataGradeKP Fused
 
 fuseK :: Katahom
 fuseK = trg fuseEX
--- normK = Katahom { kalt=normAltK, kcat=normCatK, grade=Normal}
 
 fuseKP :: KataPred
 fuseKP = target fuseEX
@@ -27,8 +28,6 @@ fuse = mkTransform fuseK
 fuseCxt :: Cxt -> RE -> OK FuseRE
 fuseCxt = katahom fuseK
 
-
--- normH = HomTrans { falt=normAlt,  fcat=normCat, frep= normRep, fopt=fuseOpt}
 HomTrans { falt=fuseAlt,  fcat=fuseCat, frep= fuseRep, fopt=fuseOpt} = fuseH
 fuseH = mkHomTrans fuseK
 
@@ -53,30 +52,6 @@ mergeFuse fuseop (x:xs) (y:ys) =
        Right True  -> x: mergeFuse fuseop xs (y:ys)
        Right False -> y : mergeFuse fuseop (x:xs) ys
 
-{-
--- extendfusion would correspond to a different linear order on REs
-leftOrderedFusion :: Fusion RE
-leftOrderedFusion x@(Cat ix xs) y@(Cat iy ys) =
-    case compare (head xs) (head ys) of
-        LT -> Right True
-        EQ -> Left (fuseCat [head xs, mkAlt [catSegment x (tail xs), catSegment y (tail ys)] ])
-        GT -> Right False
-leftOrderedFusion x y@(Cat iy ys) =
-    case compare x (head ys) of
-        LT -> Right True
-        EQ -> Left (fuseCat [ x, Opt(catSegment y (tail ys))])
-        GT -> Right False 
-leftOrderedFusion x@(Cat ix xs) y =
-    case compare (head xs) y of
-        LT -> Right True
-        EQ -> Left (fuseCat [ y, Opt(catSegment x (tail xs))])
-        GT -> Right False
-leftOrderedFusion x y =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left x
-        GT -> Right False
--}
 leftOrderedFusion :: Fusion RE
 leftOrderedFusion e1 e2 =
    case commonList (theList e1)(theList e2) of
@@ -93,29 +68,7 @@ leftOrderedFusion e1 e2 =
 theList :: RE -> [RE]
 theList (Cat _ xs) = xs
 theList x          = [x]
-{-
-rightOrderedFusion :: Fusion RE
-rightOrderedFusion x@(Cat ix xs) y@(Cat iy ys) =
-    case compare (last xs) (last ys) of
-        LT -> Right True
-        EQ -> Left (fuseCat [mkAlt [catSegment x (init xs), catSegment y (init ys)],last xs])
-        GT -> Right False
-rightOrderedFusion x y@(Cat iy ys) =
-    case compare x (last ys) of
-        LT -> Right True
-        EQ -> Left (fuseCat [Opt(catSegment y (init ys)), x])
-        GT -> Right False 
-rightOrderedFusion x@(Cat ix xs) y =
-    case compare (last xs) y of
-        LT -> Right True
-        EQ -> Left (fuseCat [Opt(catSegment x (init xs)), y])
-        GT -> Right False
-rightOrderedFusion x y =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left x
-        GT -> Right False
--}
+
 revList :: RE -> [RE]
 revList (Cat _ xs) = reverse xs
 revList x          = [x]
@@ -132,8 +85,6 @@ rightOrderedFusion e1 e2 =
    from2 e1 e2 [x]  = x
    from2 e1 e2 xs   = catSegment2 e1 e2 (reverse xs)
    rebuild a1 a2 co = fuseCat [mkAlt [a1,a2],co]
-       
-   
 
 commonList :: Ord a => [a] -> [a] -> Either ([a],[a],[a]) Bool
 commonList xs ys | n==0
@@ -143,58 +94,6 @@ commonList xs ys | n==0
     where
     (n,bb) = firstDiff 0 xs ys
 
-{-
-idea for a better commonList function
-commonList2 :: [RE] -> [RE] -> Either ([RE],[RE],[RE]) ([RE],[RE])
-commonList2 [] xs = Right ([],xs)
-commonList2 xs [] = Right (xs,[])
-commonList2 (x:xs) (y:ys) | x==y
-                          = addElem x $ commonList2 xs ys
-                          | xa == ya && singletonAlpha xa
-                          = case commonMultiSet (sort xs1)(sort ys1) of
-                                 Right _ -> Right (x:xs,y:ys)
-                                 Left(zs,[],[]) -> case commonList2 xs2 ys2 of
-                                                       Right _        -> Left(zs,xs2,ys2)
-                                                       Left(cs,ds,es) -> Left (zs++cs,ds,es)
-                                 Left(zs,as,bs) -> Left(zs,as++xs2,bs++ys2)
-                          | otherwise
-                          = Right(x:xs,y:ys)
-                            where
-                            xa = alpha x
-                            ya = alpha y
-                            (xs1,xs2) = oneletterSplit (x:xs)
-                            (ys1,ys2) = oneletterSplit (y:ys)
-
-commonMultiSet :: [RE] -> [RE] -> Either ([RE],[RE],[RE]) ([RE],[RE])
-commonMultiSet [] xs = Right ([],xs)
-commonMultiSet xs [] = Right (xs,[])
-commonMultiSet (x:xs) (y:ys) =
-    case compare x y of
-        LT -> leftAdd x $ commonMultiSet xs (y:ys)
-        GT -> rightAdd y $ commonMultiSet (x:xs) ys
-        EQ -> addElem x $ commonMultiSet xs ys
-
-oneletterSplit :: [RE] -> ([RE],[RE])
-oneletterSplit [] = ([],[])
-oneletterSplit (x:xs) | singletonAlpha a
-                      = (x:ys,zs)
-                      | otherwise
-                      = ([],x:xs)
-                        where
-                        a = alpha x
-                        (ys,zs) = span ((==a).alpha) xs
-
-addElem, leftAdd, rightAdd :: RE -> -> Either ([RE],[RE],[RE]) ([RE],[RE]) -> Either ([RE],[RE],[RE]) ([RE],[RE])
-addElem x (Left(cs,ls,rs)) = Left(x:cs,ls,rs)
-addElem x (Right(ls,rs))   = Left([x],ls,rs)
-
-leftAdd x ((Left(cs,ls,rs)) = Left(cs,x:ls,rs)
-leftAdd x (Right(ls,rs))    = Right(x:ls,rs) 
-
-rightAdd x ((Left(cs,ls,rs)) = Left(cs,ls,x:rs)
-rightAdd x (Right(ls,rs))    = Right(ls,x:rs) 
--}
-
 firstDiff :: Ord a => Int -> [a] -> [a] -> (Int,Bool)
 firstDiff k [] xs = (k,True)
 firstDiff k xs [] = (k,True)
@@ -203,44 +102,6 @@ firstDiff k (x:xs) (y:ys) =
         EQ -> firstDiff(k+1) xs ys
         bb -> (k,bb==LT)
         
-
-
-
--- maps shallow-mirrored REs into other shallow-mirrored ones
--- so cat-lists moving away from the root need to be reversed
-{- no longer used, was buggy
-backfusion :: Fusion RE
-backfusion (Cat ix (x:xs)) (Cat iy (y:ys)) =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left (mkCat [x, mkAlt [mkCatFrom (gr ix)(reverse xs), mkCatFrom (gr iy) (reverse ys)] ])
-        GT -> Right False
-backfusion x (Cat iy (y:ys)) =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left (mkCat [ x, Opt(mkCatFrom (gr iy)(reverse ys))])
-        GT -> Right False 
-backfusion (Cat ix (x:ys)) y =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left (mkCat [ x, Opt(mkCatFrom (gr ix) (reverse ys))])
-        GT -> Right False
-backfusion x y =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left x
-        GT -> Right False
--}
-
-{-
-extractCompare :: Eq a => Fusion a -> (a->a->Ordering)
-extractCompare fuse x y =
-    case fuse x y of
-        Left _ -> if x==y then EQ else LT -- or GT, should not matter as they fuse
-        Right True -> LT
-        Right False -> GT
--}
-    
 fuseSort :: Fusion a -> [a] -> [a]
 fuseSort fuseop xs = foldMerge (mergeFuse fuseop) [] $ fuseChains fuseop xs
 
@@ -265,35 +126,6 @@ rightfuse :: [RE] -> OK [RE]
 rightfuse xs = mkOK rf (length xs > length rf)
               where
               rf = fuseSort rightOrderedFusion xs
-
-{-
-OBSOLETE
--- notice that info field really applies to the fully-mirrored RE
--- however, size, swp, ewp, alphabet remain unchanged anyway
--- gradings are preserved, because graded REs will be mirrored back anyway
-shallowMirror :: FuseRE -> RE
-shallowMirror (Cat i xs) =  Cat ni rxs
-                            where
-                            rxs = reverse xs
-                            ni  = i{fi=la i, la=fi i}
-                            --ni = if null (gr i) then i{fi=firCat rxs} else i
-shallowMirror r          =  r
--}
-
--- fusion compatible with standard order on REs only
-{- NOT USED!
-basicfusion :: Fusion RE
-basicfusion (Cat _ (x:xs)) (Cat _ (y:ys)) =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left (mkCat [ x, mkAlt [mkCat xs, mkCat ys] ])
-        GT -> Right False
-basicfusion x y =
-    case compare x y of
-        LT -> Right True
-        EQ -> Left x
-        GT -> Right False
--}
 
 altFuseList :: Cxt -> Info -> [FuseRE] -> OK [RE]
 altFuseList c i xs = guardApply (ew i && c==RepCxt) whiteList xs `orOK`
@@ -335,14 +167,6 @@ catFuseList RepCxt i xs  |  ew i
                          =  changed [ kataAlt (map Sym (enumerateSet $ sw i)) ]
                             --where sw=allswpsCat xs
 catFuseList _ i xs       =  fuseListProcess False [] xs
-{- the stuff below is not wrong, but creates issues with the termination of compRE
-   SMK 170719
-catFuseList _ i xs       |  singletonAlpha(al i) --to avoid bubblesorting the lot
-                         =  fuseListProcess (xs/=nxs) [] nxs
-                         |  otherwise
-                         =  fuseListProcess False [] xs
-                            where nxs=sort xs
--}
 
 -- left argument: list of already processed elements, in reverse order
 -- right argument: unprocessed, but all cat-elements
@@ -366,15 +190,6 @@ fuseListProcess changed (Opt x:xs) (Rep y:ys)
 fuseListProcess changed (Opt x:xs) (y:ys)
                           |  x == y
                           =  fuseListProcess True xs (y:Opt x:ys)
-{- sorting for single-letter alpha taken out, because it interfere with compRE
-   SMK 17072019
-fuseListProcess changed (x:xs) (y:ys)
-                          -- new 05092018, ordering when single-letter alphabet
-                          |  alpha y == a && singletonAlpha a && x>y -- singleton alphabet segment acts as multiset, so we (bubble-)sort
-                          =  fuseListProcess True xs (y:x:ys)
-                             where
-                             a = alpha x
--}                
 fuseListProcess changed xs (y:ys) =  fuseListProcess changed (y:xs) ys
 
 -- input: KataRE that occurs as list element in either Cats or Alts in a RepCxt in trafos
@@ -399,36 +214,7 @@ whiteListL (x:xs) ys = whiteListS x $ whiteListL xs ys
 whiteList :: [KataRE] -> [KataRE]
 whiteList xs = whiteListL xs []
 
--------------------------- Normalisation ----------------------------------------------------------------------------
-
-
-{-
--- predicates for normal expressions
-normP :: RecPred
-normP = standardP { altP=ap, catP=cp, repP=rp, optP=op }
-        where
-        ap pa b xs  =  altP standardP pa b xs &&
-                       not (any (\x -> isEmp x || isLam x || isOpt x) xs) && 
-                       not (or $ linkWith (==) xs)
-        cp pa b xs  =  catP standardP pa b xs &&
-                       not (any (\x -> isEmp x || isLam x) xs) && 
-                       not (or $ linkWith normFusable xs)
-        rp x        =  not (ewp x) && normRepBody x
-        op x        =  not (ewp x) && not (isEmp x)
-
-normRepBody Emp           =  False
-normRepBody x@(Alt _ xs)  =  all isSym xs || (any (\c-> not (swp c x)) (alpha x) && all normRepBody xs)
-normRepBody x@(Cat _ xs)  =  any (\c -> not (swp c x)) (alpha x)
-normRepBody _             =  True
-
-
-
-normFusable :: RE -> RE -> Bool
-normFusable (Rep x) (Rep y)  =  x==y
-normFusable (Rep x) (Opt y)  =  x==y
-normFusable (Opt x) (Rep y)  =  x==y
-normFusable _       _        =  False
--}
+-------------------------- Normalisation --------------------------
 
 -- choice between two SSNFs in RootCxt, uncertified
 normBinAlt :: FuseRE -> FuseRE -> FuseRE
@@ -475,15 +261,6 @@ normAppend xs ys  =  na (reverse xs) ys
 -- X** --> X*
 -- (...+X*+...)* --> (...+X+...)*
 -- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
-
--- normRep :: FuseRE -> FuseRE
-{-
-normRep Emp = Lam
-normRep Lam = Lam
-normRep (Rep x) = Rep x
-normRep (Opt x) = Rep x
-normRep x = Rep $ white x
--}
 
 -- this is the 'white' operator of Gruber-Gulan SSNF
 white :: FuseRE -> FuseRE
@@ -594,7 +371,4 @@ factorAlphaCat alp (x:xs) | alpha x/=alp
                           | otherwise
                           = (x,xs) : [ (y,x:zs) | (y,zs)<- factorAlphaCat alp xs ]
 factorAlphaCat alp []     = []
-
-                              
-                              
 

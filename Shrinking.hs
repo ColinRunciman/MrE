@@ -1,11 +1,12 @@
-module Shrinking where
+module Shrinking (
+  ShrunkRE,
+  shrink, shrinkP, shrinkKP, shrinkCxt, shrinkRep, shrinkAltList, shrinkCatList,
+  isShrunk) where
 
 import List (itemRest, segPreSuf, splits, powerSplits)
 import Expression
 import Comparison
 import Fuse
--- import Pressing
--- import Refactorization
 import StarPromotion
 import Context
 import Info
@@ -44,7 +45,6 @@ shrinkDepth, coShrinkDepth :: Int
 shrinkDepth    =  100
 coShrinkDepth  =  100
 
-
 -- Shrinking is a generate-and-test method.  It lazily generates
 -- variants of x with something missed out, but in a way that
 -- ensures L(x') <= L(x) (or vice versa: co-shrinking).  It tests such x' to see if in fact
@@ -56,7 +56,6 @@ isShrunk :: RE -> Bool
 isShrunk = checkWith shrinkP
 
 shrinkEX :: Extension
--- shrinkEX = mkExtension shrinkAltList shrinkCatList refactKP Shrunk
 shrinkEX = mkExtension shrinkAltList shrinkCatList promoteKP Shrunk
 
 shrinkK :: Katahom
@@ -89,9 +88,6 @@ globalShrinkCxt c (Cat i xs) = ifchanged(shrinkCatList c i xs) (changed . fuseCa
 globalShrinkCxt c (Rep x)    = ifchanged(globalShrinkCxt RepCxt x) (changed . fuseRep) (unchanged . Rep)
 globalShrinkCxt c (Opt x)    = ifchanged(globalShrinkCxt OptCxt x) (changed . fuseOpt) (unchanged . Opt)
 globalShrinkCxt c x          = unchanged x
-
-
-
 
 -- end of boilerplate section
 
@@ -133,14 +129,6 @@ coShrunkenCatList d xs  =  [ xs'
                              (y,suf') <- lMostCom' $ mkCat suf,
                              xs' <- [ pre' ++ [xy'] ++ suf'
                                     | xy' <- coShrunkenCat2Seg [x,y] ]]
-
-{- TO DO: catlists inside opts, special co-shrinking
-coShrunkenOptCatList :: [FuseRE] -> [[FuseRE]]
-coShrunkenOptCatList xs = [ xs'
-                          | (as,bs) <- allSplits xs, all ewp as,
-                            (cs,ds) <- allSplits bs, all ewp ds,
-                            not (null as && null ds),
--}
 
 -- TO DO: could generalise the XX* case for plural segment X
 -- TO DO: use prefixCom instead of take/drop
@@ -227,149 +215,24 @@ coShrunkenRepBody d x@(Cat _ _) =
                          coShrunken d x
 coShrunkenRepBody d _           =  [] -- cannot coshrink symbols
 
-{- OUT OF USE FOR NOW
-
-coShrunkenOpt d (Alt _ xs) = [ refactAlt xs' | xs' <- coShrunkenOptAltList xs]
-coShrunkenOpt d (Cat _ xs) = [ refactCat xs' | xs' <- coShrunkenOptCatList xs]
-coShrunkenOpt d x          = []
-
-coShrunkenOptAltList xs =  [ (nz:zs')
-                           | (ys,zs) <- powerSplits xs, (z,zs')<-itemRest zs,
-                             nz <-  [ mkCat[Opt zt,Opt(mkCat tl)] | (Opt zt,tl)<-lMostCom' z, zt===fuseAlt ys]
-                                 ++ [ mkCat[Opt(mkCat lt),Opt zt] | (lt,Opt zt)<- rMostCom' z, zt===fuseAlt ys]
-                           ]
-
-coShrunkenOptCatList xs =  [ xs1++[x2] | not(null xs1), x2<-coShrunken(Opt $ mkCat xs2)] ++
-                           [ y1:ys2    | null xs1, not(null ys2), y1<-coShrunken(Opt $mkCat ys1)]
-                           where
-                           (xs1,xs2) = span ewp xs
-                           (ys1,ys2) = span (not . ewp) xs
--}
-
 unOptRep :: RE -> [RE]
 unOptRep (Rep x) = [x]
 unOptRep (Opt x) = [x]
 unOptRep _       = []
-
-                                                                                                 
-
-{- Potential coshrinking rule for Rep bodies:
--- replace one cat by an alt, and coshrink, underneath a Rep
--- new rule SMK  7/9/2015
-coShrunkenRepBody c@(Cat _ xs) = coShrunken c ++
-                                 [ refactAlt as | (ys,zs)<- splits xs,
-                                                let y=mkCat ys, let z=mkCat zs,
-                                                as<-[[y,z'] | z'<-coShrunkenRepAlternative z] ++
-                                                    [[y',z] | y'<-coShrunkenRepAlternative y]]
-coShrunkenRepBody x = coShrunken x
-
-coShrunkenRepAlternative x | ewp x = [ refactAlt (whiteAltList x) ]
-coShrunkenRepAlternative x = coShrunken x
--}
-
-{-
-
-shrink  =  homTrans shrinkH
-
-shrinkH =  HomTrans {falt=shrinkAlt, fcat=shrinkCat, frep=shrinkRep, fopt=shrinkOpt}
-
--- NAME no longer accurate : REFACTORIZATION
-shrinkFactorized :: RE -> ShrunkRE
-shrinkFactorized Emp = Emp
-shrinkFactorized Lam = Lam
-shrinkFactorized (Sym c) = Sym c
-shrinkFactorized a@(Alt _ _) = shrinkFactorizedAlt a
-shrinkFactorized c@(Cat _ _) = shrinkFactorizedCat c
-shrinkFactorized r@(Rep _)   = shrinkFactorizedRep r
-shrinkFactorized o@(Opt _)   = shrinkFactorizedOpt o
-
-shrinkAlt :: [ShrunkRE] -> ShrunkRE
-shrinkAlt xs = shrinkFactorized(refactAlt xs)
--}
-
+                                                                                                
 shrinkAltList :: RewRule
 shrinkAltList c i xs =
       list2OK xs $  [ ys' | ys' <- shrunkenAltList shrinkDepth xs, x `sublang` la (fuseAlt ys') ]
                  ++ [ ys' | ys' <- coShrunkenAltList coShrinkDepth xs, fuseAlt ys' `sublang` lang ]
-                 -- ++ [ ys' | c>=OptCxt, ys' <- coShrunkenOptAltList xs, fuseAlt ys' `sublang` lang ]
-                 -- extra power but at significant extra cost?
       where x    = Alt i xs
             la   = contextFunction c
             lang = la x
-
-{-
-shrinkFactorizedAlt y  
-              |  not (null yss')
-              =  shrinkAlt $ head yss'              
-              |  otherwise 
-              =  y           
-  where
-  Alt _ ys    =  y
-  yss'        =  [ys' | ys' <- shrunkenAltList ys,
-                        y `sublang` fuseAlt ys' ] ++
-                 [ys' | ys' <- coShrunkenAltList ys,
-                        fuseAlt ys' `sublang` y]
--}
-
-{-                    
-shrinkCat :: [ShrunkRE] -> ShrunkRE
-shrinkCat xs = shrinkFactorized(refactCat xs)
--}
 
 shrinkCatList :: RewRule
 shrinkCatList c i xs =
       list2OK xs $  [ ys' | ys' <- shrunkenCatList shrinkDepth xs, x `sublang` la(fuseCat ys') ]
                  ++ [ ys' | ys' <- coShrunkenCatList coShrinkDepth xs, fuseCat ys' `sublang` lang ]
-                 -- ++ [ ys' | c>=OptCxt, ys'<-coShrunkenOptCatList xs, fuseCat ys' `sublang` lang]
-                 -- extra power but at significant extra cost?
       where x    = Cat i xs
             la   = contextFunction c
             lang = la x
-
-{-
-shrinkFactorizedCat y 
-              |  not (null yss')
-              =  shrinkCat $ head yss'              
-              |  otherwise 
-              =  y           
-  where
-  Cat _ ys    =  y
-  yss'        =  [ys' | ys' <- shrunkenCatList ys,
-                        y `sublang` fuseCat ys' ] ++
-                 [ys' | ys' <- coShrunkenCatList ys,
-                        fuseCat ys' `sublang` y ] 
--}
-
-{-
-shrinkRep :: ShrunkRE -> ShrunkRE
-shrinkRep x = shrinkFactorized(reFuseREp x)
-
-shrinkFactorizedRep y
-              |  not (null ys')
-              =  shrinkRep $ head ys'
-              |  otherwise 
-              =  y           
-  where
-  ys'         =  [y' | y' <- shrunken(unRep y), y `sublang` normRep y' ] ++
-                 [y' | y' <- coShrunken(unRep y), normRep y' `sublang` y ] --or: coShrunkenRepBody SMK
-
-shrinkOpt :: ShrunkRE -> ShrunkRE
-shrinkOpt x = shrinkFactorized(refactOpt x)
--}
--- added cands: if x? shrinks to y, then (x+z)? shrinks to y+z (SMK 5/9/2015)
-{-
-shrinkFactorizedOpt y  
-              |  not (null ys')
-              =  shrinkOpt $ head ys'
-              |  isAlt(unOpt y) && not(null cands)
-              =  shrinkAlt $ head cands
-              |  otherwise 
-              =  y           
-  where
-  ys'         =  [y' | y' <- shrunken(unOpt y), y `sublang` normOpt y' ] ++
-                 [y' | y' <- coShrunken(unOpt y), normOpt y' `sublang` y ]
-  cands       =  [ z':zs | (z,zs)<-itemRest (unAlt(unOpt y)),
-                               let z'=shrinkOpt z, not (isOpt z') ]
--}
-
 

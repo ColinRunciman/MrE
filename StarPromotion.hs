@@ -1,4 +1,6 @@
-module StarPromotion where
+module StarPromotion (
+  promote, promoteP, promoteKP, isPromoted,
+  promoteAlt, promoteCat, promoteOpt, promoteRep, promoteCxt ) where
 
 import Expression
 import Fuse
@@ -8,7 +10,6 @@ import List
 import Data.List (partition)
 import Data.Bits
 import Alphabet
-
 
 promoteExtension :: Extension
 promoteExtension = mkExtension altPromotion catPromotion fuseKP Promoted
@@ -49,7 +50,6 @@ innerPrune b xs =
                                             let pp=knubedList swx pre, let ss=debunkList swx suf,
                                             hasChanged pp || hasChanged ss]
                                     
-
 altStarPrune RepCxt i xs | not (ew i) && not (isEmptySet swx)
                          = list2OK xs [ catSegment x xs':ys | (x@(Cat _ xs),ys) <-itemRest xs,
                                         xs' <- [ valOf xs1 | let xs1=debunkList swx xs, hasChanged xs1 ]
@@ -104,15 +104,12 @@ demote css (Rep y) | isCharSet y
                      ys=charSet (alpha y)
 demote css x       = any (subsetS (charSet(alpha x))) css
 
-
-
 altCharSubsumption :: Info -> [RE] -> OK [RE]
 altCharSubsumption i xs = list2OK xs [ filter (goodElem cs) xs | not(isEmptySet(sw i)), let cs=droppableAltSymbols xs,
                                           not(isEmptySet cs) ]
                           where
                           goodElem chset (Sym c) = not $ elemSet c chset
                           goodElem chset _       = True
--- list2OK xs [ ys | (Sym a,ys) <- itemRest xs, any (swcheck a) ys]
 
 droppableAltSymbols :: [RE] -> CharSet
 droppableAltSymbols xs = dralsy xs emptySet emptySet
@@ -134,7 +131,6 @@ catSigmaStarPromotion i xs | ew i && sw i==cs
                            | otherwise
                            = unchanged xs
                              where cs = charSet(al i)
-
 
 debunkList :: CharSet -> [RE] -> OK [RE]
 debunkList al1 []      = unchanged []
@@ -185,7 +181,6 @@ knubedList al1 xs | isLam ny
                     al3 = charSet $ alpha ny
                     (ny,b) = knubedRE al1 y
 
-
 knubedRECxt :: Bool -> CharSet -> RE -> OK RE
 knubedRECxt c al1 re | (c||ewp re) && subsetS (charSet (alpha re)) al1
                      = changed Lam
@@ -196,7 +191,6 @@ knubedRECxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subsetS(alpha r) al1
                               = changed $ Rep (kataAlt [r,catSegment c ys])
 knubedRECxt _ _   e           = unchanged e
 
-
 knubedRE :: CharSet -> RE -> OK RE
 knubedRE al1 re | ewp re && subsetS (charSet (alpha re)) al1
                 = changed Lam
@@ -205,8 +199,4 @@ knubedRE al1 (Cat _ res) = okmap mkCat $ knubedList al1 res
 knubedRE al1 o@(Opt (Alt _ res)) = okmap mkAlt (katalift (knubedRE al1 . Opt) res) `orOK` unchanged o
 knubedRE al1 (Opt re)    = okmap Opt   $ knubedRE al1 re
 knubedRE _   e           = unchanged e
-
-
-  
-    
 
