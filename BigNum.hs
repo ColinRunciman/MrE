@@ -1,4 +1,5 @@
-module BigNum where
+module BigNum (BigNum, bigNumToDouble) where
+
 import Data.Ratio (numerator, denominator, (%))
 import Data.Monoid (mappend)
 
@@ -111,16 +112,8 @@ compareBigNum bn1 bn2 =
     expocompare k n True  = compare k n
     expocompare k n False = compare n k
 
-
-{-
- - mappend on Ordering is predefined, but ...
- - mappend EQ x = x
- - mappend x  _ = x
- - -}
-
 instance Ord BigNum where
     compare = compareBigNum
-
 
 instance Real BigNum where
     toRational = bigNumToRat

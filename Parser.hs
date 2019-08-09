@@ -1,4 +1,5 @@
-module Parser where
+module Parser (readFullExp, synAlt, synCat) where
+
 import Data.Char
 import Info
 import Expression
@@ -107,6 +108,4 @@ attrRep x       = Rep x
 
 readAttributedRE :: String -> RE
 readAttributedRE = attribute . readFullExp 
-
-
 

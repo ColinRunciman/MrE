@@ -1,7 +1,9 @@
-module PreOrderTrees where
+module PreOrderTrees
+  (RB, buildTree, addUniqTree, pruneTree, lookupPT, classReps, groupOrder) where
 
 import List (plural)
 import qualified Data.Map.Strict as M
+
 -- red-black trees over a linear pre-order
 -- labels are non-empty lists
 data Color = R | B deriving (Read,Show)
@@ -125,8 +127,7 @@ buildQuotientMap rel pick xs = quotMap pick $ groupOrder rel xs
 buildQuotientAL :: Ord a => (a->a->Ordering) -> ([a]->a) -> [a] -> [(a,a)]
 buildQuotientAL rel pick xs = quotAssocList pick $ groupOrder rel xs
 
-{- balance: first equation is new,
-   to make it work with a weaker invariant -}
+-- balance: first equation is new, to make it work with a weaker invariant
 balance :: RB a -> [a] -> RB a -> RB a
 balance (T R a x b) y (T R c z d) = T R (T B a x b) y (T B c z d)
 balance (T R (T R a x b) y c) z d = T R (T B a x b) y (T B c z d)

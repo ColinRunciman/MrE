@@ -1,4 +1,5 @@
 module RegexpCount where
+
 import BigNum
 import Data.Ratio
 import Test.QuickCheck
@@ -29,23 +30,6 @@ sizeAt :: Int -> Int -> PopNumber
 sizeAt sz n = prefixSizes sz !! n !! 0
 
 
-
-{-
--- creating a prefix for alphabet size alpha of length size with k
--- what is prob that last symbol has arity 'ar'
-probability :: Int -> Int -> Int -> Int -> Double
-probability alpha size k ar = prob (prefixSizes alpha!!size) k ar
-
-prob :: [Integer] -> Int -> Int -> Double
-prob pcounts 0 ar = if ar==0 then 1 else 0  
-prob pcounts 1 2  = 0
-prob pcounts 1 1  = divide n1 (n1+n2)
-                    where n1=2*(pcounts!!1)
-                          n2=kn*(pcounts!!2)
-prob pcounts k ar
-prob pcounts k ar
-prob pcounts k ar
--}
 
 
 divideBN :: BigNum -> BigNum -> Double

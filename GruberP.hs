@@ -1,4 +1,4 @@
-module GruberP where
+module GruberP (ggTrans, gSize, linearTrans) where
 
 import Expression
 import Parser
@@ -11,8 +11,6 @@ ggTrans (Cat i [x,y]) = synCat   (ggTrans x) (ggTrans y)
 ggTrans (Opt r)    = gOpt $ ggTrans r
 ggTrans (Rep r)    = gRep $ ggRepTrans r
 ggTrans x          = x
-
-
 
 ggRepTrans Lam             = Emp
 ggRepTrans a@(Alt i [x,y]) = synAlt (ggRepTrans x)(ggRepTrans y)
@@ -54,11 +52,4 @@ gSizeAcc n (Opt x)    = gSizeAcc (n+1) x
 lSize :: Int -> [RE] -> Int
 lSize n [] = n-1
 lSize n (x:xs) = lSize (gSizeAcc (n+1) x) xs
-
-
-
-
-
-
-
 

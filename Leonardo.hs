@@ -1,4 +1,4 @@
-module Leonardo where
+module Leonardo (Leonardo) where
 
 data Leonardo a = Cons !Int !Int (Tree a) (Leonardo a) | Nil deriving Show
 data Tree a = Bin a (Tree a) (Tree a) | Empty deriving Show
@@ -65,14 +65,6 @@ lastT Empty = error "illegal Leonardo structure"
 lastT (Bin x Empty Empty) = x
 lastT (Bin _ _ u)         = lastT u
 
-{-
-uncons :: Leonardo a -> Maybe(a,Leonardo a)
-uncons Nil = Nothing
-uncons (Cons _ _ (Bin x Empty Empty) Nil) = Just(x,Nil)
-uncons (Cons m n (Bin x (Bin y t1 t2) t3) le) =
-    Just(x,Cons (prev m n) m (Bin y t1 t2)......
--}
-
 tsrif :: Leonardo a -> a
 tsrif Nil = error "tsrif of empty list"
 tsrif (Cons _ _ t Nil) = tsrifT t
@@ -103,19 +95,3 @@ instance Functor Tree where
 listify :: Leonardo a -> [a]
 listify Nil = []
 listify lxs = headL lxs : listify (tailL lxs)
-
-{-
-instance Applicative Leonardo where
-    pure x = cons x Nil
-    x <*> y =
-        case (uncons x,uncons y) of
-             (Nothing,_) -> Nil
-             (_,Nothing) -> Nil
-             (Just(fx,x'),Just(ya,a')) -> cons (fx ya)(x' <*> a')
-    Nil <*> _ = Nil
-    _ <*> Nil = Nil
-    x <*> y   = cons (fx ya) (x' <*> y')
-                where
-                (fx,x') = uncons x
-                (ya,a') = uncons y
--}

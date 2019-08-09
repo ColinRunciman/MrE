@@ -1,4 +1,5 @@
-module UnionFindRE where
+module UnionFindRE (UFRE, emptyUF, rootUF, unionTest) where
+
 import Expression
 import Fuse
 import qualified Data.Map.Strict as Map
@@ -52,19 +53,6 @@ fixUF uf = Map.fromList al2 where
     simpl (Opt x)    = Opt (f x)
     simpl y          = y
 
-
-
-
-{- has been downgraded to pickMin, for efficiency
--- upper produces an RE that is an upper bound for both
--- inputs, and equal to both if the languages coincide
-upper :: RE -> RE -> RE
---upper (Rep x) (Rep y) = normRep (upper x y)
---upper (Rep x) y       = normRep (upper x y)
---upper x       (Rep y) = normRep (upper x y)
-upper x       y       = normBinAlt x y
--}
-
 -- actually a commutative monoid, with emptyUF as mempty
 mergeUF :: UFRE -> UFRE -> UFRE
 mergeUF m1 m2  |  Map.size m1 <= Map.size m2
@@ -74,8 +62,4 @@ mergeUF m1 m2  |  Map.size m1 <= Map.size m2
 
 addToUF :: UFRE -> UFRE -> UFRE
 addToUF m1 m2  = Map.foldrWithKey unionUF m2 m1
-
-
-
-
 
