@@ -96,12 +96,12 @@ shrunkenCatList :: Int -> [FuseRE] -> [[FuseRE]] -- the Cxt might be used
 shrunkenCatList d xs  =  [ xs'
                          | (as,[x],bs) <- segPreSuf 1 xs,
                            xs' <- [as++bs | ewp x] ++
-                                  [as++[unOpt x]++bs | isOpt x] ++ -- these two cases were part of shrinkRep/shrinkOpt
-                                  [as++[unRep x]++bs | isRep x] ++ -- but had to be moved because of new regime
+                                  [as++[unOpt x]++bs | isOpt x] ++
+                                  [as++[unRep x]++bs | isRep x] ++
                                   [ as ++ [x'] ++ bs
                                   | x' <- shrunken (d-1) x] ] ++
                          [ xs'
-                         | (pre,suf) <- splits xs,  -- TO DO: not allSplits?
+                         | (pre,suf) <- splits xs,
                            (pre',x) <- rMostComList pre,
                            (y,suf') <- lMostComList suf,
                            xs' <- [ pre' ++ [xy'] ++ suf'
@@ -114,25 +114,19 @@ shrunkenCat2Seg [Rep x, Opt y]  =  [refactAlt $ [Rep x, y]]
 shrunkenCat2Seg [Opt x, Rep y]  =  [refactAlt $ [x, Rep y]]
 shrunkenCat2Seg _               =  []
 
--- TO DO: coshrink X(YX)* to (Y?X)*
--- more generally: if A sublang X* and B sublang X*, coshrink AB to X*
-
--- Cxt might be used eventually
 coShrunkenCatList :: Int -> [FuseRE] -> [[FuseRE]]
 coShrunkenCatList d xs  =  [ xs'
                            | (as,[x],bs) <- segPreSuf 1 xs,
                              xs' <- [ as ++ [x'] ++ bs
                                     | x' <- coShrunken (d-1) x] ] ++
                            [ xs'
-                           | (pre,suf) <- splits xs,  -- TO DO: not allSplits?
+                           | (pre,suf) <- splits xs,
                              (pre',x) <- rMostCom' $ mkCat pre,
                              (y,suf') <- lMostCom' $ mkCat suf,
                              xs' <- [ pre' ++ [xy'] ++ suf'
                                     | xy' <- coShrunkenCat2Seg [x,y] ]]
 
--- TO DO: generalise the XX* case for plural segment X
--- TO DO: use prefixCom instead of take/drop
--- SMK 18/9/2015 rules x(x*y)? -> x+x*y
+-- includes rules such as x(x*y)? -> x+x*y
 coShrunkenCat2Seg :: [FuseRE] -> [FuseRE]
 coShrunkenCat2Seg [Rep x, Rep y]  =  [refactRep $ refactAlt [x,y]]
 coShrunkenCat2Seg [Rep x, Opt(Cat _ ys) ] 
@@ -179,9 +173,8 @@ coShrunkenCat2Seg _               =  []
 shrunkenAltList :: Int -> [FuseRE] -> [[FuseRE]]
 shrunkenAltList d xs = [ xs'
                        | (x,etc) <- itemRest xs,
-                         xs' <- -- could be cheaper if sublang pressing?
-                              ([Lam | ewp x] ++ etc) : ([unRep x | isRep x] ++ etc) : -- unRep case has been added because of new regime
-                              [x' :etc | x' <- shrunken (d-1) x] ]
+                         xs' <-  ([Lam | ewp x] ++ etc) : ([unRep x | isRep x] ++ etc) :
+                                 [x' :etc | x' <- shrunken (d-1) x] ]
 
 coShrunkenAltList :: Int -> [FuseRE] -> [[FuseRE]]
 coShrunkenAltList d xs = [ xs'
@@ -200,20 +193,20 @@ coShrunken :: Int -> FuseRE -> [FuseRE]
 coShrunken 0 _           =  []
 coShrunken d (Alt _ xs)  =  [refactAlt xs' | xs' <- coShrunkenAltList d xs]
 coShrunken d (Cat _ xs)  =  [refactCat xs' | xs' <- coShrunkenCatList d xs]  
-coShrunken d (Opt x)     =  {- coShrunkenOpt x ++ -}  -- extra power but at significant extra cost?
-                            [refactOpt x'  | x'  <- coShrunken (d-1) x]
+coShrunken d (Opt x)     =  [refactOpt x'  | x'  <- coShrunken (d-1) x]
 coShrunken d (Rep x)     =  [refactRep x'  | x'  <- coShrunkenRepBody (d-1) x ]
 coShrunken d _           =  []
 
-coShrunkenRepBody 0 _           = []
-coShrunkenRepBody d (Alt _ xs)  = [ valOf $ refactCxt RepCxt (mkAlt xs')
-                                | (x,etc) <-itemRest xs,
-                                  xs' <- [x':etc | x' <- coShrunkenRepBody (d-1) x] ]                          
-coShrunkenRepBody d x@(Cat _ _) =
-                         [ refactAlt[b2',mkCat suf] | (b2,suf)<-lMostCom' x, b2'<-unOptRep b2] ++
-                         [ refactAlt[mkCat pre,b3'] | (pre,b3)<-rMostCom' x, b3'<-unOptRep b3] ++
-                         coShrunken d x
-coShrunkenRepBody d _           =  [] -- cannot coshrink symbols
+coShrunkenRepBody 0 _           =  []
+coShrunkenRepBody d (Alt _ xs)  =  [ valOf $ refactCxt RepCxt (mkAlt xs')
+                                   | (x,etc) <-itemRest xs,
+                                     xs' <- [x':etc | x' <- coShrunkenRepBody (d-1) x] ]                          
+coShrunkenRepBody d x@(Cat _ _) =  [ refactAlt[b2',mkCat suf]
+                                   | (b2,suf)<-lMostCom' x, b2'<-unOptRep b2] ++
+                                   [ refactAlt[mkCat pre,b3']
+                                   | (pre,b3)<-rMostCom' x, b3'<-unOptRep b3] ++
+                                   coShrunken d x
+coShrunkenRepBody d _           =  []
 
 unOptRep :: RE -> [RE]
 unOptRep (Rep x) = [x]

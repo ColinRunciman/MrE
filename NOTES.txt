@@ -1,0 +1,9 @@
+* In Context.katahom, the RootCxt code could be switched on, to permit trafos not
+  to do their own mirror.  But best to leave it until mirroring is memoized.
+-- TO DO: coshrink X(YX)* to (Y?X)*
+-- more generally: if A sublang X* and B sublang X*, coshrink AB to X*
+
+When coShrinking Cats there is scope to do more but
+the syntactic extraction could be much more expensive.  E.g.:
+-- TO DO: generalise the XX* case for plural segment X
+-- TO DO: use prefixCom instead of take/drop
