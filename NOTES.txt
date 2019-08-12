@@ -7,3 +7,12 @@ When coShrinking Cats there is scope to do more but
 the syntactic extraction could be much more expensive.  E.g.:
 -- TO DO: generalise the XX* case for plural segment X
 -- TO DO: use prefixCom instead of take/drop
+In Presssing.sumsumePreSuf (Cat alternatives in Rep bodies):
+-- TO DO: Is the use of splits instead of prefixCom here too restrictive?
+-- BUT: should this really be in shrinking instead?
+Concerning commuteAlternativeL and commuteAlternativeR in Pressing:
+-- TO DO: this is a patch; commutes should generally have a better sense of direction,
+-- determining where Cats are allowed to occur in a result
+Concerning symbolFactorTrafo in Pressing:
+-- TO DO: one could use groupOrder as a tool for a cleverer partition for large REs/alphabets,
+-- with either basicOrd or a dedicated linear preorder
