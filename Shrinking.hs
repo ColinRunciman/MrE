@@ -101,7 +101,7 @@ shrunkenCatList d xs  =  [ xs'
                                   [ as ++ [x'] ++ bs
                                   | x' <- shrunken (d-1) x] ] ++
                          [ xs'
-                         | (pre,suf) <- splits xs,
+                         | (pre,suf) <- splits xs,  -- TO DO: not allSplits?
                            (pre',x) <- rMostComList pre,
                            (y,suf') <- lMostComList suf,
                            xs' <- [ pre' ++ [xy'] ++ suf'
@@ -114,8 +114,7 @@ shrunkenCat2Seg [Rep x, Opt y]  =  [refactAlt $ [Rep x, y]]
 shrunkenCat2Seg [Opt x, Rep y]  =  [refactAlt $ [x, Rep y]]
 shrunkenCat2Seg _               =  []
 
--- TO DO:
--- coshrink X(YX)* to (Y?X)*
+-- TO DO: coshrink X(YX)* to (Y?X)*
 -- more generally: if A sublang X* and B sublang X*, coshrink AB to X*
 
 -- Cxt might be used eventually
@@ -125,13 +124,13 @@ coShrunkenCatList d xs  =  [ xs'
                              xs' <- [ as ++ [x'] ++ bs
                                     | x' <- coShrunken (d-1) x] ] ++
                            [ xs'
-                           | (pre,suf) <- splits xs,
+                           | (pre,suf) <- splits xs,  -- TO DO: not allSplits?
                              (pre',x) <- rMostCom' $ mkCat pre,
                              (y,suf') <- lMostCom' $ mkCat suf,
                              xs' <- [ pre' ++ [xy'] ++ suf'
                                     | xy' <- coShrunkenCat2Seg [x,y] ]]
 
--- TO DO: could generalise the XX* case for plural segment X
+-- TO DO: generalise the XX* case for plural segment X
 -- TO DO: use prefixCom instead of take/drop
 -- SMK 18/9/2015 rules x(x*y)? -> x+x*y
 coShrunkenCat2Seg :: [FuseRE] -> [FuseRE]
@@ -223,16 +222,20 @@ unOptRep _       = []
                                                                                                 
 shrinkAltList :: RewRule
 shrinkAltList c i xs =
-      list2OK xs $  [ ys' | ys' <- shrunkenAltList shrinkDepth xs, x `sublang` la (fuseAlt ys') ]
-                 ++ [ ys' | ys' <- coShrunkenAltList coShrinkDepth xs, fuseAlt ys' `sublang` lang ]
+      list2OK xs $  [ ys' | ys' <- shrunkenAltList shrinkDepth xs,
+                            x `sublang` la (fuseAlt ys') ]
+                 ++ [ ys' | ys' <- coShrunkenAltList coShrinkDepth xs,
+                            fuseAlt ys' `sublang` lang ]
       where x    = Alt i xs
             la   = contextFunction c
             lang = la x
 
 shrinkCatList :: RewRule
 shrinkCatList c i xs =
-      list2OK xs $  [ ys' | ys' <- shrunkenCatList shrinkDepth xs, x `sublang` la(fuseCat ys') ]
-                 ++ [ ys' | ys' <- coShrunkenCatList coShrinkDepth xs, fuseCat ys' `sublang` lang ]
+      list2OK xs $  [ ys' | ys' <- shrunkenCatList shrinkDepth xs,
+                            x `sublang` la(fuseCat ys') ]
+                 ++ [ ys' | ys' <- coShrunkenCatList coShrinkDepth xs,
+                            fuseCat ys' `sublang` lang ]
       where x    = Cat i xs
             la   = contextFunction c
             lang = la x
