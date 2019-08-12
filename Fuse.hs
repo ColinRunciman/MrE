@@ -135,28 +135,50 @@ altFuseList c i xs = guardApply (ew i && c==RepCxt) whiteList xs `orOK`
                      singleLetterFuseLeft xs `orOK` singleLetterFuseRight xs
 
 
+-- assumption: in RepCxt this is not ewp,
+-- because altFuseList would get to break it up first
 altSigmaStar :: Cxt -> Info -> [RE] -> OK [RE]
 altSigmaStar c i xs |  c/=RepCxt || isEmptySet (sw i)
                     =  unchanged xs
-                    |  charSet(al i) == sw i
+                    |  al i == sw i
                     =  updateEQ xs (map Sym (enumerateSet $ sw i))
                     |  otherwise
-                    =  kataliftAlt (debunk (sw i)) xs
+                    =  kataliftAlt (alphaCrush (sw i)) xs
 
 -- if re is sublang of cs* replace it with cs', where cs' is its alphabet
 -- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
--- TO DO: Stefan will try strengthening to remove cs* from nullable prefixes/suffixes too
-debunk :: CharSet -> RE -> OK RE
-debunk cs (Sym c) =  unchanged (Sym c)
-debunk cs re      |  subsetS alset cs
-                  =  changed (mkAlt (map Sym allst))
-                  |  otherwise
-                  =  unchanged re
-                     where
-                     alset = alpha re
-                     allst = enumerateSet (swa re) -- was alset, swa re suffices 31072019
+alphaCrush :: Alphabet -> RE -> OK RE
+alphaCrush cs (Sym c) =  unchanged (Sym c)
+alphaCrush cs re      |  subsetS alset cs
+                      =  changed (mkAlt (map Sym allst))
+                      |  otherwise
+                      =  fixCrushRE cs re -- removes prefixes/suffixes
+                         where
+                         alset = alpha re
+                         allst = enumerateSet (swa re) 
 
--- TO DO: Stefan will try strengthening to remove sw* from nullable prefixes/suffixes;
+fixCrushRE :: Alphabet -> RE -> OK RE
+fixCrushRE cs re@(Cat i xs) =
+    list2OK re [ catSegment re (valOf yso) | let yso=fixCrush cs xs, hasChanged yso ]
+fixCrushRE cs re            = unchanged re
+
+fixCrush :: Alphabet -> [RE] -> OK [RE]
+fixCrush cs = suffixCrush cs `aft` prefixCrush cs
+
+prefixCrush, suffixCrush :: Alphabet -> [RE] -> OK [RE]
+prefixCrush cs (x:xs) |  ewp x && subsetS (alpha x) cs
+                      =  unsafeChanged $ prefixCrush cs xs
+                      |  otherwise
+                      =  unchanged (x:xs)
+prefixCrush cs []     =  unchanged [] -- should not occur
+
+suffixCrush cs xs     |  hasChanged rxs
+                      =  okmap reverse rxs
+                      |  otherwise 
+                      =  unchanged xs 
+                         where rxs = prefixCrush cs (reverse xs)
+
+
 -- also RepCxt can be promoted to suffixes (prefixes) if the complementary prefix (suffix)
 -- is nullable.  So if sw is non-trivial then:
 -- (i) remove optional suffixes/prefixes having sw as alphabet from sequence
@@ -164,8 +186,13 @@ debunk cs re      |  subsetS alset cs
 catFuseList :: Cxt -> Info -> [FuseRE] -> OK [KataRE]
 catFuseList RepCxt i xs  |  ew i
                          =  changed [ kataAlt (whiteList xs) ]
-                         |  sw i==charSet(al i)
+                         |  sw i==al i
                          =  changed [ kataAlt (map Sym (enumerateSet $ sw i)) ]
+                         |  not (isEmptySet (sw i)) 
+                         =  fixCrush (sw i) xs
+                         |  otherwise
+                         =  unchanged xs
+                            where
 catFuseList _ i xs       =  fuseListProcess False [] xs
 
 -- left argument: list of already processed elements, in reverse order

@@ -2,7 +2,7 @@ module OK (
   OK(..),
   mkOK, changed, unchanged, unsafeChanged, ifchanged, potentialChange,
   orOK, list2OK, okmap, okmapIf, single, guardOK, guardApply, fixOK, app, updateEQ,
-  katalift, katalift1 ) where
+  katalift, katalift1, aft ) where
 
 -- computations of type a
 -- True tag: something noteworthy has happened
