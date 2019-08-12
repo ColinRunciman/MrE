@@ -45,7 +45,7 @@ populations: Reg allReg
 	./allReg
 	touch populations
 
-Reg: Leonardo.hs Reg.hs
+Reg: BigNum.hs RegexpCount.hs Reg.hs
 	ghc -O Reg
 
 semcatalogue: CreateSemCatalogue
