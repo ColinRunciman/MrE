@@ -13,15 +13,8 @@ import Context
 import Info
 
 -- EXPERIMENT:
--- (1) after fusion not after refactorization
+-- (1) after fusion
 -- (2) simple cat ends not *mostCom
-
-refactOpt  =  promoteOpt
-refactRep  =  promoteRep
-refactCat  =  promoteCat
-refactAlt  =  promoteAlt
-
-refactCxt  =  promoteCxt
 
 lMostCom' :: RE -> [(RE,[RE])]
 lMostCom' (Cat _ xs)  =  [(head xs, tail xs)]
@@ -108,10 +101,10 @@ shrunkenCatList d xs  =  [ xs'
                                   | xy' <- shrunkenCat2Seg [x,y] ]]
 
 shrunkenCat2Seg :: [FuseRE] -> [FuseRE]
-shrunkenCat2Seg [Opt x, Opt y]  =  [refactOpt $ refactCat [x,y],
-                                    refactOpt $ refactAlt [x,y]]
-shrunkenCat2Seg [Rep x, Opt y]  =  [refactAlt $ [Rep x, y]]
-shrunkenCat2Seg [Opt x, Rep y]  =  [refactAlt $ [x, Rep y]]
+shrunkenCat2Seg [Opt x, Opt y]  =  [promoteOpt $ promoteCat [x,y],
+                                    promoteOpt $ promoteAlt [x,y]]
+shrunkenCat2Seg [Rep x, Opt y]  =  [promoteAlt $ [Rep x, y]]
+shrunkenCat2Seg [Opt x, Rep y]  =  [promoteAlt $ [x, Rep y]]
 shrunkenCat2Seg _               =  []
 
 coShrunkenCatList :: Int -> [FuseRE] -> [[FuseRE]]
@@ -128,42 +121,42 @@ coShrunkenCatList d xs  =  [ xs'
 
 -- includes rules such as x(x*y)? -> x+x*y
 coShrunkenCat2Seg :: [FuseRE] -> [FuseRE]
-coShrunkenCat2Seg [Rep x, Rep y]  =  [refactRep $ refactAlt [x,y]]
+coShrunkenCat2Seg [Rep x, Rep y]  =  [promoteRep $ promoteAlt [x,y]]
 coShrunkenCat2Seg [Rep x, Opt(Cat _ ys) ] 
                                   |  head ys == x
-                                  =  [ refactCat[Rep x, refactOpt(mkCat(tail ys))] ] 
+                                  =  [ promoteCat[Rep x, promoteOpt(mkCat(tail ys))] ] 
                                   |  isCat x && take n ys == xs
-                                  =  [ refactCat[Rep x, refactOpt(mkCat(drop n ys))] ]
+                                  =  [ promoteCat[Rep x, promoteOpt(mkCat(drop n ys))] ]
                                      where
                                      Cat _ xs = x
                                      n = length(unCat x)
 coShrunkenCat2Seg [Opt(Cat _ ys), Rep x ] 
                                   |  last ys == x
-                                  =  [ refactCat[refactOpt(mkCat(init ys)), Rep x] ] 
+                                  =  [ promoteCat[promoteOpt(mkCat(init ys)), Rep x] ] 
                                   |  isCat x && drop m ys == xs
-                                  =  [ refactCat[refactOpt(mkCat(take m ys)), Rep x] ]
+                                  =  [ promoteCat[promoteOpt(mkCat(take m ys)), Rep x] ]
                                      where
                                      Cat _ xs = x
                                      n = length(unCat x)
                                      m = length ys - n
 coShrunkenCat2Seg [Alt _ xs, Rep y] 
                                   |  not (null candidates)
-                                  =  [ refactCat[refactAlt ca, Rep y] | ca<-candidates ]
+                                  =  [ promoteCat[promoteAlt ca, Rep y] | ca<-candidates ]
                                      where
                                      candidates = [mkCat(init zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==last zs]
 coShrunkenCat2Seg [Rep y, Alt _ xs] 
                                   |  not (null candidates)
-                                  =  [ refactCat[Rep y, refactAlt ca] | ca<-candidates ]
+                                  =  [ promoteCat[Rep y, promoteAlt ca] | ca<-candidates ]
                                      where
                                      candidates = [mkCat(tail zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==head zs]
 coShrunkenCat2Seg [Opt x,     y]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ refactAlt[y,Opt x] | (xs,Rep y')<-rMostCom' x, eqv y y']
+                                     candidates = [ promoteAlt[y,Opt x] | (xs,Rep y')<-rMostCom' x, eqv y y']
 coShrunkenCat2Seg [y,     Opt x]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ refactAlt[y,Opt x] | (Rep y',xs)<-lMostCom' x, eqv y y']
+                                     candidates = [ promoteAlt[y,Opt x] | (Rep y',xs)<-lMostCom' x, eqv y y']
 coShrunkenCat2Seg [Rep x,     y]  |  x == y
                                   =  [Rep x]
 coShrunkenCat2Seg [x    , Rep y]  |  y == x
@@ -183,27 +176,27 @@ coShrunkenAltList d xs = [ xs'
 
 shrunken :: Int -> FuseRE -> [FuseRE]
 shrunken 0 _           =  []
-shrunken d (Alt _ xs)  =  [refactAlt xs' | xs' <- shrunkenAltList d xs]
-shrunken d (Cat _ xs)  =  [refactCat xs' | xs' <- shrunkenCatList d xs]  
-shrunken d (Opt x)     =  x : [refactOpt x' | x'  <- shrunken (d-1) x ]
-shrunken d (Rep x)     =  x : [refactRep x' | x'  <- shrunken (d-1) x ]
+shrunken d (Alt _ xs)  =  [promoteAlt xs' | xs' <- shrunkenAltList d xs]
+shrunken d (Cat _ xs)  =  [promoteCat xs' | xs' <- shrunkenCatList d xs]  
+shrunken d (Opt x)     =  x : [promoteOpt x' | x'  <- shrunken (d-1) x ]
+shrunken d (Rep x)     =  x : [promoteRep x' | x'  <- shrunken (d-1) x ]
 shrunken d _           =  []
 
 coShrunken :: Int -> FuseRE -> [FuseRE]
 coShrunken 0 _           =  []
-coShrunken d (Alt _ xs)  =  [refactAlt xs' | xs' <- coShrunkenAltList d xs]
-coShrunken d (Cat _ xs)  =  [refactCat xs' | xs' <- coShrunkenCatList d xs]  
-coShrunken d (Opt x)     =  [refactOpt x'  | x'  <- coShrunken (d-1) x]
-coShrunken d (Rep x)     =  [refactRep x'  | x'  <- coShrunkenRepBody (d-1) x ]
+coShrunken d (Alt _ xs)  =  [promoteAlt xs' | xs' <- coShrunkenAltList d xs]
+coShrunken d (Cat _ xs)  =  [promoteCat xs' | xs' <- coShrunkenCatList d xs]  
+coShrunken d (Opt x)     =  [promoteOpt x'  | x'  <- coShrunken (d-1) x]
+coShrunken d (Rep x)     =  [promoteRep x'  | x'  <- coShrunkenRepBody (d-1) x ]
 coShrunken d _           =  []
 
 coShrunkenRepBody 0 _           =  []
-coShrunkenRepBody d (Alt _ xs)  =  [ valOf $ refactCxt RepCxt (mkAlt xs')
+coShrunkenRepBody d (Alt _ xs)  =  [ valOf $ promoteCxt RepCxt (mkAlt xs')
                                    | (x,etc) <-itemRest xs,
                                      xs' <- [x':etc | x' <- coShrunkenRepBody (d-1) x] ]                          
-coShrunkenRepBody d x@(Cat _ _) =  [ refactAlt[b2',mkCat suf]
+coShrunkenRepBody d x@(Cat _ _) =  [ promoteAlt[b2',mkCat suf]
                                    | (b2,suf)<-lMostCom' x, b2'<-unOptRep b2] ++
-                                   [ refactAlt[mkCat pre,b3']
+                                   [ promoteAlt[mkCat pre,b3']
                                    | (pre,b3)<-rMostCom' x, b3'<-unOptRep b3] ++
                                    coShrunken d x
 coShrunkenRepBody d _           =  []
