@@ -9,7 +9,6 @@ import Expression
 import Comparison
 import Generator
 import Fuse
---import TopologicalSearchTree
 import PreOrderTrees
 import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
@@ -55,9 +54,9 @@ minimalEquiv re  |  n >= length theForest || size re>maxREsizeINtree
                  |  otherwise
                  =  Just $ maybe (gradeMinimal re) (gradeMinimal.bwd) (M.lookup re' tree)
                     where
-                      n = sizeSet alphabet
+                      n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
-                      alphabet = charSet $ alpha re 
+                      alphabet = alpha re 
                       (re',ren) = deBruijnify re
                       bwd = rename [(x,y)|(y,x)<-ren]
 
@@ -95,9 +94,9 @@ writeMap :: String -> Int -> Catalogue -> IO()
 writeMap sigma n t = writeFile (mapFileName sigma n) $ show t                        
 
 poMap :: String -> Int -> Catalogue
-poMap sigma n = buildMap $ filter ((==al').charSet.alpha) $ concat $ take (n+1) $ promoteA sigma
+poMap sigma n = buildMap $ filter ((==al') . alpha) $ concat $ take (n+1) $ promoteA sigma
                 where
-                al' = fromList sigma
+                al' = string2Alpha sigma
 
 buildMap :: [RE] -> Catalogue
 buildMap xs = M.fromList $ qmap $ groupOrder compRE xs

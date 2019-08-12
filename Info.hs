@@ -1,5 +1,5 @@
 module Info (
-  Info(..), ExpInfo(..), CSet, Grade(..), Cxt(..), CGMap,
+  Info(..), ExpInfo(..), Grade(..), Cxt(..), CGMap,
   emptyInfo, lamInfo, charInfo, newInfo, newInfo5, extractInfo,
   nocxt, nullcxt, noCxtCG, noCxtCG2, outerCxt, ok, lookupCGMap, upgradeCGMap ) where
 
@@ -7,46 +7,39 @@ import Alphabet
 
 data Info = Info {gr :: CGMap, ew :: Bool, 
                   al :: Alphabet,
-                  fi,la,sw :: CharSet, si :: Int} deriving Show
+                  fi,la,sw :: Alphabet, si :: Int} deriving Show
 
-data ExpInfo = ExpInfo { graded::Grade, nullable::Bool, alphabet,firsts,lasts,singles :: CSet, expressionSize :: Int }
+data ExpInfo = ExpInfo { graded::Grade, nullable::Bool,
+                         alphabet,firsts,lasts,singles :: Alphabet, expressionSize :: Int }
                deriving Show
                  
-
-newtype CSet = CSet CharSet
-
-c0 :: CSet
-c0 = CSet emptySet
-
-instance Show CSet where show (CSet x) = showSet x
-
 emptyInfo, lamInfo :: ExpInfo
-emptyInfo = ExpInfo { graded = Minimal, nullable=False,alphabet=c0,firsts=c0,lasts=c0,singles=c0,expressionSize=0 }
+emptyInfo = ExpInfo {
+              graded = Minimal, nullable=False,
+              alphabet=emptyAlpha,firsts=emptyAlpha,lasts=emptyAlpha,singles=emptyAlpha,
+              expressionSize=0 }
 
 lamInfo   = emptyInfo { nullable=True }
 
 lamListInfo :: Info -- info of empty list in a cat, size is set to -1 so that x and [x] have the same size
-lamListInfo = Info { gr=[], ew=True, al=emptyAlphabet, fi=emptySet, la=emptySet, sw=emptySet, si= -1}
+lamListInfo = Info { gr=[], ew=True, al=emptyAlpha, fi=emptyAlpha, la=emptyAlpha, sw=emptyAlpha, si= -1}
 
 emptyListInfo :: Info -- info of empty list in an alt, size is set to -1 so that x and [x] have the same size
-emptyListInfo = Info { gr=[], ew=False, al=emptyAlphabet, fi=emptySet, la=emptySet, sw=emptySet, si= -1}
+emptyListInfo = Info { gr=[], ew=False, al=emptyAlpha, fi=emptyAlpha, la=emptyAlpha, sw=emptyAlpha, si= -1}
 
-
-release :: Bool -> CharSet -> CharSet
+release :: Bool -> Alphabet -> Alphabet
 release True s  = s
-release False _ = emptySet
+release False _ = emptyAlpha
 
 charInfo :: Char -> ExpInfo
 charInfo c = ExpInfo { graded=Minimal, nullable=False,alphabet=cs,firsts=cs,lasts=cs,singles=cs,expressionSize=1 }
-             where cs=CSet $ embed c
-
-
+             where cs=char2Alpha c
 
 extractInfo :: Cxt -> Info -> ExpInfo
 extractInfo c i =
     ExpInfo { graded = lookupCGMap c (gr i),
-              nullable=ew i, alphabet=CSet $ charSet(al i),
-              firsts = CSet $ fi i, lasts=CSet $ la i, singles=CSet $ sw i,
+              nullable=ew i, alphabet=al i,
+              firsts = fi i, lasts=la i, singles=sw i,
               expressionSize = si i }
 
 nocxt NoCxt i = i
@@ -66,13 +59,11 @@ noInfo = Info {gr = [], ew = error "undefined ew in info",
 newInfo :: Bool -> Info
 newInfo b = noInfo { ew = b }
 
-newInfo5 :: Bool -> CharSet -> CharSet -> Alphabet -> CharSet -> Info
+newInfo5 :: Bool -> Alphabet -> Alphabet -> Alphabet -> Alphabet -> Info
 newInfo5 b cs1 cs2 cs3 cs4 = noInfo { ew=b, fi=cs1, la=cs2, al=cs3, sw=cs4 }
 
-
--- We do not wish to distinguish info values under
--- comparison operations as we want them to be
--- neutral in RE comparisons.
+-- We do not wish to distinguish info values under comparison operations as
+-- we want them to be neutral in RE comparisons.
 
 instance Eq Info where
   _ == _  =  True

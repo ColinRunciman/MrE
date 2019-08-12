@@ -61,8 +61,8 @@ float :: Int -> Float
 float = fromInteger . toInteger
 
 isTotal :: RE -> Bool
-isTotal (Rep x) = swa x==(charSet (alpha x))
-isTotal _       = False
+isTotal (Rep x)  =  swa x == alpha x
+isTotal _        =  False
 
 countTotal :: [ITO] -> Int
 countTotal is = length $ (filter (isTotal . out)) is

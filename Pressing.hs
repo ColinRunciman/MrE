@@ -817,8 +817,8 @@ symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
                         =  unchanged xs
                        where
                        (ewxs,nonewxs) = partition ewp xs
-                       (plnonL,sglcL) = partition (pluralCS . fir) nonewxs
-                       (plnonR,sglcR) = partition (pluralCS . las) nonewxs
+                       (plnonL,sglcL) = partition (pluralAlpha . fir) nonewxs
+                       (plnonR,sglcR) = partition (pluralAlpha . las) nonewxs
                        leftCands = [ pressCat[Sym cx,nt] : (ys++plnonL++ewxs) |
                                      ([x,y],ys) <- subsetRest 2 sglcL,
                                      let lmx=lMostCom' x, let lmy=lMostCom' y, --because of backtracking

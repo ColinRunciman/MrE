@@ -138,10 +138,10 @@ altFuseList c i xs = guardApply (ew i && c==RepCxt) whiteList xs `orOK`
 -- assumption: in RepCxt this is not ewp,
 -- because altFuseList would get to break it up first
 altSigmaStar :: Cxt -> Info -> [RE] -> OK [RE]
-altSigmaStar c i xs |  c/=RepCxt || isEmptySet (sw i)
+altSigmaStar c i xs |  c/=RepCxt || isEmptyAlpha (sw i)
                     =  unchanged xs
                     |  al i == sw i
-                    =  updateEQ xs (map Sym (enumerateSet $ sw i))
+                    =  updateEQ xs (map Sym (alpha2String $ sw i))
                     |  otherwise
                     =  kataliftAlt (alphaCrush (sw i)) xs
 
@@ -149,13 +149,13 @@ altSigmaStar c i xs |  c/=RepCxt || isEmptySet (sw i)
 -- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
 alphaCrush :: Alphabet -> RE -> OK RE
 alphaCrush cs (Sym c) =  unchanged (Sym c)
-alphaCrush cs re      |  subsetS alset cs
+alphaCrush cs re      |  subAlpha alset cs
                       =  changed (mkAlt (map Sym allst))
                       |  otherwise
                       =  fixCrushRE cs re -- removes prefixes/suffixes
                          where
                          alset = alpha re
-                         allst = enumerateSet (swa re) 
+                         allst = alpha2String (swa re) 
 
 fixCrushRE :: Alphabet -> RE -> OK RE
 fixCrushRE cs re@(Cat i xs) =
@@ -166,7 +166,7 @@ fixCrush :: Alphabet -> [RE] -> OK [RE]
 fixCrush cs = suffixCrush cs `aft` prefixCrush cs
 
 prefixCrush, suffixCrush :: Alphabet -> [RE] -> OK [RE]
-prefixCrush cs (x:xs) |  ewp x && subsetS (alpha x) cs
+prefixCrush cs (x:xs) |  ewp x && subAlpha (alpha x) cs
                       =  unsafeChanged $ prefixCrush cs xs
                       |  otherwise
                       =  unchanged (x:xs)
@@ -187,8 +187,8 @@ catFuseList :: Cxt -> Info -> [FuseRE] -> OK [KataRE]
 catFuseList RepCxt i xs  |  ew i
                          =  changed [ kataAlt (whiteList xs) ]
                          |  sw i==al i
-                         =  changed [ kataAlt (map Sym (enumerateSet $ sw i)) ]
-                         |  not (isEmptySet (sw i)) 
+                         =  changed [ kataAlt (map Sym (alpha2String $ sw i)) ]
+                         |  not (isEmptyAlpha (sw i)) 
                          =  fixCrush (sw i) xs
                          |  otherwise
                          =  unchanged xs
@@ -203,7 +203,7 @@ fuseListProcess changed [] (x:xs) =  fuseListProcess changed [x] xs
 fuseListProcess changed (Rep x:xs) (Rep y:ys)
                           |  x == y
                           =  fuseListProcess True (Rep x:xs) ys
-                          |  a == alpha y && singletonAlpha a
+                          |  a == alpha y && singularAlpha a
                           =  fuseListProcess True xs (fuse(Rep(alt[x,y])):ys)
                              where
                              a = alpha x
@@ -337,7 +337,7 @@ singleLetterFuseRight xs = app (addSingleFuseR (last xs)) (singleLetterFuseRight
 
 -- the first RE is an alt-element, so it's not an Alt/Opt/Emp/Lam
 addSingleFuse :: RE -> [RE] -> OK [RE]
-addSingleFuse c@(Cat i xs) ys | not (singletonAlpha a)
+addSingleFuse c@(Cat i xs) ys | not (singularAlpha a)
                               = unchanged (c:ys)
                               | otherwise
                               = list2OK (c:ys) facts
@@ -346,7 +346,7 @@ addSingleFuse c@(Cat i xs) ys | not (singletonAlpha a)
                                 bs    = alphaSplit a ys -- to avoid recomputation on backtracking
                                 facts = [ kataCat [z,kataAlt[zr,zr']] : zs
                                         | (z,zr)<-factorAlpha a c, (z',zr',zs)<-bs, z==z']
-addSingleFuse e ys            | not (singletonAlpha a)
+addSingleFuse e ys            | not (singularAlpha a)
                               = unchanged (e:ys)
                               | otherwise
                               = list2OK (e:ys) [ kataCat [e,kataOpt zr'] : zs
@@ -355,7 +355,7 @@ addSingleFuse e ys            | not (singletonAlpha a)
 
 -- the first RE is an alt-element, so it's not an Alt/Opt/Emp/Lam
 addSingleFuseR :: RE -> [RE] -> OK [RE]
-addSingleFuseR c@(Cat i xs) ys | not (singletonAlpha a)
+addSingleFuseR c@(Cat i xs) ys | not (singularAlpha a)
                                = unchanged (c:ys)
                                | otherwise
                                = list2OK (c:ys) facts
@@ -364,7 +364,7 @@ addSingleFuseR c@(Cat i xs) ys | not (singletonAlpha a)
                                  bs    = alphaSplitR a ys -- to avoid recomputation on backtracking
                                  facts = [ kataCat [kataAlt[zr,zr'],z] : zs
                                          | (z,zr)<-factorAlphaR a c, (z',zr',zs)<-bs, z==z']
-addSingleFuseR e ys            | not (singletonAlpha a)
+addSingleFuseR e ys            | not (singularAlpha a)
                                = unchanged (e:ys)
                                | otherwise
                                = list2OK (e:ys) [ kataCat [kataOpt zr',e] : zs

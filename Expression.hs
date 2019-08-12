@@ -140,9 +140,9 @@ width = foldHom $ Hom { hemp =0, hlam = 0, hsym = const 1, halt = sum, hcat = su
 
 -- The alphabet of symbols occurring in an RE.
 alpha :: RE -> Alphabet
-alpha Emp        =  emptyAlphabet
-alpha Lam        =  emptyAlphabet
-alpha (Sym c)    =  embedAlphabet c
+alpha Emp        =  emptyAlpha
+alpha Lam        =  emptyAlpha
+alpha (Sym c)    =  char2Alpha c
 alpha x@(Alt i xs) = al i
 alpha x@(Cat i xs) = al i
 alpha (Rep x)    = alpha x
@@ -241,30 +241,30 @@ ewp (Rep _)    =  True
 ewp (Opt _)    =  True
 
 -- allswps replacement
-swa :: RE -> CharSet
-swa Emp       = emptySet
-swa Lam       = emptySet
-swa (Sym c)   = embed c
+swa :: RE -> Alphabet
+swa Emp       = emptyAlpha
+swa Lam       = emptyAlpha
+swa (Sym c)   = char2Alpha c
 swa (Alt i _) = sw i
 swa (Cat i _) = sw i
 swa (Rep x)   = swa x
 swa (Opt x)   = swa x
 
 -- the possible first characters of RE
-fir :: RE -> CharSet
-fir Emp       = emptySet
-fir Lam       = emptySet
-fir (Sym c)   = embed c
+fir :: RE -> Alphabet
+fir Emp       = emptyAlpha
+fir Lam       = emptyAlpha
+fir (Sym c)   = char2Alpha c
 fir (Alt i _) = fi i
 fir (Cat i _) = fi i
 fir (Rep x)   = fir x
 fir (Opt x)   = fir x
 
 -- the possible last characters of RE
-las :: RE -> CharSet
-las Emp       = emptySet
-las Lam       = emptySet
-las (Sym c)   = embed c
+las :: RE -> Alphabet
+las Emp       = emptyAlpha
+las Lam       = emptyAlpha
+las (Sym c)   = char2Alpha c
 las (Alt i _) = la i
 las (Cat i _) = la i
 las (Rep x)   = las x
@@ -309,23 +309,23 @@ swpCat c (x:xs)  =  if ewp x then swpCat c xs else swp c x && all ewp xs
 
 -- computes the character set for which this RE has swp property,
 -- needs only one RE traverse; useful for large alphabets
-allswps :: RE -> CharSet
-allswps Emp         =  emptySet
-allswps Lam         =  emptySet 
-allswps (Sym t)     =  embed t
-allswps (Alt _ xs)  =  unionS (map allswps xs)
-allswps (Cat i xs)  =  if ew i then unionS (map allswps xs) else allswpsCat xs
+allswps :: RE -> Alphabet
+allswps Emp         =  emptyAlpha
+allswps Lam         =  emptyAlpha 
+allswps (Sym t)     =  char2Alpha t
+allswps (Alt _ xs)  =  unionA (map allswps xs)
+allswps (Cat i xs)  =  if ew i then unionA (map allswps xs) else allswpsCat xs
 allswps (Rep x)     =  allswps x
 allswps (Opt x)     =  allswps x
 
 -- again, we do assume here that list is not ewp, therefore no base case
-allswpsCat :: [RE] -> CharSet
+allswpsCat :: [RE] -> Alphabet
 allswpsCat (x:xs)  |  ewp x
                    =  allswpsCat xs
                    |  all ewp xs
                    =  swa x
                    |  otherwise
-                   =  emptySet
+                   =  emptyAlpha
 
 
 anywhere :: (RE -> Bool) -> RE -> Bool
@@ -406,8 +406,8 @@ mkAltCG cgm xs = Alt (newInfo5 (any ewp xs) (firAlt xs) (lasAlt xs)(alp xs)(alsw
 alp :: [RE] -> Alphabet
 alp xs = unionA $ map alpha xs
 
-alsw :: [RE] -> CharSet
-alsw xs = unionS $ map swa xs
+alsw :: [RE] -> Alphabet
+alsw xs = unionA $ map swa xs
 
 -- Info is language-correct, but not re-correct
 mkAltI :: Info -> [RE] -> RE
@@ -425,9 +425,9 @@ altSubseq (Alt i xs) xs'  =  altSubseq' $
 altSubseq _          _    =  error "altSegment of a noi?"
 
 -- first characters of an alternative
-firAlt, lasAlt :: [RE] -> CharSet
-firAlt xs = unionS (map fir xs)
-lasAlt xs = unionS (map las xs)
+firAlt, lasAlt :: [RE] -> Alphabet
+firAlt xs = unionA (map fir xs)
+lasAlt xs = unionA (map las xs)
 
 infoAlt :: RE -> RE -> Info
 infoAlt x y = newInfo5 (ewp x || ewp y) (fir x .|. fir y) (las x .|. las y)
@@ -437,13 +437,13 @@ infoAlt x y = newInfo5 (ewp x || ewp y) (fir x .|. fir y) (las x .|. las y)
 infoCat :: RE -> RE -> Info
 infoCat x y = newInfo5 (ewCat x y)(fiCat x y)(laCat x y)(alCat x y)(swCat x y)
 
-swCat :: RE -> RE -> CharSet
+swCat :: RE -> RE -> Alphabet
 swCat x y = case (ewp x,ewp y) of
             (True,True)     -> swa x .|. swa y
             (True,False)    -> swa y
             (False,True)    -> swa x
-            (False,False)   -> emptySet
-fiCat :: RE -> RE -> CharSet
+            (False,False)   -> emptyAlpha
+fiCat :: RE -> RE -> Alphabet
 fiCat x y = case ewp x of
             True     -> fir x .|. fir y
             False    -> fir x
@@ -461,7 +461,8 @@ mkCat [x] =  x
 mkCat xs  =  Cat (catInfo xs) xs
 
 catInfo :: [RE] -> Info
-catInfo xs = (foldr ctinf (newInfo5 True emptySet emptySet emptyAlphabet emptySet) xs) { si = listSize xs}
+catInfo xs = (foldr ctinf (newInfo5 True emptyAlpha emptyAlpha emptyAlpha emptyAlpha) xs)
+             { si = listSize xs}
     where
     ctinf x i = newInfo5 (ewp x && ew i) nfi nla nal nsw
                 where
@@ -472,7 +473,7 @@ catInfo xs = (foldr ctinf (newInfo5 True emptySet emptySet emptyAlphabet emptySe
                           (True,True)   -> swa x .|. sw i
                           (True,False)  -> sw i
                           (False,True)  -> swa x
-                          (False,False) -> emptySet
+                          (False,False) -> emptyAlpha
 
 catGradedInfo :: CGMap -> [RE] -> Info
 catGradedInfo cgm xs  =  (catInfo xs) { gr = cgm }
@@ -508,7 +509,7 @@ mkCatCG _ [x]  = x
 mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
 
 -- Note: only correct if input list is Emp-free
-firCat, lasCat :: [RE] -> CharSet
+firCat, lasCat :: [RE] -> Alphabet
 firCat = fi . catInfo
 
 lasCat = la . catInfo
@@ -588,13 +589,10 @@ alphaEquiv x y = not $ null $ alphaRename [] x y
 type Renaming = [(Char,Char)]
 
 renameInfo :: Renaming -> Info -> Info
-renameInfo ren i = i { fi= renameString (fi i), la=renameString (la i), al=renameAlpha(al i),
-                       sw= renameString (sw i) }
+renameInfo ren i = i { fi= rename (fi i), la=rename (la i), al=rename (al i),
+                       sw= rename (sw i) }
     where
-    renameString cs = fromList $  map (fromJust . flip lookup ren) $ enumerateSet cs
-    renameAlpha  cs = embedSet $ fromList $  map (fromJust . flip lookup ren) $ enumerateSet (charSet cs)
-
-
+    rename  =  string2Alpha . map (fromJust . flip lookup ren) . alpha2String
 
 ----- ******** various renaming operations *********
 -- charListMatch is used to match lists of first/last/etc characters
@@ -640,8 +638,8 @@ infoMatch r i1 i2  =
               r2 <- charListMatch r1 (laf i1) (laf i2)
        ]
        where
-       fif i = enumerateSet $ fi i
-       laf i = enumerateSet $ la i
+       fif i = alpha2String $ fi i
+       laf i = alpha2String $ la i
         
 
 -- essentially: are the terms alpha-equivalent w.r.t.
@@ -728,9 +726,9 @@ follow (Cat i xs) = followS xs
                     where
                     followS [] = []
                     followS [x] = follow x
-                    followS (x:y:ys) = follow x `nubMerge` [[v,w]|v<-enumerateSet(las x), w<-enumerateSet(fir y)] `nubMerge`
+                    followS (x:y:ys) = follow x `nubMerge` [[v,w]|v<-alpha2String(las x), w<-alpha2String(fir y)] `nubMerge`
                                        followS (y:ys)
-follow (Rep x)    = follow x `nubMerge` [[v,w]|v<-enumerateSet(las x), w<-enumerateSet(fir x)]
+follow (Rep x)    = follow x `nubMerge` [[v,w]|v<-alpha2String(las x), w<-alpha2String(fir x)]
 follow (Opt x)    = follow x
 
 

@@ -17,9 +17,9 @@ derive c e = smartAlt $ map smartCat $ deriveAlts c e []
 
 deriveAlts :: Char -> RE -> [RE] -> [[RE]]
 deriveAlts c (Sym d)    cont   =  [cont | c==d]
-deriveAlts c (Alt i xs) cont   |  elemSet c (fi i)
+deriveAlts c (Alt i xs) cont   |  elemAlpha c (fi i)
                                =  unions [ deriveAlts c x cont | x<-xs ]
-deriveAlts c (Cat i xs) cont   |  elemSet c (fi i)
+deriveAlts c (Cat i xs) cont   |  elemAlpha c (fi i)
                                =  deriveCatList c xs cont
 deriveAlts c (Opt x) cont      =  deriveAlts c x cont
 deriveAlts c (Rep x) cont      =  deriveAlts c x (Rep x:cont)
@@ -27,7 +27,7 @@ deriveAlts c _ _               =  [] -- Lam or Emp, or bad (fi i)
 
 -- can assume: char can be first character
 deriveCatList :: Char -> [RE] -> [RE] -> [[RE]]
-deriveCatList c (x:xs) cont   |  not (elemSet c (fir x)) -- x must be optional
+deriveCatList c (x:xs) cont   |  not (elemAlpha c (fir x)) -- x must be optional
                               =  tailDerive
                               |  not (ewp x) || not (firstCharList c xs)
                               =  headDerive
@@ -49,7 +49,7 @@ allDers c x = process x []
 
 firstCharList :: Char -> [RE] -> Bool
 firstCharList c []     = False
-firstCharList c (x:xs) = elemSet c (fir x) || ewp x && firstCharList c xs
+firstCharList c (x:xs) = elemAlpha c (fir x) || ewp x && firstCharList c xs
 
 -- derivation from the end
 evired :: RE -> Char -> RE
@@ -57,9 +57,9 @@ evired e c = smartAlt $ map smartCat $ eviredAlts c e id
 
 eviredAlts :: Char -> RE -> ([RE]->[RE]) -> [[RE]]
 eviredAlts c (Sym d)    cont   =  [cont [] | c==d]
-eviredAlts c (Alt i xs) cont   |  elemSet c (la i)
+eviredAlts c (Alt i xs) cont   |  elemAlpha c (la i)
                                =  unions [ eviredAlts c x cont | x<-xs ]
-eviredAlts c (Cat i xs) cont   |  elemSet c (la i)
+eviredAlts c (Cat i xs) cont   |  elemAlpha c (la i)
                                =  snd $ eviredCatList c xs cont
 eviredAlts c (Opt x) cont      =  eviredAlts c x cont
 eviredAlts c (Rep x) cont      =  eviredAlts c x (cont . (Rep x : ))
@@ -72,7 +72,7 @@ eviredCatList c (x:xs) cont   =
          addTop $ eviredCatList c xs (cont . (x:))
          where
          addTop (False,xss) = (False,xss)
-         addTop (True,xss)  | elemSet c (las x)
+         addTop (True,xss)  | elemAlpha c (las x)
                             = (ewp x,eviredAlts c x cont `nubMerge` xss)
                             | otherwise
                             = (ewp x,xss)

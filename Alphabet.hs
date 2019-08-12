@@ -1,20 +1,17 @@
 module Alphabet (
-  Alphabet, emptyAlphabet, singletonAlpha, embedAlphabet, alphaLength,
-  unionA, (.||.), charSet,
-  CharSet, emptySet, isEmptySet, embed, embedSet, elemSet, sizeSet, pluralCS,
-  unionS, subsetS, strictSubset, setOrder, showSet, enumerateSet, fromList) where
+  Alphabet, emptyAlpha, isEmptyAlpha, singularAlpha, pluralAlpha,
+  elemAlpha, subAlpha, strictSubAlpha,
+  char2Alpha, string2Alpha, alpha2String, alphaLength,
+  unionA, (.||.), (.&&.),
+  -- charSet,
+  -- emptySet, isEmptySet, embed, embedSet, elemSet, sizeSet, pluralCS,
+  -- unionS, subsetS, strictSubset, setOrder, showSet, enumerateSet, fromList
+  ) where
 
 import Data.Bits
 import Data.Word
 
-type Alphabet = CharSet
-type CharSet  = Word32
-
-alphaLength :: Alphabet -> Int
-alphaLength = sizeSet
-
-charSet :: Alphabet -> CharSet
-charSet = id
+type Alphabet = Word32
 
 firstCharacter :: Char
 firstCharacter = 'a'
@@ -22,54 +19,35 @@ firstCharacter = 'a'
 nthChar :: Int -> Char
 nthChar n = toEnum (n+firstCharInt)
 
+firstCharInt :: Int
 firstCharInt = fromEnum firstCharacter
 
-embed :: Char -> CharSet
-embed c = bit (fromEnum c - firstCharInt)
+char2Alpha :: Char -> Alphabet
+char2Alpha c = bit (fromEnum c - firstCharInt)
 
-removeFromCharSet :: Char -> CharSet -> Maybe CharSet
-removeFromCharSet c cs = if cs==cs' then Nothing
-                         else Just cs'
-                         where cs' = embed c `xor` cs
+emptyAlpha :: Alphabet
+emptyAlpha  =  zeroBits
 
-embedAlphabet :: Char -> Alphabet
-embedAlphabet = embed
+elemAlpha :: Char -> Alphabet -> Bool
+elemAlpha x c = not $ isEmptyAlpha (char2Alpha x .&. c)
 
-emptyAlphabet :: Alphabet
-emptyAlphabet = emptySet
-
-embedSet :: CharSet -> Alphabet
-embedSet = id
-
-emptySet :: CharSet
-emptySet = zeroBits
-
-elemSet :: Char -> CharSet -> Bool
-elemSet x c = not $ isEmptySet(embed x .&. c)
-
-enumerate :: Alphabet -> [Char]
-enumerate = enumerateSet
-
-enumerateSet :: CharSet -> [Char]
-enumerateSet cs |  isEmptySet cs
+alpha2String:: Alphabet -> [Char]
+alpha2String cs  |  isEmptyAlpha cs
                 =  []
                 |  otherwise
-                =  nthChar n : enumerateSet (clearBit cs n)
+                =  nthChar n : alpha2String (clearBit cs n)
                    where n = firstIndex cs
 
-showSet :: CharSet -> String
-showSet cs = foldr f "{}" (enumerateSet cs)
-             where
-             f c "{}"   = ['{',c,'}']
-             f c (d:ds) = d:c:',':ds
-             f c ""     = "we will not go here!"
+showAlpha :: Alphabet -> String
+showAlpha cs = foldr f "{}" (alpha2String cs)
+               where
+               f c "{}"   = ['{',c,'}']
+               f c (d:ds) = d:c:',':ds
+               f c ""     = "we will not go here!"
 
-showAlphabet :: Alphabet -> String
-showAlphabet = showSet
-
-fromList :: [Char] -> CharSet
-fromList []     = zeroBits
-fromList (x:xs) = embed x .|. fromList xs
+string2Alpha :: [Char] -> Alphabet
+string2Alpha []     = zeroBits
+string2Alpha (x:xs) = char2Alpha x .|. string2Alpha xs
 
 (.&&.) :: Alphabet -> Alphabet -> Alphabet
 (.&&.) = (.&.)
@@ -77,64 +55,49 @@ fromList (x:xs) = embed x .|. fromList xs
 (.||.) :: Alphabet -> Alphabet -> Alphabet
 (.||.) = (.|.)
 
-unionS :: [CharSet] -> CharSet
-unionS = foldr (.|.) emptySet
-
 unionA :: [Alphabet] -> Alphabet
-unionA = foldr (.||.) emptyAlphabet
+unionA = foldr (.||.) emptyAlpha
 
-isEmptyAlph :: Alphabet -> Bool
-isEmptyAlph = isEmptySet
+isEmptyAlpha :: Alphabet -> Bool
+isEmptyAlpha xs  =  xs == emptyAlpha
 
-singletonAlpha :: Alphabet -> Bool
-singletonAlpha cs = isEmptySet ((cs-1) .&. cs)
+singularAlpha :: Alphabet -> Bool
+singularAlpha cs = isEmptyAlpha ((cs-1) .&. cs)
 
-isEmptySet :: CharSet -> Bool
-isEmptySet xs = xs==emptySet
+alphaLength :: Alphabet -> Int
+alphaLength xs = popCount xs
 
-sizeSet :: CharSet -> Int
-sizeSet xs = popCount xs
-
-firstChar, lastChar :: CharSet -> Maybe Char
-lastChar  cs  |  isEmptySet cs
+firstChar, lastChar :: Alphabet -> Maybe Char
+lastChar  cs  |  isEmptyAlpha cs
               =  Nothing
               |  otherwise
               =  Just $ toEnum $ lastIndex cs + firstCharInt
 
-firstChar cs  |  isEmptySet cs
+firstChar cs  |  isEmptyAlpha cs
               =  Nothing
               |  otherwise
               =  Just $ toEnum $ lastIndex cs + firstCharInt
 
-dual :: (a->a->Ordering) -> (a->a->Ordering)
-dual co x y = case co x y of { LT -> GT; GT -> LT; EQ -> EQ }
+subAlpha :: Alphabet -> Alphabet -> Bool
+subAlpha cs ds = (cs .&. ds) == cs
 
-setOrder :: CharSet -> CharSet -> Ordering
-setOrder x y =  compare (firstIndex (y .&. z))(firstIndex (x .&. z))
-                where
-                z  = xor x y
+strictSubAlpha :: Alphabet -> Alphabet -> Bool
+strictSubAlpha cs ds = cs/=ds && subAlpha cs ds
 
-subsetS :: CharSet -> CharSet -> Bool
-subsetS cs ds = (cs .&. ds) == cs
+isCanonicalAlpha :: Alphabet -> Bool
+isCanonicalAlpha cs = popCount (cs+1) == 1
 
-strictSubset :: CharSet -> CharSet -> Bool
-strictSubset cs ds = cs/=ds && subsetS cs ds
+pluralAlpha :: Alphabet -> Bool
+pluralAlpha cs = not $ isEmptyAlpha ((cs-1) .&. cs)
 
-isCanonicalCS :: CharSet -> Bool
-isCanonicalCS cs = popCount (cs+1) == 1
-
-pluralCS :: CharSet -> Bool
-pluralCS cs = not $ isEmptySet ((cs-1) .&. cs)
-
-lastIndex :: CharSet -> Int
+lastIndex :: Alphabet -> Int
 lastIndex 0 = -1
 lastIndex 1 = 0
 lastIndex n = 1+lastIndex(div n 2)
 
-firstIndex :: CharSet -> Int
+firstIndex :: Alphabet -> Int
 firstIndex 0 = 32
 firstIndex n | odd n 
              = 0
              | otherwise
              = 1+firstIndex(div n 2)
-

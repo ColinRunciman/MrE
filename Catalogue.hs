@@ -18,7 +18,6 @@ import Comparison
 import Generator
 import Fuse
 import StarPromotion
---import TopologicalSearchTree
 import PreOrderTrees
 import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
@@ -41,12 +40,6 @@ gradeMinimalCxt = katahomGeneral khgm
         kgrep = \ _ x -> Rep x}
      
 
-{-
-instance Poset RE where
-    (<=<)       =  sublang
-    choice x y  =  pickMin
--}
-
 -- TO DO:
 -- minimalEquiv could be applied to subsequences/subalternatives
 -- e.g. in (a?w)* we could minimize (w)* to (z*), forming (a?z)*
@@ -59,27 +52,12 @@ minimalEquiv c re  |  n >= length theForest -- alphabet too large
                       Nothing -> if size re == maxREsizeINtree+1 then Just $ gradeMinimalCxt c re else Nothing
                       Just u  -> Just $ bwd u
                    where
-                      n = sizeSet alphabet
+                      n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
-                      alphabet = charSet $ alpha re 
-                      -- renaming = not $ isCanonicalCS alphabet {- creates oddities -}
-                      alphalist = enumerateSet alphabet
+                      alphabet = alpha re 
+                      alphalist = alpha2String alphabet
                       fwd = rename $ zip alphalist ['a'..]
                       bwd = rename $ zip ['a'..] alphalist
-{-
-minimalEquiv2 :: RE -> Maybe RE
-minimalEquiv2 re |  n >= length theForest2 -- alphabet too large
-                 =  Nothing
-                 |  otherwise
-                 =  case lookupRE re tree of
-                    Nothing -> if size re == maxREsizeINtree+1 then Just $ upgradeRE NoCxt Minimal re else Nothing
-                    Just u  -> Just u
-                 where
-                    n = length alphabet
-                    (maxREsizeINtree,tree) = theForest2 !! n
-                    alphabet = alpha re 
--}
-
 
 -- theForest!!n is the size-bound and catalogue tree used for an alphabet of size n
 theForest :: [(Int,RB RE)]
@@ -88,14 +66,6 @@ theForest = [(sizeFor n,tree n) | n <- [0..maxSigmaSize]]
             tree 0  =  buildTree compRE [Emp,Lam]
             tree n  =  unsafePerformIO $
                        readFile (treeFileName (sigmaFor n) (sizeFor n)) >>= (return . (pruneTree (map gradeMinimal)). read)
-{-
-theForest2 :: [(Int,REMap)]
-theForest2 = [(sizeFor n,tree n) | n <- [0..maxSigmaSize]]
-            where
-            tree 0  =  buildMap [Emp,Lam]
-            tree n  =  unsafePerformIO $
-                       readFile (treeFileName2 (sigmaFor n) (sizeFor n)) >>= (return . (pruneTree (map gradeMinimal)). read)
--}
 
 -- max size of REs in tree-files for alphabet of size n
 sizeFor :: Int -> Int
@@ -123,11 +93,6 @@ poTree sigma n = buildTree compRE $ concat $ take (n+1) $ promoteA sigma
 createForest :: IO ()
 createForest  =  mapM_ (uncurry createTreeFile) [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
-{- obsolete
-minimizeHom :: Hom (OK RE)
-minimizeHom  =  Hom { hemp=(Emp,False), hlam=(Lam,False), hsym= \c -> (Sym c,False),
-                      halt=malt, hcat=mcat, hrep=mrep, hopt=mopt }
--}
 -- TO DO: for a more canonical output, the list xs should be normalised in some way
 mbcA = altClosure minByCatalogueAltList
 mbcC = catClosure minByCatalogueCatList
@@ -195,55 +160,7 @@ catalogueCxt = katahom catalogueK
 
 -- minByCatalogueExtension = mkExtension minByCatalogueAltList minByCatalogueCatList fuseKP Catalogued
 
-{- obsolete
-mlist :: ([RE]->RE) -> ([RE]-> RE) -> [OK RE] -> OK RE
-mlist plain fancy xs  =  case minimalEquiv re of
-                         Nothing  -> (re,change)
-                         Just re' -> (re', change || re'/=re)
-                         where
-                            change  =  any snd xs
-                            xs'     =  map fst xs
-                            re      =  if change then fancy xs' else plain xs'
-
-msolo :: (RE->RE) -> (RE-> RE) -> OK RE -> OK RE
-msolo plain fancy x  =  case minimalEquiv re of
-                        Nothing  -> (re,change)
-                        Just re' -> (re', change || re'/=re)
-                        where
-                           change  =  snd x
-                           x'      =  fst x
-                           re      =  if change then fancy x' else plain x'
-
-malt :: [OK RE] -> OK RE
-malt  =  mlist mkAlt fuseAlt
-
-mcat :: [OK RE] -> OK RE
-mcat  =  mlist mkCat fuseCat
-
-mrep :: OK RE -> OK RE
-mrep  =  msolo Rep fuseRep
-
-
-mopt :: OK RE -> OK RE
-mopt  =  msolo Opt fuseOpt
--}
 
 minByCatalogue :: RE -> OK RE
 minByCatalogue re  =  catalogueCxt NoCxt re
-
-{-
-try resFileName = do
-  txt <- readFile resFileName
-  let res = map read $ lines txt
-  let res' = map wildCat res
-  mapM_ display (zip res res')nonminimal11"
-
-display :: (RE,RE) -> IO ()
-display (re,re') | re == re'
-                 = putStrLn $ show re ++ " (UNCHANGED)"
-                 | otherwise
-                 = putStrLn $ showWithSize re ++ " ---> " ++ showWithSize re'
-  where
-  showWithSize re = show re ++ " (" ++ show (size re) ++ ")"
--}
 

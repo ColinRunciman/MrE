@@ -76,8 +76,7 @@ listCompare (x:xs)(y:ys) = compare y x &&& listCompare xs ys
 
 -- comparing on ewp and firsts alone
 basicOrd :: RE -> RE -> Ordering
--- basicOrd x y = compare (ewp x) (ewp y) &&& listCompare (fir x)(fir y)
-basicOrd x y = compare (ewp x) (ewp y) &&& setOrder (fir x)(fir y)
+basicOrd x y = compare (ewp x) (ewp y) &&& compare (fir x)(fir y)
 
 basicLEQ :: RE -> RE -> Bool
 basicLEQ x y = basicOrd x y /= GT
@@ -252,7 +251,7 @@ compREHyp1 (Lam,x)       =  result $ if ewp x then LT else GT
 compREHyp1 (x,Lam)       =  result $ if ewp x then GT else LT                  
 compREHyp1 (Sym c,Sym d) =  orderSelect (compare d c) solveGoals
 compREHyp1 (Opt x,Opt y) =  compREHyp1 (x,y)
-compREHyp1 (x,y)         =  orderSelect (basicOrd x y) (compREHyp2n (enumerateSet $ fir x) x y)
+compREHyp1 (x,y)         =  orderSelect (basicOrd x y) (compREHyp2n (alpha2String $ fir x) x y)
 
 compREHyp1Der :: Derivation -> (RE,RE) -> Goals -> EqHyp -> Ordering
 compREHyp1Der d (Emp,Emp)     =  solveGoalsDer d
@@ -263,7 +262,7 @@ compREHyp1Der _ (Lam,x)       =  result $ if ewp x then LT else GT
 compREHyp1Der _ (x,Lam)       =  result $ if ewp x then GT else LT                  
 compREHyp1Der n (Sym c,Sym d) =  orderSelect (compare d c) (solveGoalsDer n)
 compREHyp1Der d (Opt x,Opt y) =  compREHyp1Der d (x,y)
-compREHyp1Der d (x,y)         =  orderSelect (basicOrd x y) (compREHyp2nDer d (enumerateSet $ fir x) x y)
+compREHyp1Der d (x,y)         =  orderSelect (basicOrd x y) (compREHyp2nDer d (alpha2String $ fir x) x y)
 
 compREHyp1UF :: (RE,RE) -> Goals -> EqHyp -> UFOrdering
 compREHyp1UF (Emp,Emp)     =  solveGoalsUF
@@ -274,7 +273,7 @@ compREHyp1UF (Lam,x)       =  resultUF $ if ewp x then LT else GT
 compREHyp1UF (x,Lam)       =  resultUF $ if ewp x then GT else LT                  
 compREHyp1UF (Sym c,Sym d) =  orderSelectUF (compare d c) solveGoalsUF
 compREHyp1UF (Opt x,Opt y) =  compREHyp1UF (x,y)
-compREHyp1UF (x,y)         =  orderSelectUF (basicOrd x y) (compREHyp2nUF (enumerateSet $ fir x) x y)
+compREHyp1UF (x,y)         =  orderSelectUF (basicOrd x y) (compREHyp2nUF (alpha2String $ fir x) x y)
 
 -- instead of continuing with x and y, we could continue
 -- with xn and yn
@@ -339,8 +338,8 @@ eqv x y = isJust $ eqr x y
 sigmaStarTest :: RE -> Bool
 sigmaStarTest x = stt [x] S.empty
                   where
-                  sig = charSet $ alpha x
-                  siglist = enumerateSet sig
+                  sig = alpha x
+                  siglist = alpha2String sig
                   stt [] _ = True
                   stt (y:ys) ss | S.member y ss
                                 = stt ys ss
