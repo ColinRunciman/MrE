@@ -145,7 +145,7 @@ altSigmaStar c i xs |  c/=RepCxt || isEmptySet (sw i)
 
 -- if re is sublang of cs* replace it with cs', where cs' is its alphabet
 -- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
--- TO DO: could possibly be strengthened by removing cs* from nullable prefixes/suffixes too
+-- TO DO: Stefan will try strengthening to remove cs* from nullable prefixes/suffixes too
 debunk :: CharSet -> RE -> OK RE
 debunk cs (Sym c) =  unchanged (Sym c)
 debunk cs re      |  subsetS alset cs
@@ -153,20 +153,19 @@ debunk cs re      |  subsetS alset cs
                   |  otherwise
                   =  unchanged re
                      where
-                     alset = charSet $ alpha re
+                     alset = alpha re
                      allst = enumerateSet (swa re) -- was alset, swa re suffices 31072019
 
--- might also do first-rolls in here, but only when also mirrored, and with las attribute
--- TO DO: could be strengthened too by removing sw* from nullable prefixes/suffixes
--- TO DO: the RepCxt can/should be promoted to suffixes (prefixes) if the omitted prefix (suffix) is nullable
---  this means: if sw is non-trivial then (i) remove optional suffixes/prefixes having sw as alphabet from sequence
---  and (ii) replace bodies that have sw as alphabet with sw
+-- TO DO: Stefan will try strengthening to remove sw* from nullable prefixes/suffixes;
+-- also RepCxt can be promoted to suffixes (prefixes) if the complementary prefix (suffix)
+-- is nullable.  So if sw is non-trivial then:
+-- (i) remove optional suffixes/prefixes having sw as alphabet from sequence
+-- (ii) replace bodies that have sw as alphabet with sw
 catFuseList :: Cxt -> Info -> [FuseRE] -> OK [KataRE]
 catFuseList RepCxt i xs  |  ew i
                          =  changed [ kataAlt (whiteList xs) ]
                          |  sw i==charSet(al i)
                          =  changed [ kataAlt (map Sym (enumerateSet $ sw i)) ]
-                            --where sw=allswpsCat xs
 catFuseList _ i xs       =  fuseListProcess False [] xs
 
 -- left argument: list of already processed elements, in reverse order
@@ -177,7 +176,6 @@ fuseListProcess changed [] (x:xs) =  fuseListProcess changed [x] xs
 fuseListProcess changed (Rep x:xs) (Rep y:ys)
                           |  x == y
                           =  fuseListProcess True (Rep x:xs) ys
-                          -- new 06072018, fusing * when single-letter alphabet
                           |  a == alpha y && singletonAlpha a
                           =  fuseListProcess True xs (fuse(Rep(alt[x,y])):ys)
                              where

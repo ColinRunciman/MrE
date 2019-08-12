@@ -52,10 +52,6 @@ subsumeAltListP r xs  =  sal [] xs 0 {- 0: nothing found, 1: standard subsumptio
 
 -- Subsumption of prefix by suffix, or vice versa, for cat alternatives
 -- in a rep body --- 'others' are the other alternatives.
--- TO DO: Is the use of splits instead of prefixCom here too restrictive?
--- SMK 10/5/2016 changed the type to ensure catlists are RepCxt-pressed,
--- with a corresponding change in candsFor
--- BUT: should this really be in shrinking instead?
 subsumePreSuf :: [PressRE] -> [PressRE] -> Maybe PressRE
 subsumePreSuf others xs |  null candidates
                         =  Nothing
@@ -69,8 +65,6 @@ subsumePreSuf others xs |  null candidates
                      | all ewp ys,
                        fuseCat ys `sublang` fuseRep(fuseAlt(mkCat zs:others)) ]
 
--- TO DO:
--- one of the items send to *===* could be a Cat List, for greedier fusion
 pressCatListM :: [PressRE] -> Maybe [FuseRE]
 pressCatListM xs
     | isNothing candidate   =  Nothing
@@ -327,9 +321,6 @@ y         *?<* Rep x      |  y `sublang` Rep x
                           |  otherwise
                           =  y *<* Rep x
                              where
-                             --cand = [ pressCat[npre,suf]
-                             --       | (pre,suf)<-suffixCom y, not(ewp suf), suf `sublang` Rep x,
-                             --         Just npre <- [Rep x *//* mkCat pre] ]
                              cand = [ pressCat[npr,nsu]
                                     | (pre,suf)<-prefixCom y,
                                       (npr,nsu)<- [ (pre,nsuf)
@@ -499,8 +490,6 @@ commuteStrict :: (RE,RE) -> Maybe (RE,RE)
 commuteStrict (x,y) =  if x/=y then commute (x,y) else Nothing  
 
 -- for commuting over Alt-args, to the right
--- TO DO: this is a patch; commutes should generally have a better sense of direction,
--- determining where Cats are allowed to occur in a result
 commuteAlternativeR :: (RE,RE) -> Maybe(RE,RE)
 commuteAlternativeR p            | isJust normalC
                                  = normalC
@@ -520,11 +509,6 @@ commuteAlternativeL (Cat _ xs,x) = Just(head xs,fuseCat(tail xs++[x]))
 commuteAlternativeL _            = Nothing
 
  
-oldCommuteL :: (RE,RE) -> Maybe (RE,RE)
-oldCommuteL (x,y) = case commuteR (press $ mirror y, press $ mirror x) of
-                    Nothing -> Nothing
-                    Just (x',y') -> Just (press $ mirror y', press $ mirror x')
-
 commuteR :: (RE,RE) -> Maybe (RE,RE)                 
 commuteR (x, Alt _ ys)       |  all isJust coms && isJust eqrs
                              =  Just $ (pressAlt ys', x')
@@ -598,7 +582,10 @@ commuteL _                   =  Nothing
 -- SMK 16/05/16: added Lam case as we may want fusing commutes to preserve normalisation
 -- TO DO: investigate whether and if so, why, a cat may occur in the arguments
 lCom :: [RE] -> RE -> Maybe (RE,[RE])
-lCom xs y  =  foldr lCom' (Just (y,[])) xs
+lCom xs y  | any (\re -> isCat re || isLam re) xs || isCat y || isLam y
+           = error "Cat in lCom argument!"
+           | otherwise
+           = foldr lCom' (Just (y,[])) xs
   where
   lCom' _ Nothing          =  Nothing
   lCom' x (Just (y',xs'))  =  maybe Nothing (\(y'',x')-> Just (y'',catCons x' xs')) $ commuteStrict (x,y')
@@ -607,7 +594,10 @@ lCom xs y  =  foldr lCom' (Just (y,[])) xs
   catCons x ys             =  x:ys
 
 rCom :: RE -> [RE] -> Maybe ([RE],RE)
-rCom y xs  =  foldl rCom' (Just([], y)) xs
+rCom y xs  | any (\re -> isCat re || isLam re) xs || isCat y || isLam y
+           = error "Cat in rCom argument!"
+           | otherwise
+           =  foldl rCom' (Just([], y)) xs
   where
   rCom' Nothing   _        =  Nothing
   rCom' (Just (xs',y')) x  =  maybe Nothing (\(x',y'')-> Just (catSnoc xs' x',y'')) $ commuteStrict (y',x)
@@ -628,7 +618,6 @@ prefixCom x    =  nubBy (kernel fst) $
                     (pre,xs') <- (Lam,xs) : prefixCom (mkCat xs) ] 
 
 -- fi/la/ew cannot change under rolling, but size can
--- TO DO: grading is invalidated, though one could keep grades up to Pressed
 rollIfCat (Cat i xs) = mkCatI i{gr=[]} $ rollList xs
 rollIfCat x          = x
 
@@ -821,8 +810,6 @@ catSplit xs = list2OK xs
 -- accelerated factorization for symbols
 -- we can only factorize symbols from cats that are non-nullable
 -- and whose first/last symbol can only be that symbol
--- TO DO: one could use groupOrder as a tool for a cleverer partition for large REs/alphabets,
--- with either basicOrd or a dedicated linear preorder
 symbolFactorTrafo :: Info -> [PressRE] -> OK [PressRE]
 symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
                         =  list2OK xs (leftCands ++ rightCands)
