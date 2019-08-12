@@ -1,7 +1,7 @@
 module OK (
   OK(..),
-  mkOK, changed, unchanged, unsafeChanged, ifchanged,
-  orOK, list2OK, okmap, okmapIf, guardOK, guardApply, fixOK, app, updateEQ,
+  mkOK, changed, unchanged, unsafeChanged, ifchanged, potentialChange,
+  orOK, list2OK, okmap, okmapIf, single, guardOK, guardApply, fixOK, app, updateEQ,
   katalift, katalift1 ) where
 
 -- computations of type a

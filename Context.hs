@@ -66,38 +66,10 @@ kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCat $ katalift f xs
 catRuleOK :: RewRule -> RewRule
 catRuleOK r c i xs = okmapIf concatCat $ r c i xs
 
-appch :: (a -> OK a) -> (OK a -> OK a)
-appch f x = ifchanged x f unchanged
-
--- Kleisli-composition, in function application order
-aft :: (b -> OK c) -> (a -> OK b) -> a -> OK c
-aft f g  =  \x -> f `app` g x
-
-aftch :: (a -> OK a) -> (a -> OK a) -> a -> OK a
-aftch f g  =  \x -> f `appch` g x
-
--- abandon calls not satisfying the relation
-chapp :: (a->a-> Bool) -> (a -> OK a) -> (a -> OK a)
-chapp p f x = if p x (valOf call) then call else unchanged x where call = f x
-
-okmap2 :: (a->b->c) -> (OK a -> OK b -> OK c)
-okmap2 bin o1 o2 = mkOK (bin (valOf o1) (valOf o2)) (hasChanged o1 || hasChanged o2)
-
-single :: OK a -> OK [a]
-single = okmap (:[])
-
-guardMap :: Bool -> (a->a) -> OK a -> OK a
-guardMap b f x = if b then okmap f x else x
-
--- if predicate is True, flag a change regardless; no need to evaluate it if change has been flagged anyway
-potentialChange :: (a->Bool) -> OK a -> OK a
-potentialChange p x = mkOK vx (hasChanged x || p vx) where vx=valOf x
-
 -- untrusting katahom, i.e. it does not assume that the rules preserve standardness
 -- or that the original RE was standard
 -- it does trust existing grading though
--- TO DO: the RootCxt code could be switched on, to permit trafos not to do their own mirror
---   best to leave it till mirroring is memoized
+
 katahom :: Katahom -> Cxt -> RE -> OK RE
 katahom kh RootCxt x       =  katahom kh NoCxt x -- to avoid confusing trafos with unfamiliar context
 katahom kh c Emp           =  unchanged Emp
@@ -204,12 +176,12 @@ tpr :: Extension -> RecPred
 tpr = kpred . target
 
 type ListMap = Info -> [RE] -> OK [RE]
--- TO DO: eliminate need for this
-altComp :: ListMap -> ListMap -> ListMap
-altComp f g i xs = f ni `app` xso
+
+listComp :: ([RE]->Info) -> ListMap -> ListMap -> ListMap
+listComp listInfo f g i xs = f ni `app` xso
                    where
                    xso = g i xs
-                   ni = if (hasChanged xso) then altInfo (valOf xso) else i
+                   ni = if hasChanged xso then listInfo (valOf xso) else i
 
 genericRepeatAlt :: Extension -> Cxt -> OK [RE] -> OK [RE]
 genericRepeatAlt rs c xso  |  hasChanged xso || hasChanged yso
@@ -221,7 +193,8 @@ genericRepeatAlt rs c xso  |  hasChanged xso || hasChanged yso
 
 -- Alt part of generic boilerplate
 genericAltK :: Extension -> Cxt -> Info -> [RE] -> OK [ToRE]
-genericAltK rs c i xs = (genericFromAltK rs c `altComp` altRuleOK(kalt(src rs)) c) i xs
+genericAltK rs c i xs =
+  listComp altInfo (genericFromAltK rs c) (altRuleOK(kalt(src rs)) c) i xs
 
 -- generic! only applied on lists that are not only pointwise FromRE, but also as a whole
 genericFromAltK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
@@ -234,13 +207,6 @@ genericFromAltK rs c i (Lam:xs)    |  any ewp (valOf xso)
                                       where
                                       xso = genericFromAltK rs OptCxt i{ew=False} xs
 genericFromAltK rs c i xs          =  genericRepeatAlt rs c (altRuleOK(altStep rs) c i xs)
-
--- Cat Part of boilerplate
--- altComp :: ListMap -> ListMap -> ListMap
-catComp f g i xs = f ni `app` xso
-                   where
-                   xso = g i xs
-                   ni = if (hasChanged xso) then catInfo (valOf xso) else i
 
 supplyCatInfo :: ListMap -> [RE] -> OK [RE]
 supplyCatInfo f xs = f (catInfo xs) xs
@@ -255,7 +221,8 @@ genericRepeatCat rs c xso  |  hasChanged xso || hasChanged yso
 
 -- inputs have been evaluated
 genericCatK :: Extension -> Cxt -> Info -> [ToRE] -> OK [ToRE]
-genericCatK rs c i xs = (genericFromCatK rs c `catComp` catRuleOK(kcat(src rs)) c) i xs
+genericCatK rs c i xs =
+  listComp catInfo (genericFromCatK rs c) (catRuleOK(kcat(src rs)) c) i xs
 
 genericFromCatK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
 genericFromCatK _  c _ []       =  unchanged []

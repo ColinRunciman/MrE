@@ -61,14 +61,13 @@ subsumePreSuf others xs |  null candidates
                         =  Nothing
                         |  otherwise
                         =  Just $ head candidates
-                        where
-                           candidates = [ c
-                                        | (pre,suf) <- splits xs,
-                                           c <- candsFor pre suf ++ candsFor suf pre ]
-                           candsFor ys zs  =  [mkCat $ valOf $ pressCatK RepCxt i zs | all ewp ys &&
-                                                    (fuseCat ys `sublang` fuseRep(fuseAlt(mkCat zs:others)))]
-                                              where i = newInfo (all ewp zs)
-
+  where
+  candidates      =  [ c
+                     | (pre,suf) <- splits xs,
+                       c <- candsFor pre suf ++ candsFor suf pre ]
+  candsFor ys zs  =  [ mkCat $ valOf $ pressCatK RepCxt (newInfo (all ewp zs)) zs
+                     | all ewp ys,
+                       fuseCat ys `sublang` fuseRep(fuseAlt(mkCat zs:others)) ]
 
 -- TO DO:
 -- one of the items send to *===* could be a Cat List, for greedier fusion
@@ -649,13 +648,6 @@ lMostCom' a@(Alt i xs)  =  (a,[]) : nubBy (kernel fst)
                                         let tlt=pressAlt(mkCat tl:ys),
                                         fuseCat[hd,tlt]===a,
                                         let ntl=asList(tlt)]
-{- semantically not an issue, but creates loops with size-preserving *==* fusions
-lMostCom' o@(Opt x)     =  (o,[]) : nubBy (kernel fst)
-                           [ p | (hd,tl)<- lMostCom' x, p <-
-                                 [ (hd,ntl) | ewp hd, let tlt=mkCat tl, fuseCat[hd,Opt tlt]===o, 
-                                              let ntl=asList(pressOpt tlt) ] ++
-                                 [ (pressOpt hd,tl) | all ewp tl, fuseCat(Opt hd:tl)===o ]
-                           ]  -}                        
 lMostCom' x             =  [(x,[])]
 
 asList (Cat _ xs) = xs

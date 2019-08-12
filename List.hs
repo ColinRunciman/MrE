@@ -168,20 +168,19 @@ itemRest (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- itemRest xs]
 -- All possible divisions of a list into non-empty prefix and suffix.
 splits :: [a] -> [([a],[a])]
 splits []     = []
-splits [x]    = []
+splits [_]    = []
 splits (x:ys) = ([x],ys) : [(x:ys1, ys2) | (ys1,ys2) <- splits ys]
+
+-- Like splits but allowing empty prefix and/or suffix.
+allSplits :: [a] -> [([a],[a])]
+allSplits []      =  [([],[])]
+allSplits (x:ys)  =  ([],x:ys) : [(x:ys1, ys2) | (ys1,ys2) <- allSplits ys]
 
 -- similar as splits, for set-like lists,
 -- so it's a form of powerset of non-empty subsets and non-empty remainders
 powerSplits :: [a] -> [([a],[a])]
 powerSplits [] = []
 powerSplits xs = init $ tail $ allPowerSplits xs
-
--- TO DO: splits should give allSplits? check usage for dependency
--- on non-empty results?
-allSplits :: [a] -> [([a],[a])]
-allSplits []      =  [([],[])]
-allSplits (x:ys)  =  ([],x:ys) : [(x:ys1, ys2) | (ys1,ys2) <- allSplits ys]
 
 -- similar as allSplits, for set-like lists, so it's a form of powerset,
 -- but with the remainder
