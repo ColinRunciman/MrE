@@ -159,3 +159,6 @@ nonExpandingMrE x  =  and [nonExpandingUnder size kataGrade x,
                            nonExpandingUnder size (press . promote) x,
                            nonExpandingUnder size syncat x]
 
+propPickMinList :: [RE] -> Bool
+propPickMinList xs  =  not (null xs) ==>
+                       size (pickMinList xs) == minimum (map size xs)

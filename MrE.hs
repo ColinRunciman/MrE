@@ -22,9 +22,6 @@ import Fuse
 -- -m minimizing mode: stellation + minimization using semantic catalogues
 -- -z pressing after using the catalogue
 
--- TO DO: allow users to assemble their own hierarchy of transformations
--- this would be at odds with our enum type for Grades though
-
 usage = "MrE [-q | -m | -p | -c | -s | -z | -k | -y ] re1 re2 ...\n"
 
 stelEX2 :: Extension
