@@ -1,11 +1,7 @@
 module Catalogue where
 
--- TO DO: we can have two different kinds of catalogues here:
--- (i) RE-lookup, i.e. finite maps from RE to RE indexed by compare
--- (ii) language-lookup, i.e. preorder-trees indexed by compRE (or its refinements, e.g. compRE in a RepCxt)
--- difference: (i) is more efficient to lookup, but (ii) finds many language-equivalences beyond the size limit
--- TO DO: tree sizes could be curtailed by not only using the canonical alphabet,
--- but by demanding that the first letter occurring is 'a' etc.
+-- This is a catalogue based on language lookup as distinct from expression lookup.
+-- It uses preorder-trees indexed by compRE (or its refinements, e.g. compRE in a RepCxt)
 
 import Info
 import Data.List
@@ -23,7 +19,6 @@ import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
 import Context
 import Alphabet
---import REProfile -- experimental alternative catalogue mechanism
 
 -- for now, alternative would be to integrate a "readMinimal" when building the catalogue
 gradeMinimal :: RE -> RE
@@ -39,11 +34,6 @@ gradeMinimalCxt = katahomGeneral khgm
         kgopt = \ _ x -> Opt x,
         kgrep = \ _ x -> Rep x}
      
-
--- TO DO:
--- minimalEquiv could be applied to subsequences/subalternatives
--- e.g. in (a?w)* we could minimize (w)* to (z*), forming (a?z)*
-
 minimalEquiv :: Cxt -> RE -> Maybe RE
 minimalEquiv c re  |  n >= length theForest -- alphabet too large
                    =  Nothing
@@ -93,14 +83,13 @@ poTree sigma n = buildTree compRE $ concat $ take (n+1) $ promoteA sigma
 createForest :: IO ()
 createForest  =  mapM_ (uncurry createTreeFile) [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
--- TO DO: for a more canonical output, the list xs should be normalised in some way
 mbcA = altClosure minByCatalogueAltList
 mbcC = catClosure minByCatalogueCatList
 minByCatalogueAltList, minByCatalogueCatList :: RewRule
 minByCatalogueAltList c i xs = minByList smartAlt c i xs
-                               where smartAlt j ys = beforeTrans c (Alt j ys) -- smartAlt was Alt
+                               where smartAlt _ ys = beforeTrans c (alt ys)
 minByCatalogueCatList c i xs = minByList smartCat c i xs
-                               where smartCat j ys = beforeTrans c (Cat j ys) -- smartCat was Cat
+                               where smartCat _ ys = beforeTrans c (cat ys)
 
 -- note: 2nd prize is: if r* is not in catalogue, but r is with minimum r'
 -- then (r')* is minimal too [ otherwise, the minimum of (r')* is at most the size of r'

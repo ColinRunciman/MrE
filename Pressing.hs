@@ -580,7 +580,6 @@ commuteL _                   =  Nothing
 -- (ie. leftwards) arriving as y'; rCom is similar but forwards
 -- SMK 31/08/15: replaced cons/snoc with catCons/catSnoc to avoid having lists with cats
 -- SMK 16/05/16: added Lam case as we may want fusing commutes to preserve normalisation
--- TO DO: investigate whether and if so, why, a cat may occur in the arguments
 lCom :: [RE] -> RE -> Maybe (RE,[RE])
 lCom xs y  | any (\re -> isCat re || isLam re) xs || isCat y || isLam y
            = error "Cat in lCom argument!"
