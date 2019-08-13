@@ -236,6 +236,11 @@ orderSelectUF :: Ordering -> (Goals -> EqHyp -> UFOrdering) -> Goals -> EqHyp ->
 orderSelectUF EQ continuation = continuation
 orderSelectUF ot _            = resultUF ot
 
+-- this order needs to be compatible with the
+-- order on sets
+compareSym :: Char -> Char -> Ordering
+compareSym c d = compare c d -- was compare d c with the old order on sets
+
 -- compREHyp1 p gs e checks the goal p
 -- if the languages of p are elementarily different that difference is the result
 -- if they are clearly the same the goal is dismissed and the remaining goals are checked
@@ -249,7 +254,7 @@ compREHyp1 (_  ,Emp)     =  result GT
 compREHyp1 (Lam,Lam)     =  solveGoals
 compREHyp1 (Lam,x)       =  result $ if ewp x then LT else GT
 compREHyp1 (x,Lam)       =  result $ if ewp x then GT else LT                  
-compREHyp1 (Sym c,Sym d) =  orderSelect (compare d c) solveGoals
+compREHyp1 (Sym c,Sym d) =  orderSelect (compareSym c d) solveGoals
 compREHyp1 (Opt x,Opt y) =  compREHyp1 (x,y)
 compREHyp1 (x,y)         =  orderSelect (basicOrd x y) (compREHyp2n (alpha2String $ fir x) x y)
 
@@ -260,7 +265,7 @@ compREHyp1Der _ (_  ,Emp)     =  result GT
 compREHyp1Der d (Lam,Lam)     =  solveGoalsDer d
 compREHyp1Der _ (Lam,x)       =  result $ if ewp x then LT else GT
 compREHyp1Der _ (x,Lam)       =  result $ if ewp x then GT else LT                  
-compREHyp1Der n (Sym c,Sym d) =  orderSelect (compare d c) (solveGoalsDer n)
+compREHyp1Der n (Sym c,Sym d) =  orderSelect (compareSym c d) (solveGoalsDer n)
 compREHyp1Der d (Opt x,Opt y) =  compREHyp1Der d (x,y)
 compREHyp1Der d (x,y)         =  orderSelect (basicOrd x y) (compREHyp2nDer d (alpha2String $ fir x) x y)
 
@@ -271,7 +276,7 @@ compREHyp1UF (_  ,Emp)     =  resultUF GT
 compREHyp1UF (Lam,Lam)     =  solveGoalsUF
 compREHyp1UF (Lam,x)       =  resultUF $ if ewp x then LT else GT
 compREHyp1UF (x,Lam)       =  resultUF $ if ewp x then GT else LT                  
-compREHyp1UF (Sym c,Sym d) =  orderSelectUF (compare d c) solveGoalsUF
+compREHyp1UF (Sym c,Sym d) =  orderSelectUF (compareSym c d) solveGoalsUF
 compREHyp1UF (Opt x,Opt y) =  compREHyp1UF (x,y)
 compREHyp1UF (x,y)         =  orderSelectUF (basicOrd x y) (compREHyp2nUF (alpha2String $ fir x) x y)
 
