@@ -1,5 +1,5 @@
 module List (
-   unsnoc, linkWith, plural, strictlyOrdered, maximaBy,
+   unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
    mergeMap, nubMerge, foldMerge, nubSort, chainSort,
    segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
    splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,

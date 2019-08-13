@@ -27,10 +27,6 @@ import Alphabet
 -- (2) a size measure; (3) smart constructors so == gives AC-equivalence;
 -- (4) a parser; (5) a printer.
 
--- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt
--- item occurs in an Alt argument list; (3) no Emp or Lam occurs as a strict
--- subexpression.
-
 data RE = Emp
         | Lam
         | Sym Char
@@ -39,6 +35,24 @@ data RE = Emp
         | Rep RE
         | Opt RE
         deriving (Eq,Ord)
+
+-- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt or Opt
+-- item occurs in an Alt argument list; (3) Alt argument lists are ordered using
+-- the derived RE ordering (4) no Emp or Lam occurs as a strict subexpression; 
+
+validRE :: RE -> Bool
+validRE (Cat _ xs)  =  not (any isCat) xs &&
+                       all validSubRE xs
+validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && ordered xs &&
+                       all validSubRE xs
+validRE (Opt x)     =  validSubRE x
+validRE (Rep x)     =  validSubRE x
+validRE _           =  True
+
+validSubRE :: RE -> Bool
+validSubRE Emp  =  False
+validSubRE Lam  =  False
+validSubRE x    =  validRE x
 
 isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt :: RE -> Bool
 
@@ -369,6 +383,7 @@ alt xs  |  any ewp xs && not (any ewp xs')
   altList (Alt _ ys)  =  ys
   altList Emp         =  []
   altList Lam         =  []
+  altList (Opt x)     =  altList x
   altList z           =  [z]
 
 -- flattening sequences one level down, preserving singletons (to preserve Grades)
@@ -413,10 +428,12 @@ mkAltCG _ []   = Emp
 mkAltCG _ [x]  = x
 mkAltCG cgm xs = Alt (newInfo5 (any ewp xs) (firAlt xs) (lasAlt xs)(alp xs)(alsw xs)){gr=cgm, si=listSize xs} xs
 
+opt :: RE -> RE
 opt Emp  =  Lam
 opt Lam  =  Lam
 opt x    =  Opt x
 
+rep :: RE -> RE
 rep Emp  =  Lam
 rep Lam  =  Lam
 rep x    =  Rep x
