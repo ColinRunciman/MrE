@@ -1,7 +1,7 @@
 module Expression (
   RE(..), HomTrans(..), RecPred(..), HomInfo(..), KatahomGeneral(..), Renaming,
   isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt, unAlt, unCat, unOpt, unRep,
-  alt, cat, mkAlt, mkCat, mkAltI, mkCatI, mkAltCG, mkCatCG, concatAlt, concatCat,
+  alt, cat, opt, rep, mkAlt, mkCat, mkAltI, mkCatI, mkAltCG, mkCatCG, concatAlt, concatCat,
   flatCat,
   subalts, subcats, subaltsPred, subcatsPred, subaltsLPred, subcatsLPred,
   altSubseq, catSegment, catSegment2,
@@ -27,12 +27,16 @@ import Alphabet
 -- (2) a size measure; (3) smart constructors so == gives AC-equivalence;
 -- (4) a parser; (5) a printer.
 
+-- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt
+-- item occurs in an Alt argument list; (3) no Emp or Lam occurs as a strict
+-- subexpression.
+
 data RE = Emp
         | Lam
         | Sym Char
-	| Alt Info [RE]
+        | Alt Info [RE]
         | Cat Info [RE]
-	| Rep RE
+        | Rep RE
         | Opt RE
         deriving (Eq,Ord)
 
@@ -356,9 +360,15 @@ flatCat (Cat _ xs : ys) = flatCat (xs++ys)
 flatCat (x: xs)         = x: flatCat xs
 
 alt :: [RE] -> RE
-alt xs = mkAlt $ unionsMulti $ map altList xs
+alt xs  |  any ewp xs && not (any ewp xs')
+        =  opt (mkAlt xs')
+        |  otherwise
+        =  mkAlt xs'
   where
+  xs'                 =  mergeMap altList xs
   altList (Alt _ ys)  =  ys
+  altList Emp         =  []
+  altList Lam         =  []
   altList z           =  [z]
 
 -- flattening sequences one level down, preserving singletons (to preserve Grades)
@@ -402,6 +412,14 @@ mkAltCG :: CGMap -> [RE] -> RE
 mkAltCG _ []   = Emp
 mkAltCG _ [x]  = x
 mkAltCG cgm xs = Alt (newInfo5 (any ewp xs) (firAlt xs) (lasAlt xs)(alp xs)(alsw xs)){gr=cgm, si=listSize xs} xs
+
+opt Emp  =  Lam
+opt Lam  =  Lam
+opt x    =  Opt x
+
+rep Emp  =  Lam
+rep Lam  =  Lam
+rep x    =  Rep x
 
 alp :: [RE] -> Alphabet
 alp xs = unionA $ map alpha xs
@@ -527,10 +545,10 @@ rest ('+':s) ((c:a):as) = if null c then wrong
 			  else rest s (([]:c:a):as)
 rest ('*':s) ((c:a):as) = case c of
                           []     -> wrong
-                          (x:xs) -> rest s (((Rep x:xs):a):as)
+                          (x:xs) -> rest s (((rep x:xs):a):as)
 rest ('?':s) ((c:a):as) = case c of
                           []     -> wrong
-                          (x:xs) -> rest s (((Opt x:xs):a):as)
+                          (x:xs) -> rest s (((opt x:xs):a):as)
 rest ('0':s) ((c:a):as) = rest s (((Emp:c):a):as)
 rest ('1':s) ((c:a):as) = rest s (((Lam:c):a):as)
 rest ('(':s) as         = rest s ([[]]:as)

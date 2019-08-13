@@ -18,7 +18,6 @@ import Test.LeanCheck
 
 {- These instances were for Lazy SmallCheck
 
--- NB. Don't bother with Emp!
 instance Serial RE where
   series  =  cons0 Lam \/ const (drawnFrom [Sym 'a', Sym 'b']) \/ 
              -- cons2 Alt \/ cons2 Cat \/ 
@@ -29,11 +28,13 @@ instance Serial Info where
   series  =  const (drawnFrom [newInfo False, newInfo True])
 -}
 
+-- NB. Don't bother with Emp!
+
 instance Listable RE where
   tiers  =  cons0 Lam \/
             [[Sym 'a'], [Sym 'b'], [Sym 'c']] \/
             cons1 alt \/ cons1 cat \/
-            cons1 Rep \/ cons1 Opt
+            cons1 rep \/ cons1 opt
 
 for :: (a->Bool) -> (a->Bool) -> a -> Bool
 for k p x  =  k x ==> p x
