@@ -41,7 +41,7 @@ data RE = Emp
 -- the derived RE ordering (4) no Emp or Lam occurs as a strict subexpression; 
 
 validRE :: RE -> Bool
-validRE (Cat _ xs)  =  not (any isCat) xs &&
+validRE (Cat _ xs)  =  not (any isCat xs) &&
                        all validSubRE xs
 validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && ordered xs &&
                        all validSubRE xs
