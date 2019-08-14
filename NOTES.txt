@@ -1,18 +1,31 @@
 * In Context.katahom, the RootCxt code could be switched on, to permit trafos not
   to do their own mirror.  But best to leave it until mirroring is memoized.
--- TO DO: coshrink X(YX)* to (Y?X)*
--- more generally: if A sublang X* and B sublang X*, coshrink AB to X*
 
-When coShrinking Cats there is scope to do more but
-the syntactic extraction could be much more expensive.  E.g.:
--- TO DO: generalise the XX* case for plural segment X
--- TO DO: use prefixCom instead of take/drop
-In Presssing.sumsumePreSuf (Cat alternatives in Rep bodies):
--- TO DO: Is the use of splits instead of prefixCom here too restrictive?
--- BUT: should this really be in shrinking instead?
-Concerning commuteAlternativeL and commuteAlternativeR in Pressing:
--- TO DO: this is a patch; commutes should generally have a better sense of direction,
--- determining where Cats are allowed to occur in a result
-Concerning symbolFactorTrafo in Pressing:
--- TO DO: one could use groupOrder as a tool for a cleverer partition for large REs/alphabets,
--- with either basicOrd or a dedicated linear preorder
+* When coShrinking Cats there is scope to do more but the syntactic extraction
+  could be much more expensive.  E.g.:
+  We might coshrink X(YX)* to (Y?X)*, and more generally: if A sublang X* and
+  B sublang X*, coshrink AB to X*
+  We could generalise the XX* case for plural segment X
+  or use prefixCom instead of take/drop
+
+* In Presssing.subsumePreSuf (Cat alternatives in Rep bodies):
+  prefixCom could be used instead of simple splits.
+  (Arguably subsumePreSuf could be regarded as a form of shrinking.)
+
+* Concerning commuteAlternativeL and commuteAlternativeR in Pressing:
+  this is a patch; commutes should generally have a better sense of direction,
+  determining where Cats are allowed to occur in a result
+  And concerning symbolFactorTrafo in Pressing:
+  we could use groupOrder to obtain a cleverer partition for large REs/alphabets,
+  with either basicOrd or a dedicated linear preorder
+
+* In Catalogue, tree sizes could be curtailed by not only using the canonical
+  alphabet, but also demanding that the first letter occurring is 'a' etc.
+
+* Also in Catalogue, subsets of Alts or segments of Cats could be considered as
+  candidates for minimisation, but the cost would be exponential.
+
+* Concerning MrE as a whole, it would be nice to allow users to assemble their own
+  sequences of transformations, but that conflicts with our current linearly
+  ordered Grades.
+

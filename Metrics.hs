@@ -133,12 +133,17 @@ minRate sim res  =  do
 -- a simplification speed measure for a list of test REs
 -- computed as: sum of catalogue-lookup times / sum of sim times
 
-{- TO DO:
+{- TO DO: Colin will fulfil this idea, a basis for saying how expensive our
+-- transformations are in comparison with enumerating "sensible" REs in size
+-- order until the first equivalent is found.
 simSpeed :: (RE->RE) -> [RE] -> IO ()
 simSpeed sim res  =  do
   putStrLn "Simplification was "++ show s ++ " X faster than minimization by enumerative search."
 
 subSpeed :: (RE->RE->Bool) -> [(RE,RE)] -> IO ()
+
+enumREsOver :: String -> [RE]
+
 -}
 
 timingsName :: String

@@ -12,6 +12,12 @@ import Data.List (partition)
 import Data.Bits
 import Alphabet
 
+-- Transformations in this module concern Rep x where x has the single-word
+-- property for some sub-alphabet A --- a property memoised in the Info
+-- fields of REs.  For example, if the Rep x occurs in an Alt or a Cat it may
+-- absorb other Alt or Cat items, either wholly or in part.
+-- (see altPromotion and catPromotion)
+
 promoteExtension :: Extension
 promoteExtension = mkExtension altPromotion catPromotion fuseKP Promoted
 
@@ -30,11 +36,13 @@ promoteP = tpr promoteExtension
 isPromoted = checkWith promoteP
 
 altPromotion, catPromotion :: RewRule
-altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK` altCharSubsumption i xs
+altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
+                      altCharSubsumption i xs
+
 catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs
 
 catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
-                         = debunkList swx xs `orOK` knubedList swx xs `orOK` innerPrune True xs
+                         = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs
                            where
                            swx = sw i
 catStarPrune c _ xs = innerPrune (c>=OptCxt) xs
@@ -48,13 +56,13 @@ innerPrune True [Rep y,x] | x==y
 innerPrune b xs =
     list2OK xs [valOf pp ++ (e:valOf ss) | (pre,e,suf)<-segElemSuf xs, isRep e,
                                             let swx=swa e, not(isEmptyAlpha swx),
-                                            let pp=knubedList swx pre, let ss=debunkList swx suf,
+                                            let pp=crushLeftWrt swx pre, let ss=crushRightWrt swx suf,
                                             hasChanged pp || hasChanged ss]
                                     
 altStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = list2OK xs [ catSegment x xs':ys | (x@(Cat _ xs),ys) <-itemRest xs,
-                                        xs' <- [ valOf xs1 | let xs1=debunkList swx xs, hasChanged xs1 ]
-                                            ++ [ valOf xs2 | let xs2=knubedList swx xs, hasChanged xs2 ]
+                                        xs' <- [ valOf xs1 | let xs1=crushRightWrt swx xs, hasChanged xs1 ]
+                                            ++ [ valOf xs2 | let xs2=crushLeftWrt swx xs, hasChanged xs2 ]
                                       ]
                            where
                            swx = sw i
@@ -106,8 +114,9 @@ demote css (Rep y) | isAlphabet y
 demote css x       = any (subAlpha (alpha x)) css
 
 altCharSubsumption :: Info -> [RE] -> OK [RE]
-altCharSubsumption i xs = list2OK xs [ filter (goodElem cs) xs | not(isEmptyAlpha(sw i)), let cs=droppableAltSymbols xs,
-                                          not(isEmptyAlpha cs) ]
+altCharSubsumption i xs = list2OK xs [ filter (goodElem cs) xs
+                                     | not(isEmptyAlpha(sw i)), let cs=droppableAltSymbols xs,
+                                       not(isEmptyAlpha cs) ]
                           where
                           goodElem chset (Sym c) = not $ elemAlpha c chset
                           goodElem chset _       = True
@@ -133,14 +142,14 @@ catSigmaStarPromotion i xs | ew i && sw i==cs
                            = unchanged xs
                              where cs = al i
 
-debunkList :: Alphabet -> [RE] -> OK [RE]
-debunkList al1 []      = unchanged []
-debunkList al1 (re:ps) | isLam nre
-                       = unsafeChanged $ debunkList al1 ps -- greedy
+crushRightWrt :: Alphabet -> [RE] -> OK [RE]
+crushRightWrt al1 []      = unchanged []
+crushRightWrt al1 (re:ps) | isLam nre
+                       = unsafeChanged $ crushRightWrt al1 ps -- greedy
                        | b && not(ewp nre) && singularAlpha al3 && subAlpha al3 al1
-                       = unsafeChanged $ okmap (nre:) $ debunkList al3 ps --greedy
+                       = unsafeChanged $ okmap (nre:) $ crushRightWrt al3 ps --greedy
                        | not b && not(ewp re) && singularAlpha al2 && subAlpha al2 al1 
-                       = okmap (re:) $ debunkList al2 ps -- changed: used to require al1==al2
+                       = okmap (re:) $ crushRightWrt al2 ps -- changed: used to require al1==al2
                        | b
                        = changed (nre:ps)
                        | otherwise
@@ -148,32 +157,32 @@ debunkList al1 (re:ps) | isLam nre
                          where
                          al2 = alpha re
                          al3 = alpha nre
-                         d   = debunkRECxt False al1 re
-                         nre = valOf d
-                         b   = hasChanged d 
+                         c   = crushRightInCxt False al1 re
+                         nre = valOf c
+                         b   = hasChanged c 
 
-debunkRECxt :: Bool -> Alphabet -> RE -> OK RE
-debunkRECxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
+crushRightInCxt :: Bool -> Alphabet -> RE -> OK RE
+crushRightInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
                      = changed Lam
-debunkRECxt c al1 (Alt i res) = okmap kataAlt $ katalift (debunkRECxt (c||ew i) al1) res
-debunkRECxt _ al1 (Cat _ res) = okmap mkCat $ debunkList al1 res
-debunkRECxt _ al1 (Opt re)    = okmap Opt   $ debunkRECxt True al1 re
-debunkRECxt _ al1 (Rep c@(Cat i xs)) --Conway rule for debunking, alphaLength condition for efficiency only
+crushRightInCxt c al1 (Alt i res) = okmap kataAlt $ katalift (crushRightInCxt (c||ew i) al1) res
+crushRightInCxt _ al1 (Cat _ res) = okmap mkCat $ crushRightWrt al1 res
+crushRightInCxt _ al1 (Opt re)    = okmap Opt   $ crushRightInCxt True al1 re
+crushRightInCxt _ al1 (Rep c@(Cat i xs)) -- a Conway rule, alphaLength condition for efficiency only
                               | alphaLength (al i)>1 && isRep y && subAlpha(alpha r) al1
                               = changed $ Rep (kataAlt [r,catSegment c ys])
                                 where
                                 Just(ys,y) = unsnoc xs
                                 Rep r      = y
-debunkRECxt _ _    e          = unchanged e                       
+crushRightInCxt _ _    e          = unchanged e                       
 
-knubedList :: Alphabet -> [RE] -> OK [RE]
-knubedList al1 [] = unchanged []
-knubedList al1 xs | isLam ny
-                  = unsafeChanged $ knubedList al1 ys
+crushLeftWrt :: Alphabet -> [RE] -> OK [RE]
+crushLeftWrt al1 [] = unchanged []
+crushLeftWrt al1 xs | isLam ny
+                  = unsafeChanged $ crushLeftWrt al1 ys
                   | b && not(ewp ny) && singularAlpha al3 && subAlpha al3 al1
-                  = unsafeChanged $ okmap (++ [ny]) $ knubedList al3 ys
+                  = unsafeChanged $ okmap (++ [ny]) $ crushLeftWrt al3 ys
                   | not b && not(ewp y) && singularAlpha al2 && subAlpha al2 al1 
-                  = okmap (++[y]) $ knubedList al2 ys
+                  = okmap (++[y]) $ crushLeftWrt al2 ys
                   | b
                   = changed (ys ++ [ny])
                   | otherwise
@@ -182,26 +191,16 @@ knubedList al1 xs | isLam ny
                     Just (ys,y) = unsnoc xs
                     al2 = alpha y
                     al3 = alpha ny
-                    k   = knubedRE al1 y
-                    ny  = valOf k
-                    b   = hasChanged k
+                    c   = crushLeftInCxt False al1 y
+                    ny  = valOf c
+                    b   = hasChanged c
 
-knubedRECxt :: Bool -> Alphabet -> RE -> OK RE
-knubedRECxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
+crushLeftInCxt :: Bool -> Alphabet -> RE -> OK RE
+crushLeftInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
                      = changed Lam
-knubedRECxt c al1 (Alt i res) = okmap kataAlt $ katalift (knubedRECxt (c||ew i) al1) res
-knubedRECxt _ al1 (Cat _ res) = okmap mkCat $ knubedList al1 res
-knubedRECxt _ al1 (Opt re)    = okmap Opt   $ knubedRECxt True al1 re
-knubedRECxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
+crushLeftInCxt c al1 (Alt i res) = okmap kataAlt $ katalift (crushLeftInCxt (c||ew i) al1) res
+crushLeftInCxt _ al1 (Cat _ res) = okmap mkCat $ crushLeftWrt al1 res
+crushLeftInCxt _ al1 (Opt re)    = okmap Opt   $ crushLeftInCxt True al1 re
+crushLeftInCxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
                               = changed $ Rep (kataAlt [r,catSegment c ys])
-knubedRECxt _ _   e           = unchanged e
-
-knubedRE :: Alphabet -> RE -> OK RE
-knubedRE al1 re | ewp re && subAlpha (alpha re) al1
-                = changed Lam
-knubedRE al1 (Alt _ res) = okmap kataAlt $ katalift (knubedRE al1) res
-knubedRE al1 (Cat _ res) = okmap mkCat $ knubedList al1 res
-knubedRE al1 o@(Opt (Alt _ res)) = okmap mkAlt (katalift (knubedRE al1 . Opt) res) `orOK` unchanged o
-knubedRE al1 (Opt re)    = okmap Opt   $ knubedRE al1 re
-knubedRE _   e           = unchanged e
-
+crushLeftInCxt _ _   e           = unchanged e

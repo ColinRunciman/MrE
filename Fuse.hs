@@ -11,7 +11,16 @@ import Function ((===>))
 import Alphabet
 import Data.List
 
--- boilerplate, giving things names
+-- Transformations in this module include the Gruber-Gulan rules and additional
+-- rules of no worse than log-linear complexity.  For example:
+-- (1) factorisation of common prefixes or suffixes in Alts, and some more
+--     specialised transformations for Alts that are Rep bodies
+--     (see altFuseList)
+-- (2) combination of neighbouring Opt x and Rep x in Cats, also commuting these
+--     with any intervening x occurrences to enable such fusion, and again
+--     some more specialised transformations for Cats that are Rep bodies
+--     (see catFuseList)
+
 type FuseRE = RE
 
 fuseEX :: Extension
@@ -158,8 +167,8 @@ alphaCrush cs re      |  subAlpha alset cs
                          allst = alpha2String (swa re) 
 
 fixCrushRE :: Alphabet -> RE -> OK RE
-fixCrushRE cs re@(Cat i xs) =
-    list2OK re [ catSegment re (valOf yso) | let yso=fixCrush cs xs, hasChanged yso ]
+fixCrushRE cs re@(Cat i xs) = list2OK re [ catSegment re (valOf yso)
+                                         | let yso=fixCrush cs xs, hasChanged yso ]
 fixCrushRE cs re            = unchanged re
 
 fixCrush :: Alphabet -> [RE] -> OK [RE]
@@ -177,7 +186,6 @@ suffixCrush cs xs     |  hasChanged rxs
                       |  otherwise 
                       =  unchanged xs 
                          where rxs = prefixCrush cs (reverse xs)
-
 
 -- also RepCxt can be promoted to suffixes (prefixes) if the complementary prefix (suffix)
 -- is nullable.  So if sw is non-trivial then:
