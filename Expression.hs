@@ -37,14 +37,14 @@ data RE = Emp
         deriving (Eq,Ord)
 
 -- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt or Opt
--- item occurs in an Alt argument list; (3) Alt argument lists are ordered using
--- the derived RE ordering (4) no Opt argment satisfies ewp (5) no Rep argument is
+-- item occurs in an Alt argument list; (3) Alt argument lists are strictly ordered
+-- using the derived RE ordering (4) no Opt argment satisfies ewp (5) no Rep argument is
 -- a Rep or an Opt (5) no Emp or Lam occurs anywhere as a strict subexpression. 
 
 validRE :: RE -> Bool
 validRE (Cat _ xs)  =  not (any isCat xs) &&
                        all validSubRE xs
-validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && ordered xs &&
+validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && strictlyOrdered xs &&
                        all validSubRE xs
 validRE (Opt x)     =  not (ewp x) && validSubRE x
 validRE (Rep x)     =  not (isOpt x || isRep x) && validSubRE x
@@ -380,7 +380,7 @@ alt xs  |  any ewp xs && not (any ewp xs')
         |  otherwise
         =  mkAlt xs'
   where
-  xs'                 =  mergeMap altList xs
+  xs'                 =  nubMergeMap altList xs
   altList (Alt _ ys)  =  ys
   altList Emp         =  []
   altList Lam         =  []

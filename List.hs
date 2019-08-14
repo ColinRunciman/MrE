@@ -1,6 +1,6 @@
 module List (
    unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
-   mergeMap, nubMerge, foldMerge, nubSort, chainSort,
+   nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
    segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
    splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
    compareLength, itemRest, sublists, isSublistOf,
@@ -49,9 +49,8 @@ merge (x:xs) (y:ys)  =  case compare x y of
                         GT -> y : merge (x:xs) ys
 
 -- f must give ordered results
-mergeMap :: Ord b => (a -> [b]) -> [a] -> [b]
-mergeMap _ []      =  []
-mergeMap f (x:xs)  =  f x `merge` mergeMap f xs
+nubMergeMap :: Ord b => (a -> [b]) -> [a] -> [b]
+nubMergeMap f  =  unions . map f
 
 nubMerge :: Ord a => [a] -> [a] -> [a]
 nubMerge [] ys          =  ys
