@@ -38,15 +38,16 @@ data RE = Emp
 
 -- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt or Opt
 -- item occurs in an Alt argument list; (3) Alt argument lists are ordered using
--- the derived RE ordering (4) no Emp or Lam occurs as a strict subexpression; 
+-- the derived RE ordering (4) no Opt argment satisfies ewp (5) no Rep argument is
+-- a Rep or an Opt (5) no Emp or Lam occurs anywhere as a strict subexpression. 
 
 validRE :: RE -> Bool
 validRE (Cat _ xs)  =  not (any isCat xs) &&
                        all validSubRE xs
 validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && ordered xs &&
                        all validSubRE xs
-validRE (Opt x)     =  validSubRE x
-validRE (Rep x)     =  validSubRE x
+validRE (Opt x)     =  not (ewp x) && validSubRE x
+validRE (Rep x)     =  not (isOpt x || isRep x) && validSubRE x
 validRE _           =  True
 
 validSubRE :: RE -> Bool
@@ -430,13 +431,17 @@ mkAltCG cgm xs = Alt (newInfo5 (any ewp xs) (firAlt xs) (lasAlt xs)(alp xs)(alsw
 
 opt :: RE -> RE
 opt Emp  =  Lam
-opt Lam  =  Lam
-opt x    =  Opt x
+opt x    |  ewp x
+         =  x
+         |  otherwise
+         =  Opt x
 
 rep :: RE -> RE
-rep Emp  =  Lam
-rep Lam  =  Lam
-rep x    =  Rep x
+rep Emp      =  Lam
+rep Lam      =  Lam
+rep (Opt x)  =  Rep x
+rep (Rep x)  =  Rep x
+rep x        =  Rep x
 
 alp :: [RE] -> Alphabet
 alp xs = unionA $ map alpha xs
