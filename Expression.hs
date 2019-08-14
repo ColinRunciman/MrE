@@ -11,7 +11,7 @@ module Expression (
   size, listSize,
   mirror, rename, pickMin, pickMinList,
   homTrans, checkWith, foldHomInfo, katahomGeneral, upgradeRE, minimalAssert, 
-  (&&&) ) where
+  validate, (&&&) ) where
 
 import List
 import Data.List
@@ -54,6 +54,10 @@ validSubRE :: RE -> Bool
 validSubRE Emp  =  False
 validSubRE Lam  =  False
 validSubRE x    =  validRE x
+
+-- Take any freely constructed RE and give an invariant-respecting equivalent.
+validate :: RE -> RE
+validate  =  homTrans $ HomTrans {falt = alt, fcat = cat, frep = rep, fopt = opt}
 
 isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt :: RE -> Bool
 

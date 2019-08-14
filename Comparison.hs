@@ -1,5 +1,5 @@
 module Comparison (
-  (===), eqr, eqv, subExpr, strictSubExpr, sublang, compRE ) where
+  (===), (<<==), (====), eqr, eqv, subExpr, strictSubExpr, sublang, compRE ) where
 
 import Function
 import List
@@ -15,7 +15,6 @@ import Alphabet
 import Queue
 import RegexpMemo
 import Derivative
-import Sanify
 
 -- syntactic well-founded order on REs
 smallerComp :: RE -> RE -> Ordering
@@ -316,9 +315,6 @@ listOrder (x:xs) (y:ys) =
         EQ -> listOrder xs ys
         GT -> listOrder (x:xs) ys
 
-sub :: RE -> RE -> Bool
-sub x y = sublang x y
-
 -- preserves property for stronger than FuseRE
 -- eqr gives a tentative representative of the equivalence class
 eqr :: FuseRE -> FuseRE -> Maybe FuseRE
@@ -355,10 +351,10 @@ sigmaStarTest x = stt [x] S.empty
 
 -- safe sublang, and lang
 (<<==) :: RE -> RE -> Bool
-x <<== y = sanify x `sub` sanify y
+x <<== y = validate x `sublang` validate y
 
 (====) :: RE -> RE -> Bool
-x ==== y = sanify x === sanify y
+x ==== y = validate x === validate y
 
 
 

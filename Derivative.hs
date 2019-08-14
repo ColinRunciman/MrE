@@ -1,19 +1,12 @@
 module Derivative (derive, allDerives) where
 
 import Expression
-import Sanify
 import Alphabet
 import Info
 import List
 
-smartCat :: [RE] -> RE
-smartCat = sanCat
-
-smartAlt :: [RE] -> RE
-smartAlt = sanAlt
-
 derive :: Char -> RE -> RE
-derive c e = smartAlt $ map smartCat $ deriveAlts c e []
+derive c e = alt $ map cat $ deriveAlts c e []
 
 deriveAlts :: Char -> RE -> [RE] -> [[RE]]
 deriveAlts c (Sym d)    cont   =  [cont | c==d]
@@ -53,7 +46,7 @@ firstCharList c (x:xs) = elemAlpha c (fir x) || ewp x && firstCharList c xs
 
 -- derivation from the end
 evired :: RE -> Char -> RE
-evired e c = smartAlt $ map smartCat $ eviredAlts c e id
+evired e c = alt $ map cat $ eviredAlts c e id
 
 eviredAlts :: Char -> RE -> ([RE]->[RE]) -> [[RE]]
 eviredAlts c (Sym d)    cont   =  [cont [] | c==d]

@@ -9,11 +9,9 @@ import Context
 import Comparison
 import Fuse
 import Pressing
-import Sanify
 import Stellation
 import StarPromotion
 import SyntaxCatalogue
--- import LazySmallCheck
 import Test.LeanCheck
 
 {- These instances were for Lazy SmallCheck
@@ -28,10 +26,10 @@ instance Serial Info where
   series  =  const (drawnFrom [newInfo False, newInfo True])
 -}
 
--- NB. Don't bother with Emp!
+-- NB. Don't bother with Emp -- or Lam for now!
 instance Listable RE where
-  tiers  =  cons0 Lam \/
-            [[Sym 'a'], [Sym 'b'], [Sym 'c']] \/
+  tiers  =  -- cons0 Lam \/
+            [[Sym 'a'], [Sym 'b']] \/
             cons1 alt \/ cons1 cat \/
             cons1 rep \/ cons1 opt
 
@@ -71,7 +69,7 @@ soundSub s    =  sublang `includes` s
 soundTrans :: (RE->RE) -> RE -> Bool
 soundTrans t  =  t `obeys` equiv
   where
-  equiv x y  =  sanify x === sanify y
+  equiv x y  =  validate x === validate y
 
 shrinkingUnder :: Ord a => (RE->a) -> (RE->RE) -> RE -> Bool
 shrinkingUnder m t x  =  m (t x) < m x
