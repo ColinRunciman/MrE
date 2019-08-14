@@ -48,6 +48,7 @@ okmap2 binOp c1 c2 = mkOK (binOp (valOf c1)(valOf c2)) (hasChanged c1||hasChange
 
 instance Monad OK where
     a >>= f = app f a
+    return x = pure x
 
 -- >>=, but with args swapped
 app :: (a -> OK b) -> OK a -> OK b
