@@ -9,6 +9,10 @@ import Comparison
 import Pressing
 import Shrinking
 
+-- The motivating observation for the transformation here: if any expression x has
+-- the empty-word property, and is also transitive, so L(1) <= L(xx) <= L(x), then
+-- x === Rep x, enabling simplification of x because of the Rep context.
+
 type StelRE = RE
 
 isStellar :: RE -> Bool
@@ -42,24 +46,25 @@ altTrans :: Cxt -> Info -> [StelRE] -> OK [ShrunkRE]
 altTrans c i xs =  list2OK xs [ Rep body' : zs
                               | c>=OptCxt, (ys,zs)<-allPowerSplits xs, not(null ys),
                                 let body=altSubseq (Alt i xs) ys, istransitive body,
-                                let body'=valOf $ shrinkCxt RepCxt body, -- may or may not have an impact
-                                size body'+1<size body || size body'<size body && (not $ ew i)]
+                                let body'=valOf $ shrinkCxt RepCxt body,
+                                size body'+1 < size body ||
+                                     size body' < size body && (not $ ew i) ]
 
 catTrans :: Cxt -> Info -> [StelRE] -> OK [ShrunkRE]
 catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                    where
                    me = Cat i xs
-                   normalcands = [ pre++[Rep newmidb]++suf
+                   normalcands = [ pre++[Rep newmidBody]++suf
                                  | (le,suf)<-prefixCom me, (pre,mid)<-suffixCom le,
                                    not(isRep mid) && ewp mid && istransitive mid,
-                                   -- possible issue if mid part is x?, and x* does not shrink
-                                   let newmidb=valOf $ shrinkCxt RepCxt mid ]
+                                   let newmidBody=valOf $ shrinkCxt RepCxt mid,
+                                   size newmidBody+1 < size mid ]
                    repcxtcands = [ [unRep brep] | c==RepCxt, brep <- bodyreps ]
                    optcxtcands = [ [brep]
                                  | c==OptCxt, not(ew i), istransitive me, brep <- bodyreps ]
                    bodyreps    = [ brep
                                  | not (ew i), (pre,suf)<-prefixCom me, not(null suf),
                                    let suft=mkCat suf, ewp pre || ewp suft,
-                                   let body=mkAlt[pre,suft],
+                                   let body=alt[pre,suft],
                                    let brep=shrinkRep body, brep===Rep me ]
 

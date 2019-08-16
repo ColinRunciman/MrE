@@ -6,10 +6,6 @@ import Context
 import Function
 import OK
 import Comparison
-import Fuse
-import StarPromotion
-import Pressing
-import Shrinking
 import List
 import Data.List
 import Control.Monad
@@ -84,12 +80,15 @@ simAlt (Alt i1 xs) re          = []
 simAlt re          (Alt i2 ys) = [(ew i2||ewp re,re:ys) | re<=head ys]
 simAlt re1         re2         = [(ewp re1||ewp re2,[re1,re2]) | re1<=re2 ]
 
-createGradedCarrier :: Alphabet -> Grade-> RecPred -> Carrier
-createGradedCarrier alpha g p = memo
+createGradedCarrier :: Alphabet -> KataPred -> Carrier
+createGradedCarrier alpha kp = memo
     where
+    g     =  grade (khom kp)
+    p     =  kpred kp
     memo = ([Emp | empP p RootCxt]++ [Lam | lamP p RootCxt]): size1 : size2 : from 3
     size1 = [ Sym c | c<-alpha, symP p NoCxt c]
-    size2 = [ Rep re | re <- size1, repP p NoCxt re ] ++ [ Opt re | re <- size1, optP p NoCxt re ]
+    size2 = [ Rep re | re <- size1, repP p NoCxt re ] ++
+            [ Opt re | re <- size1, optP p NoCxt re ]
     from n = sizeat n : from (n+1)
     sizeat n = catat n ++ altat n ++ optat n ++ repat n
     catat n = [ valOf cac
@@ -170,15 +169,6 @@ linearOrderTest car ordering cutoff = process 0
     ltcheck [] = []
     ltcheck (x:xs) = [(x,y)|y<-xs, ordering x y/=LT] ++ ltcheck xs
 
-
-fuseA alpha = createGradedCarrier alpha Fused fuseP
-
-promoteA alpha = createGradedCarrier alpha Promoted promoteP
-
-pressA alpha = createGradedCarrier alpha Pressed pressP
-
-shrinkA alpha = createGradedCarrier alpha Shrunk shrinkP
-
 -- check that a hom forms an algebra
 -- prints samplesize many counterExamples, found within size cutOff
 checkSurjectivity :: HomTrans -> Carrier -> IO()
@@ -203,19 +193,19 @@ checkSurjectivity hom carrier = surTest 2 sampleSize
     testPair x y | x==y      = []
                  | otherwise = [(x,y)]
 
-checkAlgebra :: Alphabet -> Katahom -> RecPred -> IO()
-checkAlgebra alpha kahom fp = closedA 0 sampleSize
+checkAlgebra :: Alphabet -> KataPred -> IO()
+checkAlgebra alpha kp = closedA 0 sampleSize
     where
-    hom = mkHomTrans kahom
-    cutOff=16 -- maximum size of arguments, then stop
-    sampleSize=10 -- maximum no of counter examples, then stop
-    carrier = createGradedCarrier alpha (grade kahom) fp
+    hom        = mkHomTrans (khom kp)
+    cutOff     = 16 -- maximum size of arguments, then stop
+    sampleSize = 10 -- maximum no of counter examples, then stop
+    carrier    = createGradedCarrier alpha kp
     closedA n rmE
         | n==cutOff || rmE <=0 = return ()
         | otherwise            =
            do { putStrLn $ "checking arguments of size " ++ (show n);
-                k<-checkViolations rmE fp $ (applyNary hom carrier n++
-                                             applyUnary hom carrier n);
+                k<-checkViolations rmE (kpred kp) $
+                  (applyNary hom carrier n ++ applyUnary hom carrier n);
                 closedA(n+1)(rmE-k)
               }
 
@@ -247,19 +237,3 @@ genList :: Carrier -> Int -> [[RE]]
 genList c 0 = [[]]
 genList c n = [ r:rs | m<-[0..n-1], r<-c!!m, rs<-genList c (n-1-m)]
 
-onePer :: Int -> [a] -> [a]
-onePer n []  =  []
-onePer n xs  =  head xs : onePer n (drop n xs)
-
-bad1, bad2, bad3, bad4, bad5 :: RE
-bad1= read "(a?(bab*)?*ba?)***?"
-bad2= read "(a?ba*?a?(a+b+(a?(ab?aaa?)*?(a+aa))?))*"
-bad3= read "(((a+bb)((a+(a+b)*+a?)b?*+b*))*?(b(a+b)baa??abb?b?*)?**\
-            \(b+b*a+a?+a?)?ba**aa*a)*"
-bad4= read "((a+b+(b+aa*)*+((a+b)?b((a+b+b?)***??(aa)??+(b+b)*))?)\
-            \((b+b+bbba)(b+a*+b?)(a+a*a?+b?b)(a**(aa*?a)?)?a(a+a)a(\
-            \(b*?a+a*)*a*ba)*?*(aa?b)?a(b+((a+b)?a?)?)?+(a+b*)*aab)?\
-            \a*?b)**"
-bad5= read "((a+b+c+d+e+f+g+h)*b(a+e*)((f(b+c+e+h)*(a+b+c+g+h)*(d(h+cd+e*(d?g)*+h*e))?)*b?(c+e+gg)\
-            \(cg+e?a?+(b(d+e*))*)((a+b+(e+h)e?)(h+be?)*+(c+ga*f*)?(((b+d+g)*+(c+h)*)\
-            \(a+bh*)*(f+ga*)(f+g+aa))?)(ef+(d+bc)?((b+d)?f)*((h+b*)d)?+(d+g)*))*)*"

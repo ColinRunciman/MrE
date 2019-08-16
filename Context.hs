@@ -1,5 +1,5 @@
 module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RewRule,
-  okGradeCxt,
+  okGradeCxt, gradeMinimal, gradeMinimalCxt,
   mkExtension, mkHomTrans, mkTransform,
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
@@ -360,3 +360,20 @@ limitExtension n ext = mkExtension altR catR (source ext) (grd $ target ext)
                        where
                        altR = altSizeBound n (altStep ext)
                        catR = altSizeBound n (catStep ext)
+
+-- REs stored in either of the catalogues are just strings; for use they must be
+-- marked throughout as of Minimal grade.
+
+gradeMinimal :: RE -> RE
+gradeMinimal = gradeMinimalCxt NoCxt
+
+gradeMinimalCxt :: Cxt -> RE -> RE
+gradeMinimalCxt = katahomGeneral khgm
+    where
+    khgm = KatahomGeneral {
+        kgemp = Emp, kglam = const Lam, kgsym = Sym,
+        kgalt = \c i xs->Alt (i{gr=[(outerCxt (ew i) c,Minimal)]}) xs,
+        kgcat = \c i xs->Cat (i{gr=[(outerCxt (ew i) c,Minimal)]}) xs,
+        kgopt = \ _ x -> Opt x,
+        kgrep = \ _ x -> Rep x}
+

@@ -17,6 +17,13 @@ import List
 import StarPromotion
 import Alphabet
 
+-- As an optional extra, in combination with the algebra-based transformations, one
+-- can look up subREs with small alphabets in a catalogue of known minimal expressions,
+-- hoping to find an equivalent.  This module defines a catalogue based on syntactic
+-- lookup of expressions as distinct from language-based lookup (for which see Catalogue).
+-- It uses finite maps indexed by the derived ordering on expressions, with matching
+-- modulo renaming.
+
 type Catalogue = M.Map RE RE
 
 deBruijnify :: RE -> (RE, Renaming)
@@ -30,24 +37,10 @@ deBruijnify e | isCanonical cs
     e' = rename re e
     (e'',re') = deBruijnify e'
 
+-- Whereas the semantic catalogue represents all languages expressible by REs of size
+-- <= n, the syntactic catalogue is a finite map for which any retrieved value is
+-- strictly smaller than the key by which it is found.
 
--- for now, alternative would be to integrate a "readMinimal" when building the catalogue
-gradeMinimal :: RE -> RE
-gradeMinimal = gradeMinimalCxt NoCxt
-
-gradeMinimalCxt :: Cxt -> RE -> RE
-gradeMinimalCxt = katahomGeneral khgm
-    where
-    khgm = KatahomGeneral {
-        kgemp = Emp, kglam = const Lam, kgsym = Sym,
-        kgalt = \c i xs->Alt (i{gr=[(outerCxt (ew i) c,Minimal)]}) xs,
-        kgcat = \c i xs->Cat (i{gr=[(outerCxt (ew i) c,Minimal)]}) xs,
-        kgopt = \ _ x -> Opt x,
-        kgrep = \ _ x -> Rep x}
-
--- slightly different, the size-out-by-1 argument does not apply here (really? second thoughts!)
--- compared to the semantic catalogue
--- therefore no Cxt argument
 minimalEquiv :: RE -> Maybe RE
 minimalEquiv re  |  n >= length theForest || size re>maxREsizeINtree
                  =  Nothing
@@ -94,9 +87,8 @@ writeMap :: String -> Int -> Catalogue -> IO()
 writeMap sigma n t = writeFile (mapFileName sigma n) $ show t                        
 
 poMap :: String -> Int -> Catalogue
-poMap sigma n = buildMap $ filter ((==al') . alpha) $ concat $ take (n+1) $ promoteA sigma
-                where
-                al' = string2Alpha sigma
+poMap sigma n = buildMap $ filter ((== string2Alpha sigma) . alpha) $ concat $
+                take (n+1) $ createGradedCarrier sigma beforeKP
 
 buildMap :: [RE] -> Catalogue
 buildMap xs = M.fromList $ qmap $ groupOrder compRE xs
@@ -107,25 +99,20 @@ qmap :: [[RE]] -> [(RE,RE)]
 qmap []         =  []
 qmap ([_] : xs) =  qmap xs
 qmap ([] :xs)   =  error "found empty quotient list"
-qmap (xs: xss)  =  [ (x,y) | let y=pickMinList xs, x<-xs, size x>size y, canonicalRE x ] ++ qmap xss 
+qmap (xs: xss)  =  [ (x,y) | let y=pickMinList xs, x<-xs, size x>size y, canonicalRE x ] ++
+                   qmap xss 
 
 createForest :: IO ()
 createForest  =  mapM_ (uncurry createMapFile) [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
-{- obsolete
-minimizeHom :: Hom (OK RE)
-minimizeHom  =  Hom { hemp=(Emp,False), hlam=(Lam,False), hsym= \c -> (Sym c,False),
-                      halt=malt, hcat=mcat, hrep=mrep, hopt=mopt }
--}
 mbcA c i xs = altClosurePred (not . untreatable) minByCatalogueAltList c i xs
 mbcC c i xs = catClosurePred (not . untreatable) minByCatalogueCatList c i xs
 
 minByCatalogueAltList, minByCatalogueCatList :: RewRule
 minByCatalogueAltList c i xs = minByList smartAlt c i xs
-                               where smartAlt j ys = beforeTrans c (Alt j ys) -- smartAlt was Alt
+                               where smartAlt _ ys = beforeTrans c (alt ys)
 minByCatalogueCatList c i xs = minByList smartCat c i xs
-                               where smartCat j ys = beforeTrans c (Cat j ys) -- smartCat was Cat
-
+                               where smartCat _ ys = beforeTrans c (cat ys)
 
 -- idea: use untreatable for a cleverer altClosure/catClosure
 untreatable :: RE -> Bool
@@ -140,24 +127,23 @@ minByList constr c i xs =
     case minimalEquiv rec of
     Nothing  | c==NoCxt  -> unchanged xs
              | otherwise -> list2OK xs [ [re'''] | Just re'' <- [minimalEquiv re],
-                                         size re''<si i, let red=contextFunction c re'',
+                                         size re'' < si i, let red=contextFunction c re'',
                                          Just re''' <- [minimalEquiv red] ]                                                 
-    Just re' -> changed [unwrap c re']  -- no need to upgrade re' as this is the syntactic catalogue
+    Just re' -> changed [unwrap c re']
     where re  = constr i xs
           rec = contextFunction c re
           unwrap RepCxt x |  isRep x
                           =  unRep x
                           |  otherwise
-                          =  error $ show x ++ " is a non-* minimal equivalent of " ++ show rec
+                          =  error $ show x ++ " is a non-* minimal equivalent of " ++
+                                     show rec
           unwrap OptCxt x |  isOpt x
                           =  unOpt x
                           |  size x> si i
-						  =  gradeMinimalCxt OptCxt re
-                          -- was: =  upgradeRE OptCxt Minimal re
+                          =  gradeMinimalCxt OptCxt re
                           |  otherwise
                           =  x
           unwrap NoCxt x  =  x
-
 
 minByCatalogueExtension :: Extension
 minByCatalogueExtension = mkExtension mbcA mbcC beforeKP BottomCatalogued
@@ -178,57 +164,5 @@ beforeK = khom beforeKP
 beforeTrans :: Cxt -> RE -> RE
 beforeTrans c r = valOf $ katahom beforeK c r
 
-
--- minByCatalogueExtension = mkExtension minByCatalogueAltList minByCatalogueCatList fuseKP Catalogued
-
-{- obsolete
-mlist :: ([RE]->RE) -> ([RE]-> RE) -> [OK RE] -> OK RE
-mlist plain fancy xs  =  case minimalEquiv re of
-                         Nothing  -> (re,change)
-                         Just re' -> (re', change || re'/=re)
-                         where
-                            change  =  any snd xs
-                            xs'     =  map fst xs
-                            re      =  if change then fancy xs' else plain xs'
-
-msolo :: (RE->RE) -> (RE-> RE) -> OK RE -> OK RE
-msolo plain fancy x  =  case minimalEquiv re of
-                        Nothing  -> (re,change)
-                        Just re' -> (re', change || re'/=re)
-                        where
-                           change  =  snd x
-                           x'      =  fst x
-                           re      =  if change then fancy x' else plain x'
-
-malt :: [OK RE] -> OK RE
-malt  =  mlist mkAlt fuseAlt
-
-mcat :: [OK RE] -> OK RE
-mcat  =  mlist mkCat fuseCat
-
-mrep :: OK RE -> OK RE
-mrep  =  msolo Rep fuseRep
-
-mopt :: OK RE -> OK RE
-mopt  =  msolo Opt fuseOpt
--}
-
 minByCatalogue :: RE -> OK RE
 minByCatalogue re  =  katahom minByCatalogueK NoCxt re
-
-{-
-try resFileName = do
-  txt <- readFile resFileName
-  let res = map read $ lines txt
-  let res' = map wildCat res
-  mapM_ display (zip res res')nonminimal11"
-
-display :: (RE,RE) -> IO ()
-display (re,re') | re == re'
-                 = putStrLn $ show re ++ " (UNCHANGED)"
-                 | otherwise
-                 = putStrLn $ showWithSize re ++ " ---> " ++ showWithSize re'
-  where
-  showWithSize re = show re ++ " (" ++ show (size re) ++ ")"
--}
-

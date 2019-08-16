@@ -12,9 +12,17 @@ import StarPromotion
 import Context
 import Info
 
--- EXPERIMENT:
--- (1) after fusion
--- (2) simple cat ends not *mostCom
+-- Shrinking is a generate-and-test method.  It lazily generates variants x' of x with
+-- something missed out, but such that L(x') <= L(x) (or vice versa: co-shrinking).
+-- It tests such x' to see if in fact L(x) <= L(x') is also true.
+-- If so, voila! --- a simpler x.
+
+-- N.B. Although Shrunk is placed after Pressed in the Grade ordering, shrinking
+-- does not depend on or guarantee pressing.  When an expression is successfully
+-- reduced by shrinking, star promotion is applied to the result.
+
+-- The following *MostCom functions have the same types as, and a similar purpose to,
+-- the identically named functions in Pressing, but they do less.
 
 lMostCom' :: RE -> [(RE,[RE])]
 lMostCom' (Cat _ xs)  =  [(head xs, tail xs)]
@@ -32,17 +40,15 @@ rMostComList :: [RE] -> [([RE],RE)]
 rMostComList []  =  []
 rMostComList xs  =  [(init xs, last xs)]
 
--- FURTHER EXPERIMENT
--- (3) bounded-depth shrinkage
+-- In principle, we bound the depth to which REs are searched for candidate subREs to be 
+-- removed.  In practice, the depth bounds are large enough that they are unlikely to apply.
+
+-- In principle, shrinking could be applied once only at the root, rather than recursively
+-- at every level.
 
 shrinkDepth, coShrinkDepth :: Int
 shrinkDepth    =  100
 coShrinkDepth  =  100
-
--- Shrinking is a generate-and-test method.  It lazily generates
--- variants of x with something missed out, but in a way that
--- ensures L(x') <= L(x) (or vice versa: co-shrinking).  It tests such x' to see if in fact
--- L(x) <= L(x') is also true.  If so, voila! -- a simpler x.
 
 type ShrunkRE = RE
 
@@ -75,12 +81,12 @@ globalShrink :: RE -> OK RE
 globalShrink x = fixOK (globalShrinkCxt NoCxt) x
 
 globalShrinkCxt :: Cxt -> RE -> OK RE
-globalShrinkCxt c (Alt i xs) = ifchanged(shrinkAltList c' i xs) (changed . fuseAlt)(unchanged . Alt i)
+globalShrinkCxt c (Alt i xs) = ifchanged(shrinkAltList c' i xs) (changed . alt)(unchanged . Alt i)
                                where c' = if ew i then max OptCxt c else c
-globalShrinkCxt c (Cat i xs) = ifchanged(shrinkCatList c i xs) (changed . fuseCat)(unchanged . Cat i)
+globalShrinkCxt c (Cat i xs) = ifchanged(shrinkCatList c i xs) (changed . cat)(unchanged . Cat i)
                                where c' = if ew i then max OptCxt c else c
-globalShrinkCxt c (Rep x)    = ifchanged(globalShrinkCxt RepCxt x) (changed . fuseRep) (unchanged . Rep)
-globalShrinkCxt c (Opt x)    = ifchanged(globalShrinkCxt OptCxt x) (changed . fuseOpt) (unchanged . Opt)
+globalShrinkCxt c (Rep x)    = ifchanged(globalShrinkCxt RepCxt x) (changed . rep) (unchanged . Rep)
+globalShrinkCxt c (Opt x)    = ifchanged(globalShrinkCxt OptCxt x) (changed . opt) (unchanged . Opt)
 globalShrinkCxt c x          = unchanged x
 
 -- end of boilerplate section
@@ -101,10 +107,9 @@ shrunkenCatList d xs  =  [ xs'
                                   | xy' <- shrunkenCat2Seg [x,y] ]]
 
 shrunkenCat2Seg :: [FuseRE] -> [FuseRE]
-shrunkenCat2Seg [Opt x, Opt y]  =  [promoteOpt $ promoteCat [x,y],
-                                    promoteOpt $ promoteAlt [x,y]]
-shrunkenCat2Seg [Rep x, Opt y]  =  [promoteAlt $ [Rep x, y]]
-shrunkenCat2Seg [Opt x, Rep y]  =  [promoteAlt $ [x, Rep y]]
+shrunkenCat2Seg [Opt x, Opt y]  =  [opt $ cat [x,y], opt $ alt [x,y]]
+shrunkenCat2Seg [Rep x, Opt y]  =  [alt [Rep x, y]]
+shrunkenCat2Seg [Opt x, Rep y]  =  [alt [x, Rep y]]
 shrunkenCat2Seg _               =  []
 
 coShrunkenCatList :: Int -> [FuseRE] -> [[FuseRE]]
@@ -121,42 +126,42 @@ coShrunkenCatList d xs  =  [ xs'
 
 -- includes rules such as x(x*y)? -> x+x*y
 coShrunkenCat2Seg :: [FuseRE] -> [FuseRE]
-coShrunkenCat2Seg [Rep x, Rep y]  =  [promoteRep $ promoteAlt [x,y]]
+coShrunkenCat2Seg [Rep x, Rep y]  =  [rep $ alt [x,y]]
 coShrunkenCat2Seg [Rep x, Opt(Cat _ ys) ] 
                                   |  head ys == x
-                                  =  [ promoteCat[Rep x, promoteOpt(mkCat(tail ys))] ] 
+                                  =  [ cat[Rep x, opt(mkCat(tail ys))] ] 
                                   |  isCat x && take n ys == xs
-                                  =  [ promoteCat[Rep x, promoteOpt(mkCat(drop n ys))] ]
+                                  =  [ cat[Rep x, opt(mkCat(drop n ys))] ]
                                      where
                                      Cat _ xs = x
                                      n = length(unCat x)
 coShrunkenCat2Seg [Opt(Cat _ ys), Rep x ] 
                                   |  last ys == x
-                                  =  [ promoteCat[promoteOpt(mkCat(init ys)), Rep x] ] 
+                                  =  [ cat[opt(mkCat(init ys)), Rep x] ] 
                                   |  isCat x && drop m ys == xs
-                                  =  [ promoteCat[promoteOpt(mkCat(take m ys)), Rep x] ]
+                                  =  [ cat[opt(mkCat(take m ys)), Rep x] ]
                                      where
                                      Cat _ xs = x
                                      n = length(unCat x)
                                      m = length ys - n
 coShrunkenCat2Seg [Alt _ xs, Rep y] 
                                   |  not (null candidates)
-                                  =  [ promoteCat[promoteAlt ca, Rep y] | ca<-candidates ]
+                                  =  [ cat[alt ca, Rep y] | ca<-candidates ]
                                      where
                                      candidates = [mkCat(init zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==last zs]
 coShrunkenCat2Seg [Rep y, Alt _ xs] 
                                   |  not (null candidates)
-                                  =  [ promoteCat[Rep y, promoteAlt ca] | ca<-candidates ]
+                                  =  [ cat[Rep y, alt ca] | ca<-candidates ]
                                      where
                                      candidates = [mkCat(tail zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==head zs]
 coShrunkenCat2Seg [Opt x,     y]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ promoteAlt[y,Opt x] | (xs,Rep y')<-rMostCom' x, eqv y y']
+                                     candidates = [ alt [y,Opt x] | (xs,Rep y')<-rMostCom' x, eqv y y']
 coShrunkenCat2Seg [y,     Opt x]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ promoteAlt[y,Opt x] | (Rep y',xs)<-lMostCom' x, eqv y y']
+                                     candidates = [ alt [y,Opt x] | (Rep y',xs)<-lMostCom' x, eqv y y']
 coShrunkenCat2Seg [Rep x,     y]  |  x == y
                                   =  [Rep x]
 coShrunkenCat2Seg [x    , Rep y]  |  y == x
@@ -176,27 +181,27 @@ coShrunkenAltList d xs = [ xs'
 
 shrunken :: Int -> FuseRE -> [FuseRE]
 shrunken 0 _           =  []
-shrunken d (Alt _ xs)  =  [promoteAlt xs' | xs' <- shrunkenAltList d xs]
-shrunken d (Cat _ xs)  =  [promoteCat xs' | xs' <- shrunkenCatList d xs]  
-shrunken d (Opt x)     =  x : [promoteOpt x' | x'  <- shrunken (d-1) x ]
-shrunken d (Rep x)     =  x : [promoteRep x' | x'  <- shrunken (d-1) x ]
+shrunken d (Alt _ xs)  =  [alt xs' | xs' <- shrunkenAltList d xs]
+shrunken d (Cat _ xs)  =  [cat xs' | xs' <- shrunkenCatList d xs]  
+shrunken d (Opt x)     =  x : [opt x' | x'  <- shrunken (d-1) x ]
+shrunken d (Rep x)     =  x : [rep x' | x'  <- shrunken (d-1) x ]
 shrunken d _           =  []
 
 coShrunken :: Int -> FuseRE -> [FuseRE]
 coShrunken 0 _           =  []
-coShrunken d (Alt _ xs)  =  [promoteAlt xs' | xs' <- coShrunkenAltList d xs]
-coShrunken d (Cat _ xs)  =  [promoteCat xs' | xs' <- coShrunkenCatList d xs]  
-coShrunken d (Opt x)     =  [promoteOpt x'  | x'  <- coShrunken (d-1) x]
-coShrunken d (Rep x)     =  [promoteRep x'  | x'  <- coShrunkenRepBody (d-1) x ]
+coShrunken d (Alt _ xs)  =  [alt xs' | xs' <- coShrunkenAltList d xs]
+coShrunken d (Cat _ xs)  =  [cat xs' | xs' <- coShrunkenCatList d xs]  
+coShrunken d (Opt x)     =  [opt x'  | x'  <- coShrunken (d-1) x]
+coShrunken d (Rep x)     =  [rep x'  | x'  <- coShrunkenRepBody (d-1) x ]
 coShrunken d _           =  []
 
 coShrunkenRepBody 0 _           =  []
-coShrunkenRepBody d (Alt _ xs)  =  [ valOf $ promoteCxt RepCxt (mkAlt xs')
+coShrunkenRepBody d (Alt _ xs)  =  [ mkAlt xs'
                                    | (x,etc) <-itemRest xs,
                                      xs' <- [x':etc | x' <- coShrunkenRepBody (d-1) x] ]                          
-coShrunkenRepBody d x@(Cat _ _) =  [ promoteAlt[b2',mkCat suf]
+coShrunkenRepBody d x@(Cat _ _) =  [ alt [b2',mkCat suf]
                                    | (b2,suf)<-lMostCom' x, b2'<-unOptRep b2] ++
-                                   [ promoteAlt[mkCat pre,b3']
+                                   [ alt [mkCat pre,b3']
                                    | (pre,b3)<-rMostCom' x, b3'<-unOptRep b3] ++
                                    coShrunken d x
 coShrunkenRepBody d _           =  []
@@ -209,20 +214,19 @@ unOptRep _       = []
 shrinkAltList :: RewRule
 shrinkAltList c i xs =
       list2OK xs $  [ ys' | ys' <- shrunkenAltList shrinkDepth xs,
-                            x `sublang` la (fuseAlt ys') ]
+                            x `sublang` la (alt ys') ]
                  ++ [ ys' | ys' <- coShrunkenAltList coShrinkDepth xs,
-                            fuseAlt ys' `sublang` lang ]
+                            alt ys' `sublang` la x ]
       where x    = Alt i xs
             la   = contextFunction c
-            lang = la x
 
 shrinkCatList :: RewRule
 shrinkCatList c i xs =
       list2OK xs $  [ ys' | ys' <- shrunkenCatList shrinkDepth xs,
-                            x `sublang` la(fuseCat ys') ]
+                            x `sublang` la (cat ys') ]
                  ++ [ ys' | ys' <- coShrunkenCatList coShrinkDepth xs,
-                            fuseCat ys' `sublang` lang ]
+                            cat ys' `sublang` la x ]
       where x    = Cat i xs
             la   = contextFunction c
-            lang = la x
+
 

@@ -1,5 +1,5 @@
 module List (
-   unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
+   snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
    nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
    segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
    splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
@@ -401,6 +401,9 @@ unionsEQ = foldr union []
 -- concat for multiset-like lists, given as sorted lists
 unionsMulti :: Ord a => [[a]] -> [a]
 unionsMulti = foldMerge merge []
+
+snoc :: [a] -> a -> [a]
+snoc xs x  =  foldr (:) [x] xs
 
 unsnoc :: [a] -> Maybe([a],a)
 unsnoc xs = uns id xs where
