@@ -312,20 +312,20 @@ normAppend xs ys  =  na (reverse xs) ys
 -- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
 
 -- this is the 'white' operator of Gruber-Gulan SSNF
-white :: FuseRE -> FuseRE
-white Emp         =  Emp
-white Lam         =  Emp
-white (Sym s)     =  Sym s
-white (Alt i xs)  |  ew i
-                  =  fuseAlt $ map white xs
-                  |  otherwise
-                  =  Alt i xs
-white (Cat i xs)  |  ew i
-                  =  fuseAlt $ map white xs
-                  |  otherwise
-                  =  Cat i xs
-white (Rep x)     =  x
-white (Opt x)     =  x
+--white :: FuseRE -> FuseRE
+--white Emp         =  Emp
+--white Lam         =  Emp
+--white (Sym s)     =  Sym s
+--white (Alt i xs)  |  ew i
+--                  =  fuseAlt $ map white xs
+--                  |  otherwise
+--                  =  Alt i xs
+--white (Cat i xs)  |  ew i
+--                  =  fuseAlt $ map white xs
+--                  |  otherwise
+--                  =  Cat i xs
+--white (Rep x)     =  x
+--white (Opt x)     =  x
 
 -- like white, but anticipates normAlt/pressAlt/factAlt... as next step
 -- whiteAltList only returns a list of subREs of its argument
