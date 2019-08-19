@@ -123,3 +123,21 @@ gluchkov re = NFA {
     
 
 
+-- set of two-letter substrings of words of the language
+-- with linearised alphabet this is used for creating the Glushkov-automaton
+-- here, we can take it as an invariant of a language
+follow :: RE -> [[Char]]
+follow Emp     = []
+follow Lam     = []
+follow (Sym _) = []
+follow (Alt i xs) = unions $ map follow xs
+follow (Cat i xs) = followS xs
+                    where
+                    followS [] = []
+                    followS [x] = follow x
+                    followS (x:y:ys) = follow x `nubMerge` [[v,w]|v<-alpha2String(las x), w<-alpha2String(fir y)] `nubMerge`
+                                       followS (y:ys)
+follow (Rep x)    = follow x `nubMerge` [[v,w]|v<-alpha2String(las x), w<-alpha2String(fir x)]
+follow (Opt x)    = follow x
+
+

@@ -1,9 +1,9 @@
-module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RewRule,
-  okGradeCxt, gradeMinimal, gradeMinimalCxt,
+module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), RewRule,
+  okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
   mkExtension, mkHomTrans, mkTransform,
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
-  isKata, katahom, tpr, trg, altSizeBound, catSizeBound) where
+  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith) where
 
 import List
 import Info
@@ -37,34 +37,34 @@ altRule :: Katahom -> RewRule
 altRule kh c i xs  |  not (plural xs')
                    =  xso
                    |  otherwise
-                   =  okmap concatAlt $ kalt kh c ni `app` xso
+                   =  okmap nubMergeAltItems $ kalt kh c ni `app` xso
                       where
                       xso = kataliftAltSafe (katahom kh c) xs
                       xs' = valOf xso
                       ni  = if hasChanged xso then altInfo xs' else i
 
 kataliftAltSafe :: (RE->OK RE) -> [RE] -> OK [RE]
-kataliftAltSafe f xs = potentialChange (/=xs) $ (okmap concatAlt $ katalift f xs)
+kataliftAltSafe f xs = potentialChange (/=xs) $ (okmap nubMergeAltItems $ katalift f xs)
 
 altRuleOK :: RewRule -> RewRule
-altRuleOK r c i xs = okmapIf concatAlt (r c i xs)
+altRuleOK r c i xs = okmapIf nubMergeAltItems (r c i xs)
 
 -- dual to altRule
 catRule :: Katahom -> RewRule
 catRule kh c i xs  |  not (plural xs')
                    =  xso 
                    |  otherwise
-                   =  okmap concatCat $ kcat kh c ni `app` xso
+                   =  okmap concatCatItems $ kcat kh c ni `app` xso
                       where
                       xso = kataliftCatSafe (katahom kh NoCxt) xs
                       xs' = valOf xso
                       ni  = if hasChanged xso then catInfo xs' else i
 
 kataliftCatSafe :: (RE->OK RE) -> [RE] -> OK [RE]
-kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCat $ katalift f xs)
+kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCatItems $ katalift f xs)
 
 catRuleOK :: RewRule -> RewRule
-catRuleOK r c i xs = okmapIf concatCat $ r c i xs
+catRuleOK r c i xs = okmapIf concatCatItems $ r c i xs
 
 -- untrusting katahom, i.e. it does not assume that the rules preserve standardness
 -- or that the original RE was standard
@@ -120,9 +120,9 @@ total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
 
 -- specific katalifts for Cats and Alts
 kataliftAlt, kataliftCat, katalift1Alt :: (RE -> OK RE) -> [RE] -> OK [RE]
-kataliftAlt f xs  = okmapIf concatAlt $ katalift f xs
-kataliftCat f xs  = okmapIf concatCat $ katalift f xs
-katalift1Alt f xs = okmapIf concatAlt $ katalift1 f xs
+kataliftAlt f xs  = okmapIf nubMergeAltItems $ katalift f xs
+kataliftCat f xs  = okmapIf concatCatItems   $ katalift f xs
+katalift1Alt f xs = okmapIf nubMergeAltItems $ katalift1 f xs
 
 -- generic creation of a HomTrans
 mkHomTrans :: Katahom -> HomTrans
@@ -376,4 +376,53 @@ gradeMinimalCxt = katahomGeneral khgm
         kgcat = \c i xs->Cat (i{gr=[(outerCxt (ew i) c,Minimal)]}) xs,
         kgopt = \ _ x -> Opt x,
         kgrep = \ _ x -> Rep x}
+
+contextFunction :: Cxt -> RE -> RE
+contextFunction RepCxt  =  rep
+contextFunction OptCxt  =  opt
+contextFunction _       =  id
+
+-- Recursive predicates RE -> Bool.  NB: not, in general, homomorphisms.
+
+data RecPred =
+    RecPred {
+        empP :: Cxt -> Bool,
+        lamP :: Cxt -> Bool,
+        symP :: Cxt -> Char -> Bool,
+        catP :: Cxt -> Info -> [RE] -> Bool,
+        altP :: Cxt -> Info -> [RE] -> Bool,
+        repP :: Cxt -> RE -> Bool,
+        optP :: Cxt -> RE -> Bool
+    }
+
+-- NB the order of checking in && cases is important
+-- so that *P predicates can assume checked components
+-- more special predicates that check e.g. whether certain characters are present should use foldHomInfo
+checkWith :: RecPred -> RE -> Bool
+checkWith p = checkWith' RootCxt
+    where
+	checkWith' c Emp             =  empP p c
+	checkWith' c Lam             =  lamP p c
+	checkWith' c (Sym d)         =  symP p c d
+	checkWith' c (Cat i xs)      =  all (checkWith' NoCxt) xs && catP p oc i xs
+				        where oc = outerCxt (ew i) c 
+	checkWith' c (Alt i xs)      =  all (checkWith' oc) xs && altP p oc i xs
+				        where oc = outerCxt (ew i) c
+	checkWith' c (Rep re)        =  checkWith' RepCxt re && repP p c re
+        checkWith' c (Opt re)        =  checkWith' oc re && optP p c re
+                                        where oc = max OptCxt c
+
+upgradeRE :: Cxt -> Grade -> RE -> RE
+upgradeRE c g (Alt i xs) =  Alt i{ gr = upgradeCGMap c g (gr i)} xs
+upgradeRE c g (Cat i xs) =  Cat i{ gr = upgradeCGMap c g (gr i)} xs
+upgradeRE _ _ x          =  x
+
+-- makes the assertion that the top of the term is Minimal
+-- assuming the subterms are labelled anyway
+-- has to go below Rep/Opt as this is an asserion with a stronger context
+minimalAssert :: RE -> RE
+minimalAssert (Rep x) = Rep (upgradeRE RepCxt Minimal x)
+minimalAssert (Opt x) = Opt (upgradeRE OptCxt Minimal x)
+minimalAssert x       = upgradeRE NoCxt Minimal x
+
 

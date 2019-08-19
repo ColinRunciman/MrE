@@ -84,9 +84,9 @@ attributeHom :: HomInfo RE
 attributeHom = HomInfo { hiemp=Emp, hilam=Lam, hisym=Sym, hialt=attrAlt, hicat=attrCat, hiopt=attrOpt, hirep=attrRep }
 
 -- only ew information is assumed to be present
--- because concatAlt removes Lam/Opt, we may have to recover them
+-- because nubMergeAltItems removes Lam/Opt, we may have to recover them
 attrAlt :: Info -> [RE] -> RE
-attrAlt i xs =  opti (ew i) $ mkAlt (concatAlt xs)
+attrAlt i xs =  opti (ew i) $ mkAlt (nubMergeAltItems xs)
                 where
                 opti True  x |  not (ewp x)
                              =  Opt x
@@ -94,7 +94,7 @@ attrAlt i xs =  opti (ew i) $ mkAlt (concatAlt xs)
 
 -- no Emp in list
 attrCat :: Info -> [RE] -> RE
-attrCat i xs = mkCat $  concatCat xs
+attrCat i xs = mkCat $  concatCatItems xs
 
 -- Lam/Emp should not occur here
 attrOpt x |  ewp x

@@ -127,7 +127,7 @@ Rep x    *//* y          |  isJust y'
                                 b `sublang` Rep x, Just re<-[Rep x *//* pressCat bs]]
                             where
                             y' = x *//* y 
-Sym d    *//* y          |  not(ewp y) && swp d y && isCat y
+Sym d    *//* y          |  not (ewp y) && (d `elemAlpha` swa y) && isCat y
                          =  listToMaybe $ [ pressCat[Sym d, ntl] | (Sym d,tl) <- lMostCom' y,
                                             Just ntl <- [ Lam *//* mkCat tl] ]   ++
                                           [ pressCat[nlt, Sym d] | (lt,Sym d) <- rMostCom' y,
@@ -374,13 +374,13 @@ t *>=* u = listToMaybe $ [ r | Just r <- [t *==* u]] ++ [ pressCat[t,u'] | Just 
 Rep body *==* y       | ewp y && not (null candidates)
                       = Just $ head candidates
                         where
-                        candidates = [ pressRep(normBinAlt yb (fuseCat tl))
+                        candidates = [ pressRep(alt [yb, cat tl])
                                      | (hd,tl)<-lMostCom' body,
                                        Just (Rep yb)<-[eqr hd y]]
 y *==* Rep body       | ewp y && not (null candidates)
                       = Just $ head candidates
                         where
-                        candidates = [ pressRep(normBinAlt yb (fuseCat lt))
+                        candidates = [ pressRep(alt [yb, cat lt])
                                      | (lt,dh)<-rMostCom' body,
                                        Just (Rep yb)<-[eqr dh y] ]
 Opt x *==* Opt y      |  not (null cands)
@@ -410,12 +410,12 @@ Opt y *==* x          |  not $ null cands
 x *==* a@(Alt i xs)   | not(null cands) 
                       = Just $ head cands
                         where                       
-                        cands = [ pressAlt [xy, fuseBinCat x (altSubseq a ys)]
+                        cands = [ pressAlt [xy, cat [x, altSubseq a ys]]
                                 | (y,ys) <- itemRest xs, Just xy <- [x *<=* y], size xy < size y ]
 a@(Alt i xs) *==* x   | not(null cands) 
                       = Just $ head cands
                         where
-                        cands = [ pressAlt [yx, fuseBinCat (altSubseq a ys) x]
+                        cands = [ pressAlt [yx, cat [altSubseq a ys, x]]
                                 | (y,ys) <- itemRest xs, Just yx <- [y *>=* x], size yx < size y]
 x *==* c@(Cat _ xs)   | not $ null candidates
                       = Just $ head candidates
@@ -478,19 +478,19 @@ commuteStrict (x,y) =  if x/=y then commute (x,y) else Nothing
 
 -- For commuting over Alt items, to the right.
 commuteAlternativeR :: (RE,RE) -> Maybe(RE,RE)
-commuteAlternativeR p            | isJust normalC
-                                 = normalC
+commuteAlternativeR p            | isJust p'
+                                 = p'
                                    where
-                                   normalC = commute p
+                                   p' = commute p
 commuteAlternativeR (x,Cat _ xs) = Just(fuseCat(x:lt),dh)
                                    where Just(lt,dh)=unsnoc xs
 commuteAlternativeR _            = Nothing
 
 -- And the mirror function.
 commuteAlternativeL :: (RE,RE) -> Maybe(RE,RE)
-commuteAlternativeL p            | isJust normalC
-                                 = normalC
-                                   where normalC = commute p
+commuteAlternativeL p            | isJust p'
+                                 = p'
+                                   where p' = commute p
 commuteAlternativeL (Cat _ xs,x) = Just(head xs,fuseCat(tail xs++[x]))
 commuteAlternativeL _            = Nothing
 
@@ -505,7 +505,7 @@ commuteR (x, Cat _ ys)       |  isJust com
                              =  Just $ (pressCat ys', x')
                                 where com = rCom x ys ; Just (ys',x') = com
 commuteR (x, Rep (Cat i ys)) |  not $ null candidates
-                             =  Just (pressRep $ fuseCat nl, head nl)
+                             =  Just (pressRep $ cat nl, head nl)
                                 where
                                 candidates = [x' : init' | (init',x'') <- rMostCom'(Cat i ys),
                                                            Just x' <- [eqrCommute x'' x]]
@@ -516,7 +516,7 @@ commuteR (x, Rep y)          |  isJust com && eqx && eqy
                                       (eqx,x'') = equalCommute x x'
                                       (eqy,y'') = equalCommute y y'
 commuteR (x, Opt (Cat i ys)) |  not $ null candidates
-                             =  Just (pressOpt $ fuseCat nl, head nl)
+                             =  Just (pressOpt $ cat nl, head nl)
                                 where
                                 candidates = [x':init'| (init',x'') <- rMostCom'(Cat i ys),
                                                         Just x' <- [eqrCommute x'' x]]
@@ -539,7 +539,7 @@ commuteL (Cat _ xs, y)       |  isJust com
                              =  Just $ (y', pressCat xs')
                                 where com = lCom xs y ; Just (y',xs') = com
 commuteL (Rep (Cat i xs), y) |  not $ null candidates
-                             =  Just (last nl, pressRep $ fuseCat nl)
+                             =  Just (last nl, pressRep $ cat nl)
                                 where
                                 candidates = [tail'++[y'] | (y'',tail') <- lMostCom'(Cat i xs),
                                                            Just y' <- [eqrCommute y'' y]]
@@ -550,7 +550,7 @@ commuteL (Rep x, y)          |  isJust com && eqx && eqy
                                       (eqy,y'') = equalCommute y y'
                                       (eqx,x'') = equalCommute x x'
 commuteL (Opt (Cat i xs), y) |  not $ null candidates
-                             =  Just (last c, pressOpt $ fuseCat c)
+                             =  Just (last c, pressOpt $ cat c)
                                 where
                                 candidates = [tail'++[y'] | (y'',tail') <- lMostCom'(Cat i xs),
                                                         Just y' <- [eqrCommute y'' y]]
@@ -667,8 +667,12 @@ rollList xs  |  rolled xs
 rollPass :: [PressRE] -> [PressRE]
 rollPass []  = []
 rollPass [x] = [x]
-rollPass xs  = m : rollPass (flatCat tl)
-    where (m,tl) = minimumBy (comparing fst) $ lMostComList xs
+rollPass xs  = m : rollPass (flat tl)
+    where
+    (m,tl)  =  minimumBy (comparing fst) $ lMostComList xs
+    flat []               =  []
+    flat (Cat _ xs : ys)  =  flat (xs++ys)
+    flat (x: xs)          =  x: flat xs
 
 rolled :: [PressRE] -> Bool
 rolled [] = True

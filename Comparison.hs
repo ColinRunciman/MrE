@@ -1,16 +1,18 @@
 module Comparison (
-  (===), (<<==), (====), eqr, eqv, subExpr, strictSubExpr, sublang, compRE ) where
+  (===), (<<==), (====), eqr, eqv, subExpr, strictSubExpr, sublang, compRE,
+  (&&&), sizeOrder, pickMin, pickMinList ) where
 
+import Data.Maybe
+import Data.Bits
+import Data.List (sortBy,(\\),minimumBy)
+import qualified Data.Set as S
+import qualified Data.Map.Strict as Map
+import Data.Monoid (mappend)
 import Function
 import List
 import Expression
 import Info
 import Fuse
-import Data.List (sortBy,(\\))
-import UnionFindRE
-import qualified Data.Set as S
-import Data.Maybe
-import Data.Bits
 import Alphabet
 import Queue
 import Derivative
@@ -18,12 +20,26 @@ import Derivative
 -- This module defines various comparison functions over regular expressions
 -- or their languages.  
 
+(&&&) :: Ordering -> Ordering -> Ordering
+(&&&) = mappend
+
 -- comparing on ewp and firsts alone
 basicOrd :: RE -> RE -> Ordering
 basicOrd x y = compare (ewp x) (ewp y) &&& compare (fir x)(fir y)
 
 basicLEQ :: RE -> RE -> Bool
 basicLEQ x y = basicOrd x y /= GT
+
+-- size-based ordering and selection
+
+sizeOrder :: RE -> RE  -> Ordering
+sizeOrder x y = compare (size x)(size y) &&& compare x y
+
+pickMin :: RE -> RE -> RE
+pickMin x y = minimumBy sizeOrder [x,y]
+
+pickMinList :: [RE] -> RE
+pickMinList xs = minimumBy sizeOrder xs
 
 -- Tests for syntactic subexpressions (reflexive and irreflexive).
 
@@ -68,7 +84,7 @@ sublaHyp1 _ x          y           |  ewp x && not(ewp y)
 -- In all the following cases we know ewp (1st arg) ==> ewp (2nd arg).
 sublaHyp1 h Lam        x           =  Just h
 sublaHyp1 _ _          Lam         =  Nothing
-sublaHyp1 h (Sym x)    y           =  justIf (swp x y) h
+sublaHyp1 h (Sym x)    y           =  justIf (x `elemAlpha` swa y) h
 sublaHyp1 _ _          (Sym z)     =  Nothing
 sublaHyp1 h (Opt x)    y           =  sublaHyp1 h x y
 sublaHyp1 h (Alt _ xs) y           =  sublaHypAlts xs y h
@@ -96,12 +112,12 @@ sublaHyp2 h x@(Rep (Cat b xs))     y  =  sublaHyp1 h (mkCat (xs ++ [x])) y
 sublaHyp2 h (Rep x)                y  =  sublaHyp1 h (mkCat [x,Rep x]) y
 sublaHyp2 h (Cat _ (Sym c:rs))     y  =  sublaHyp1 h (mkCat rs) (derive c y)
 sublaHyp2 h (Cat _ (Alt _ xs:rs))  y  =  let tl=mkCat rs in
-                                               sublaHypAlts [fuseBinCat x tl | x<-xs ] y h
+                                               sublaHypAlts [cat [x, tl] | x<-xs ] y h
 sublaHyp2 h (Cat _ (Opt x:rs))     y  =  let tl=mkCat rs in
                                               sublaHyp1 h tl y >>= 
-                                              \h' -> sublaHyp1 h' (fuseBinCat x tl) y
+                                              \h' -> sublaHyp1 h' (cat [x, tl]) y
 sublaHyp2 h inp@(Cat _ (Rep x:rs)) y  =  sublaHyp1 h (mkCat rs) y >>=
-                                           \h' -> sublaHyp1 h' (fuseBinCat x inp) y
+                                           \h' -> sublaHyp1 h' (cat [x, inp]) y
 sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 
 -- The compRE function is a language-based linear ordering of REs.
@@ -213,4 +229,62 @@ x <<== y = validate x `sublang` validate y
 
 (====) :: RE -> RE -> Bool
 x ==== y = validate x === validate y
+
+-- Union Find
+
+type UFRE = Map.Map RE RE
+
+emptyUF :: UFRE
+emptyUF = Map.empty
+
+-- auxiliary to compute the list of all nodes that lead to a root
+findL :: RE -> [RE] -> UFRE -> (RE,[RE])
+findL x xs u = case Map.lookup x u of
+               Nothing -> (x,xs)
+               Just x' -> findL x' (x:xs) u
+
+unionTest :: RE -> RE -> UFRE -> (RE,RE,UFRE)
+unionTest x y u  =  (xn,yn,Map.union(Map.fromList [(y,zn)|y<-zs]) u)
+             where
+                (xn,xs)   =  findL x [] u
+                (yn,ys)   =  findL y [] u
+                zn  =  pickMin xn yn
+                zs  =  [ yn | zn/=yn ] ++ [xn | zn/=xn] ++ xs ++ ys
+
+unionUF :: RE -> RE -> UFRE -> UFRE
+unionUF x y u  =  Map.union(Map.fromList [(y,zn)|y<-zs]) u
+             where
+                (xn,xs)   =  findL x [] u
+                (yn,ys)   =  findL y [] u
+                zn  =  pickMin xn yn
+                zs  =  [ yn | zn/=yn ] ++ [xn | zn/=xn] ++ xs ++ ys
+
+-- root lookup without path compression
+rootUF :: UFRE -> RE -> RE
+rootUF u x =  case Map.lookup x u of
+               Nothing -> x
+               Just x' -> rootUF u x'
+
+fixUF :: UFRE -> UFRE
+fixUF uf = Map.fromList al2 where
+    f x  = fromMaybe x (Map.lookup x uf')
+    dom = nubSort (Map.elems uf ++ Map.keys uf)
+    al1 = [(x,simpl(rootUF uf x))|x<-dom]
+    uf' = Map.fromList al1
+    al2 = [(x,fuse y)|(x,y)<-al1]
+    simpl (Alt i xs) = Alt i (map f xs)
+    simpl (Cat i xs) = Cat i (map f xs)
+    simpl (Rep x)    = Rep (f x)
+    simpl (Opt x)    = Opt (f x)
+    simpl y          = y
+
+-- actually a commutative monoid, with emptyUF as mempty
+mergeUF :: UFRE -> UFRE -> UFRE
+mergeUF m1 m2  |  Map.size m1 <= Map.size m2
+               =  addToUF m1 m2
+               |  otherwise
+               =  addToUF m2 m1
+
+addToUF :: UFRE -> UFRE -> UFRE
+addToUF m1 m2  = Map.foldrWithKey unionUF m2 m1
 

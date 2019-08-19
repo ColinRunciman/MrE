@@ -2,6 +2,7 @@ module Properties where
 
 import Data.List
 import Data.Maybe
+import List
 import Expression
 import Info
 import Catalogue
@@ -32,6 +33,43 @@ instance Listable RE where
             [[Sym 'a'], [Sym 'b']] \/
             cons1 alt \/ cons1 cat \/
             cons1 rep \/ cons1 opt
+
+validRE :: RE -> Bool
+validRE (Cat _ xs)  =  not (any isCat xs) &&
+                       all validSubRE xs
+validRE (Alt _ xs)  =  not (any (\x -> isAlt x || isOpt x) xs) && strictlyOrdered xs &&
+                       all validSubRE xs
+validRE (Opt x)     =  not (ewp x) && validSubRE x
+validRE (Rep x)     =  not (isOpt x || isRep x) && validSubRE x
+validRE _           =  True
+
+validSubRE :: RE -> Bool
+validSubRE Emp  =  False
+validSubRE Lam  =  False
+validSubRE x    =  validRE x
+
+expinfo :: RE -> ExpInfo
+expinfo e = expinfoCxt NoCxt e
+
+expinfoCxt c Emp = nocxt c emptyInfo
+expinfoCxt c Lam = nocxt c lamInfo
+expinfoCxt c (Sym d) = nullcxt c (charInfo d)
+expinfoCxt c (Alt i _) = extractInfo c i
+expinfoCxt c (Cat i _) = extractInfo c i
+expinfoCxt c (Rep x) = nocxt c $ addEps (expinfoCxt RepCxt x)
+expinfoCxt c (Opt x) = nocxt c $ addEps (expinfoCxt OptCxt x)
+
+addEps :: ExpInfo -> ExpInfo
+addEps i = i { nullable=True, expressionSize=expressionSize i+1 }
+
+anywhere :: (RE -> Bool) -> RE -> Bool
+anywhere p x           |  p x
+                       =  True
+anywhere p (Alt _ xs)  =  any (anywhere p) xs
+anywhere p (Cat _ xs)  =  any (anywhere p) xs
+anywhere p (Rep x)     =  anywhere p x
+anywhere p (Opt x)     =  anywhere p x
+anywhere p _           =  False
 
 for :: (a->Bool) -> (a->Bool) -> a -> Bool
 for k p x  =  k x ==> p x
@@ -160,3 +198,11 @@ nonExpandingMrE x  =  and [nonExpandingUnder size kataGrade x,
 propPickMinList :: [RE] -> Bool
 propPickMinList xs  =  not (null xs) ==>
                        size (pickMinList xs) == minimum (map size xs)
+-- removes all grading from an RE; useful for testing purposes
+degrade :: RE -> RE
+degrade = foldHomInfo $ HomInfo {
+    hiemp = Emp, hilam = Lam, hisym = Sym,
+    hialt = \i xs -> Alt i{gr=[]} xs,
+    hicat = \i xs -> Cat i{gr=[]} xs,
+    hirep=Rep, hiopt=Opt }
+
