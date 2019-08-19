@@ -114,10 +114,10 @@ sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 x === y  =  compRE x y == EQ
 
 compRE :: RE -> RE -> Ordering
-compRE x y = solveGoals (makeGoal x y) emptyHyp
+compRE x y = solveGoals ido (makeGoal x y) emptyHyp
 
-compREinUF :: UFRE -> RE -> RE -> (Ordering,UFRE)
-compREinUF uf x y = solveGoalsUF (makeGoal x y) uf
+compREinUF :: UFRE -> RE -> RE -> UFOrdering
+compREinUF uf x y = solveGoals ufo (makeGoal x y) uf
 
 type EqHyp = UFRE
 
@@ -132,82 +132,58 @@ makeGoal x y = singletonQ (x,y)
 makeGoals :: [RE] -> Goals
 makeGoals xs = list2Q (linkWith (,) xs)
 
-success :: EqHyp -> Ordering
-success _ = EQ
+data UFOrdering  =  UFO Ordering UFRE
 
-successUF :: EqHyp -> UFOrdering
-successUF uf = (EQ,uf)
+class OrdRE a where
+  result :: a -> Ordering -> Goals -> EqHyp -> a
+  success :: a -> EqHyp -> a
+
+instance OrdRE Ordering where
+  result  _ ord _ _  =  ord
+  success _ _        =  EQ
+
+instance OrdRE UFOrdering where
+  result  _ ord _ _  =  UFO ord emptyUF
+  success _ uf       =  UFO EQ uf
+
+ido :: Ordering
+ido  =  undefined
+
+ufo :: UFOrdering
+ufo  =  undefined
 
 -- Each goal is a pair of expressions that needs to be proved equal.
 -- If one fails then the whole comparison fails with the same result.
 
-solveGoals :: Goals -> EqHyp -> Ordering
-solveGoals gs = maybe success (uncurry compREHyp1) (pollQM gs)
+solveGoals :: OrdRE a => a -> Goals -> EqHyp -> a
+solveGoals o gs = maybe (success o) (uncurry $ compREHyp1 o) (pollQM gs)
 
-type UFOrdering = (Ordering,UFRE)
+orderSelect :: OrdRE a => a -> Ordering -> (Goals -> EqHyp -> a) -> Goals -> EqHyp -> a
+orderSelect _ EQ continuation = continuation
+orderSelect o ot _            = result o ot
 
-{- retains the UF structure -}
-solveGoalsUF :: Goals -> EqHyp -> UFOrdering
-solveGoalsUF gs = maybe successUF (uncurry compREHyp1UF) (pollQM gs)
+-- compREHyp1 o p gs e checks the goal p as follows.
+-- (1) If the languages of p are elementarily different that difference is the result.
+-- (2) If they are clearly the same the goal is dismissed and the remaining goals are checked.
+-- (3) If p is found in e then the goal is dismissed.
+-- (4) Otherwise the derivatives of p are added to the queue of goals to be solved.
 
-{- the 'return' of some function space monad, but non-monadic notation -}
-result :: Ordering -> Goals -> EqHyp -> Ordering
-result ord goals hyp = ord
+compREHyp1 :: OrdRE a => a -> (RE,RE) -> Goals -> EqHyp -> a
+compREHyp1 o (Emp,Emp)     =  solveGoals o
+compREHyp1 o (Emp,_)       =  result o LT
+compREHyp1 o (_  ,Emp)     =  result o GT
+compREHyp1 o (Lam,Lam)     =  solveGoals o
+compREHyp1 o (Lam,x)       =  result o $ if ewp x then LT else GT
+compREHyp1 o (x,Lam)       =  result o $ if ewp x then GT else LT                  
+compREHyp1 o (Sym c,Sym d) =  orderSelect o (compare c d) (solveGoals o)
+compREHyp1 o (Opt x,Opt y) =  compREHyp1 o (x,y)
+compREHyp1 o (x,y)         =  orderSelect o (basicOrd x y) (compREHyp2n o (alpha2String $ fir x) x y)
 
-{- returns emptyUF, because the process failed, so the current UF needs to be wiped -}
-resultUF :: Ordering -> Goals -> EqHyp -> UFOrdering
-resultUF ord goals hyp = (ord,emptyUF)
-
-orderSelect :: Ordering -> (Goals -> EqHyp -> Ordering) -> Goals -> EqHyp -> Ordering
-orderSelect EQ continuation = continuation
-orderSelect ot _            = result ot
-
-orderSelectUF :: Ordering -> (Goals -> EqHyp -> UFOrdering) -> Goals -> EqHyp -> UFOrdering
-orderSelectUF EQ continuation = continuation
-orderSelectUF ot _            = resultUF ot
-
--- compREHyp1 p gs e checks the goal p
--- if the languages of p are elementarily different that difference is the result
--- if they are clearly the same the goal is dismissed and the remaining goals are checked
--- if p is found in e then the goal is dimissed and...
--- otherwise the derivatives of p are computed, added to the queue of goals,
--- which is then solved
-
-compREHyp1 :: (RE,RE) -> Goals -> EqHyp -> Ordering
-compREHyp1 (Emp,Emp)     =  solveGoals
-compREHyp1 (Emp,_)       =  result LT
-compREHyp1 (_  ,Emp)     =  result GT
-compREHyp1 (Lam,Lam)     =  solveGoals
-compREHyp1 (Lam,x)       =  result $ if ewp x then LT else GT
-compREHyp1 (x,Lam)       =  result $ if ewp x then GT else LT                  
-compREHyp1 (Sym c,Sym d) =  orderSelect (compare c d) solveGoals
-compREHyp1 (Opt x,Opt y) =  compREHyp1 (x,y)
-compREHyp1 (x,y)         =  orderSelect (basicOrd x y) (compREHyp2n (alpha2String $ fir x) x y)
-
-compREHyp1UF :: (RE,RE) -> Goals -> EqHyp -> UFOrdering
-compREHyp1UF (Emp,Emp)     =  solveGoalsUF
-compREHyp1UF (Emp,_)       =  resultUF LT
-compREHyp1UF (_  ,Emp)     =  resultUF GT
-compREHyp1UF (Lam,Lam)     =  solveGoalsUF
-compREHyp1UF (Lam,x)       =  resultUF $ if ewp x then LT else GT
-compREHyp1UF (x,Lam)       =  resultUF $ if ewp x then GT else LT                  
-compREHyp1UF (Sym c,Sym d) =  orderSelectUF (compare c d) solveGoalsUF
-compREHyp1UF (Opt x,Opt y) =  compREHyp1UF (x,y)
-compREHyp1UF (x,y)         =  orderSelectUF (basicOrd x y) (compREHyp2nUF (alpha2String $ fir x) x y)
-
-compREHyp2n fir x y goals hyp
+compREHyp2n o fir x y goals hyp
     |  xn==yn
-    =  solveGoals goals hyp'
+    =  solveGoals o goals hyp'
     |  otherwise
-    =  solveGoals (enterListQ (map (\c ->(derive c x,derive c y)) fir) goals) hyp'
-       where
-       (xn,yn,hyp')  =  unionTest x y hyp
-
-compREHyp2nUF fir x y goals hyp
-    |  xn==yn
-    =  solveGoalsUF goals hyp'
-    |  otherwise
-    =  solveGoalsUF (enterListQ (map (\c ->(derive c x,derive c y)) fir) goals) hyp'
+    =  solveGoals o (enterListQ (map (\c ->(derive c x,derive c y)) fir) goals) hyp'
        where
        (xn,yn,hyp')  =  unionTest x y hyp
 
@@ -226,7 +202,7 @@ equivMin x y  =  (isJust m, fromJust m)
 
 eqrList :: [RE] -> Maybe RE
 eqrList xs = justIf (rel==EQ) (rootUF uf (head xs))
-             where (rel,uf) = solveGoalsUF (makeGoals xs) emptyHyp
+             where UFO rel uf = solveGoals ufo (makeGoals xs) emptyHyp
 
 eqv :: RE -> RE -> Bool
 eqv x y = isJust $ eqr x y
