@@ -140,8 +140,9 @@ rightfuse xs = mkOK rf (length xs > length rf)
 altFuseList :: Cxt -> Info -> [FuseRE] -> OK [RE]
 altFuseList c i xs = guardApply (ew i && c==RepCxt) whiteList xs `orOK`
                      altSigmaStar c i xs `orOK`
-                     leftfuse xs `orOK` rightfuse xs `orOK`
-                     singleLetterFuseLeft xs `orOK` singleLetterFuseRight xs
+                     leftfuse xs `orOK` rightfuse xs
+                     -- `orOK` singleLetterFuseLeft xs `orOK` singleLetterFuseRight xs
+                     --  commented out as it is not a loglinear trafo
 
 
 -- assumption: in RepCxt this is not ewp,
@@ -197,34 +198,48 @@ catFuseList RepCxt i xs  |  ew i
                          |  sw i==al i
                          =  changed [ kataAlt (map Sym (alpha2String $ sw i)) ]
                          |  not (isEmptyAlpha (sw i)) 
-                         =  fixCrush (sw i) xs
-                         |  otherwise
-                         =  unchanged xs
-                            where
-catFuseList _ i xs       =  fuseListProcess False [] xs
+                         =  fuseListProcess `app` fixCrush (sw i) xs
+catFuseList _ i xs       =  fuseListProcess xs
 
 -- left argument: list of already processed elements, in reverse order
 -- right argument: unprocessed, but all cat-elements
-fuseListProcess :: Bool -> [FuseRE] -> [FuseRE] -> OK [FuseRE]
-fuseListProcess changed xs []     =  mkOK (reverse xs) changed
-fuseListProcess changed [] (x:xs) =  fuseListProcess changed [x] xs
-fuseListProcess changed (Rep x:xs) (Rep y:ys)
-                          |  x == y
-                          =  fuseListProcess True (Rep x:xs) ys
-                          |  a == alpha y && singularAlpha a
-                          =  fuseListProcess True xs (fuse(Rep(alt[x,y])):ys)
-                             where
-                             a = alpha x
-fuseListProcess changed (Rep x:xs) (Opt y:ys)
-                          |  x == y
-                          =  fuseListProcess True (Rep x:xs) ys
-fuseListProcess changed (Opt x:xs) (Rep y:ys)
-                          |  x == y
-                          =  fuseListProcess True xs (Rep y:ys)
-fuseListProcess changed (Opt x:xs) (y:ys)
-                          |  x == y
-                          =  fuseListProcess True xs (y:Opt x:ys)
-fuseListProcess changed xs (y:ys) =  fuseListProcess changed (y:xs) ys
+-- fuseListProcess :: Bool -> [FuseRE] -> [FuseRE] -> OK [FuseRE]
+-- fuseListProcess changed xs []     =  mkOK (reverse xs) changed
+-- fuseListProcess changed [] (x:xs) =  fuseListProcess changed [x] xs
+-- fuseListProcess changed (Rep x:xs) (Rep y:ys)
+--                          |  x == y
+--                          =  fuseListProcess True (Rep x:xs) ys
+--                          |  a == alpha y && singularAlpha a
+--                          =  fuseListProcess True xs (fuse(Rep(alt[x,y])):ys)
+--                             where
+--                             a = alpha x
+-- fuseListProcess changed (Rep x:xs) (Opt y:ys)
+--                          |  x == y
+--                          =  fuseListProcess True (Rep x:xs) ys
+--fuseListProcess changed (Opt x:xs) (Rep y:ys)
+--                          |  x == y
+--                          =  fuseListProcess True xs (Rep y:ys)
+--fuseListProcess changed (Opt x:xs) (y:ys)
+--                          |  x == y
+--                          =  fuseListProcess True xs (y:Opt x:ys)
+--fuseListProcess changed xs (y:ys) =  fuseListProcess changed (y:xs) ys
+
+fuseListProcess :: [RE] -> OK [RE]
+fuseListProcess xs = updateEQ xs $ concat $ fuseChains fuseCatElem xs
+
+fuseCatElem :: Fusion RE
+fuseCatElem (Rep x)(Rep y) |  x == y
+                           =  Left (Rep x)
+                           |  a == alpha y && singularAlpha a
+                           =  Left (fuse(rep(alt[x,y])))
+                           |  otherwise
+                           =  Right True -- no swap
+                              where
+                              a = alpha x
+fuseCatElem (Rep x)(Opt y) =  if x==y then Left(Rep x) else Right True
+fuseCatElem (Opt x)(Rep y) =  if x==y then Left(Rep x) else Right True
+fuseCatElem x y            =  Right True
+
 
 -- input: KataRE that occurs as list element in either Cats or Alts in a RepCxt in trafos
 -- snd arg is a list of already whited ones
