@@ -36,10 +36,6 @@ ordered, strictlyOrdered :: Ord a => [a] -> Bool
 ordered          =  linkedBy (<=)
 strictlyOrdered  =  linkedBy (<)
 
-orderedBy, strictlyOrderedBy :: (a->a->Ordering) -> [a] -> Bool
-orderedBy cmp               =  linkedBy (\x y->cmp x y /= GT)
-strictlyOrderedBy cmp       =  linkedBy (\x y->cmp x y == LT)
-
 merge :: Ord a => [a] -> [a] -> [a]
 merge [] ys          =  ys
 merge xs []          =  xs
@@ -102,30 +98,12 @@ nubChains = foldr addOne []
                     EQ -> chains
                     GT -> [x]:chains
 
--- like \\ but for set-like lists and exploits order
-nubRemove :: Ord a => [a] -> [a] -> [a]
-nubRemove [] _          = []
-nubRemove xs []         = xs
-nubRemove (x:xs) (y:ys) =
-    case compare x y of
-        LT -> x : nubRemove xs (y:ys)
-        EQ -> nubRemove xs ys
-        GT -> nubRemove (x:xs) ys
-
 mergeBy :: (a->a->Ordering) -> [a] -> [a] -> [a]
 mergeBy cmp [] ys          =  ys
 mergeBy cmp xs []          =  xs
 mergeBy cmp (x:xs) (y:ys)  =  case cmp x y of
                            LT -> x : mergeBy cmp xs (y:ys)
                            _  -> y : mergeBy cmp (x:xs) ys
-
-insertSet :: Ord a => a -> [a] -> [a]
-insertSet x [] = [x]
-insertSet x inp@(y:ys) =
-    case compare x y of
-        LT -> x:inp
-        EQ -> inp
-        GT -> y:insertSet x ys
 
 -- intersection of sorted set-like list
 intersectSet :: Ord a => [a] -> [a] -> [a]
@@ -136,16 +114,6 @@ intersectSet (x:xs)(y:ys) =
         GT -> intersectSet (x:xs) ys
 intersectSet [] _  = []
 intersectSet _ []  = []
-
--- subset of set-like lists
-subsetOrd :: Ord a => [a] -> [a] -> Bool
-subsetOrd (x:xs) (y:ys) =
-    case compare x y of
-        LT -> False
-        EQ -> subsetOrd xs ys
-        GT -> subsetOrd (x:xs) ys
-subsetOrd [] _     = True
-subsetOrd (_:_) [] = False
 
 -- removes an element from a set-like list, but fails if element is not there
 -- spec: removeFromSet x ys = listToMaybe [ zs | (y,zs)<-itemRest ys, y==x]
@@ -158,11 +126,6 @@ removeFromSet x xs = rfs xs id
            LT -> Nothing
            EQ -> Just $ f ys
            GT -> rfs ys (f . (y:))
-
--- The result of anyRest p q xs is True when for some item x in xs, p x is True
--- and for all other items q x is True.  The item x need not be unique.
-anyRest :: (a->Bool) -> (a->Bool) -> [a] -> Bool
-anyRest p q xs = any (all q) [ys | (x,ys) <- itemRest xs, p x]
 
 -- All choices of one item from a list paired with the list of remaining items.
 itemRest :: [a] -> [(a,[a])]
@@ -194,11 +157,13 @@ allPowerSplits (x:xs) = [(x:ys1,ys2)|(ys1,ys2)<-nxs] ++ [(ys1,x:ys2)|(ys1,ys2)<-
     where
     nxs = allPowerSplits xs
 
--- splits a list-set into two parts, the first of being non-empty and elements satisfying the predicate
+-- splits a list-set into two parts in all possible ways such that the first part
+-- is non-empty and contains only elements satisfying the predicate
 powerSplitsPred :: (a->Bool) -> [a] -> [([a],[a])]
 powerSplitsPred p [] = []
 powerSplitsPred p (x:xs) | p x
-                         = ([x],xs) : [ (x:ys1,ys2)|(ys1,ys2)<-nxs] ++ [(ys1,x:ys2)|(ys1,ys2)<-nxs]
+                         = ([x],xs) : [(x:ys1,ys2)|(ys1,ys2)<-nxs] ++
+                                      [(ys1,x:ys2)|(ys1,ys2)<-nxs]
                          | otherwise
                          = [(ys1,x:ys2)|(ys1,ys2)<-nxs]
                            where
@@ -294,17 +259,6 @@ segments :: [a] -> [[a]]
 segments xs  =  [] : [s | t <- tails xs, not (null t),
                           s <- inits t,  not (null s)]
 
-maxSegmentedBy :: (a->a->Bool) -> [a] -> [[a]]
-maxSegmentedBy _ []         =  []
-maxSegmentedBy _ [x]        =  [[x]]
-maxSegmentedBy r (x:y:etc)  |  r x y
-                            =  (x:ys) : yss
-                            |  otherwise
-                            =  [x] : ys : yss
-  where
-  ys:yss  =  maxSegmentedBy r (y:etc)
-
-
 -- The result of subsetRest n xs lists all subsequences of xs of length n,
 -- each paired with the corresponding residue of xs.
 subsetRest :: Int -> [a] -> [([a],[a])]
@@ -312,25 +266,6 @@ subsetRest 0 xs      =  [([], xs)]
 subsetRest _ []      =  []
 subsetRest n (x:xs)  =  [(x:as, bs) | (as,bs) <- subsetRest (n-1) xs] ++
                         [(as, x:bs) | (as,bs) <- subsetRest n     xs]
-
--- The result of segPartitionBy p xs is a pair (yss,nss) where yss lists the
--- maximal segments in which each element satisfies p and ns the maximal
--- non-p  segments.  By convention xs = concat (interleave yss nss), so the
--- first element of yss may be [].
-segPartitionBy :: (a->Bool) -> [a] -> ([[a]],[[a]])
-segPartitionBy p xs  =  if null etc then ([ys],[]) else (ys:yss,ns:nss) 
-   where
-   (ys, etc)  =  span p xs 
-   (ns, xs')  =  span (not . p) etc
-   (yss,nss)  =  segPartitionBy p xs' 
-
-interleave :: [a] -> [a] -> [a]
-interleave [] ys = ys
-interleave (x:xs) ys = x:interleave ys xs
-
--- cross product
-cross :: [a] -> [b] -> [(a,b)]
-cross xs ys =  [(x,y) | x<- xs, y<-ys]
 
 -- Given a list xs :: [a] of distinct items, and a predicate
 -- p :: a -> a -> Bool, obtain a minimal sublist ys of xs such that
@@ -349,46 +284,6 @@ maximaBy p  =  mb []
                 =  mb ms xs
                 |  otherwise
                 =  mb (x:ms) xs
-
--- Given a list xs :: [a] of distinct items, and a predicate
--- p :: a -> [a] -> Bool, obtain a minimal sublist ys such that
--- p x ys holds for every x in xs \\ ys.  A monotonicity condition
--- may be assumed for p: if p x ys and ys is a sublist of zs then p x zs.
--- NB The method here is "greedy": it considers successive items of
--- xs for addition to an accumulating sublist.  So the result may
--- depend on list order even though p does not.  If the choice matters,
--- the function could be generalised to give all possible results.
-minSubListBy :: (a->[a]->Bool) -> [a] -> [a]
-minSubListBy p  =  msl [] 
-  where
-  msl ms []      =  ms
-  msl ms (x:xs)  |  p x (ms++xs)
-                 =  msl ms xs
-                 |  otherwise
-                 =  msl (ms++[x]) xs
-
--- Is there a way to split a list xs into non-empty segments,
--- each of which satisfies a predicate p?
-anySegsAll :: ([a]->Bool) -> [a] -> Bool
-anySegsAll p []  =  True
-anySegsAll p xs  =  p xs ||
-                    or [ p xs1 && anySegsAll p xs2
-                       | (xs1, xs2) <- splits xs ]
-
--- Is there a way to split each of two lists xs and ys into the same
--- number of non-empty segments xs1...xsn and ys1...ysn so that a
--- given binary predicate p holds for each xsi ysi?
-anyPairedSegsAll p [] []  =  True
-anyPairedSegsAll p xs ys  =  p xs ys ||
-                             or [ p xs1 ys1 && anyPairedSegsAll p xs2 ys2
-                                | (xs1, xs2) <- splits xs,
-                                  (ys1, ys2) <- splits ys ]
--- dual to span, at end of list
-spanEnd :: (a->Bool) -> [a] -> ([a],[a])
-spanEnd p xs = foldr addElem ([],[]) xs
-               where
-               addElem x ([],ys) = if p x then ([],x:ys) else ([x],ys)
-               addElem x (xs,ys) = (x:xs,ys)
 
 -- concat for set-like lists, given as sorted lists without duplicates
 unions :: Ord a => [[a]] -> [a]
