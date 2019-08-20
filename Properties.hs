@@ -206,3 +206,22 @@ degrade = foldHomInfo $ HomInfo {
     hicat = \i xs -> Cat i{gr=[]} xs,
     hirep=Rep, hiopt=Opt }
 
+grading :: RE -> String
+grading = katahomGeneral
+                  (KatahomGeneral {kgemp="", kglam=const "", kgsym= const "",
+                                   kgalt= altOrCatGrading, kgcat= altOrCatGrading,
+                                   kgrep= const id, kgopt= const id}) NoCxt
+  where
+  altOrCatGrading c i xs = gradeChar (lookupCGMap c (gr i)):
+                           if any (not . null) xs then "("++concat (intersperse "," $ filter (not . null) xs)++")"
+                           else ""
+
+gradeChar :: Grade -> Char
+gradeChar g = case g of
+              {NoGrade -> 'n'; Kata -> 'k'; Fused -> 'f' ; Catalogued -> 'c'; Pressed -> 'p' ; Refactorized -> 'r';
+               Shrunk -> 's'; Stellar -> '*'; Auto -> 'a' ; Minimal -> 'm'; Promoted -> 'o'; BottomCatalogued -> 'b';
+               Topshrunk -> 't' }
+
+
+
+

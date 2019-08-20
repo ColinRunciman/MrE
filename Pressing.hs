@@ -590,8 +590,8 @@ prefixCom x    =  nubBy (kernel fst) $
                   | (x,xs) <- lMostCom' x,
                     (pre,xs') <- (Lam,xs) : prefixCom (mkCat xs) ] 
 
--- fi/la/ew cannot change under rolling, but size can
-rollIfCat (Cat i xs) = mkCatI i{gr=[]} $ rollList xs
+-- fi/la/ew/sw cannot change under rolling, but so we rebuild attributes
+rollIfCat (Cat i xs) = mkCat $ rollList xs
 rollIfCat x          = x
 
 lMostCom :: Bool -> FuseRE -> [(FuseRE,[FuseRE])]

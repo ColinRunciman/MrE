@@ -1,9 +1,8 @@
 module Expression (
   RE(..), HomTrans(..), HomInfo(..), KatahomGeneral(..), Renaming,
   isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt, unAlt, unCat, unOpt, unRep,
-  alt, cat, opt, rep, mkAlt, mkCat, mkAltI, mkCatI, mkAltCG, mkCatCG,
+  alt, cat, opt, rep, mkAlt, mkCat,
   nubMergeAltItems, concatCatItems,
-  subalts, subcats, subaltsPred, subcatsPred, subaltsLPred, subcatsLPred,
   altSubseq, catSegment,
   ewp, alpha, alphaL, alphaEquiv, canonicalRE, isCanonical,
   swa, fir, las, firAlt, firCat, lasAlt, lasCat, altInfo, catInfo,
@@ -331,20 +330,14 @@ nubMergeAltItems xs  = unions $ map altList xs
   altList (Opt x)    = altList x
   altList y          = [y]
 
+-- Info is language-correct, but not re-correct
+-- mkAltI :: Info -> [RE] -> RE
+-- mkAltI _ []  = Emp
+-- mkAltI _ [x] = x
+-- mkAltI i xs  = Alt (newInfo5 (ew i) (fi i) (la i) (al i) (sw i)){ si=listSize xs} xs
+
 altGradedInfo :: CGMap -> [RE] -> Info
 altGradedInfo cgm xs  =  (altInfo xs) { gr = cgm }
-
--- used only in one place in katahom machinery
-mkAltCG :: CGMap -> [RE] -> RE
-mkAltCG _ []   = Emp
-mkAltCG _ [x]  = x
-mkAltCG cgm xs = Alt (newInfo5 (any ewp xs) (firAlt xs) (lasAlt xs)(listAlpha xs)(swAlt xs)){gr=cgm, si=listSize xs} xs
-
--- Info is language-correct, but not re-correct
-mkAltI :: Info -> [RE] -> RE
-mkAltI _ []  = Emp
-mkAltI _ [x] = x
-mkAltI i xs  = Alt (newInfo5 (ew i) (fi i) (la i) (al i) (sw i)){ si=listSize xs} xs
 
 altSubseq :: RE -> [RE] -> RE
 altSubseq (Alt i xs) xs'  =  altSubseq' $
@@ -352,17 +345,18 @@ altSubseq (Alt i xs) xs'  =  altSubseq' $
   where
   altSubseq' []   =  Emp
   altSubseq' [x]  =  x
-  altSubseq' xs'  =  Alt (altGradedInfo (gr i) xs') xs'
+  altSubseq' xs'  =  Alt (altGradedInfo (subAltCGMap $ gr i) xs') xs'
 altSubseq _          _    =  error "altSegment of a noi?"
+
+
+-- used when cat is created binary, with unknown size
+-- mkCatI :: Info -> [RE] -> RE
+-- mkCatI _ []   =  Lam
+-- mkCatI _ [x]  =  x
+-- mkCatI i xs   =  Cat i{si=listSize xs} xs
 
 catGradedInfo :: CGMap -> [RE] -> Info
 catGradedInfo cgm xs  =  (catInfo xs) { gr = cgm }
-
--- used when cat is created binary, with unknown size
-mkCatI :: Info -> [RE] -> RE
-mkCatI _ []   =  Lam
-mkCatI _ [x]  =  x
-mkCatI i xs   =  Cat i{si=listSize xs} xs
 
 catSegment :: RE -> [RE] -> RE
 catSegment (Cat i xs) xs'  =  catSegment' $
@@ -370,14 +364,9 @@ catSegment (Cat i xs) xs'  =  catSegment' $
   where
   catSegment' []   =  Lam
   catSegment' [x]  =  x
-  catSegment' xs'  =  Cat (catGradedInfo (noCxtCG $ gr i) xs') xs'
+  catSegment' xs'  =  Cat (catGradedInfo (subCatCGMap $ gr i) xs') xs'
 catSegment _          _    =  error "catSegment of a dog?"
 
--- used only in one place in katahom machinery
-mkCatCG :: CGMap -> [RE] -> RE
-mkCatCG _ []   = Lam
-mkCatCG _ [x]  = x
-mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
 
 -- REs are read and shown in a form as close to usual conventions
 -- as ASCII permits.
@@ -474,14 +463,16 @@ alphaRename _ _ _                      =  []
 
 infoMatch :: Renaming -> Info -> Info -> [Renaming]
 infoMatch r i1 i2  =
-  [ r2
+  [ r3
   | ew i1==ew i2 && si i1==si i2,
     r0 <- charListMatch r (alpha2String (fi i1 .&. la i1)) (alpha2String (fi i2 .&. la i2)),
     r1 <- charListMatch r0 (fif i1) (fif i2),
-    r2 <- charListMatch r1 (laf i1) (laf i2) ]
+    r2 <- charListMatch r1 (laf i1) (laf i2),
+    r3 <- charListMatch r2 (swf i1) (swf i2) ]
   where
   fif i = alpha2String $ fi i
   laf i = alpha2String $ la i
+  swf i = alpha2String $ sw i
         
 -- charListMatch is used to match lists of first/last/etc characters
 -- To avoid combinatorial explosion it produces a list of at most one renaming.
@@ -557,43 +548,6 @@ rename ren re  =  katahomGeneral
                   (KatahomGeneral {kgemp=Emp, kglam=const Lam, kgsym= \c -> Sym $ fromJust $lookup c ren,
                                    kgalt= \_ i xs->Alt (renameInfo ren i)(sort xs),
                                    kgcat= \_ i xs->Cat (renameInfo ren i) xs, kgrep= const Rep, kgopt= const Opt}) NoCxt re
-
-grading :: RE -> String
-grading = katahomGeneral
-                  (KatahomGeneral {kgemp="", kglam=const "", kgsym= const "",
-                                   kgalt= altOrCatGrading, kgcat= altOrCatGrading,
-                                   kgrep= const id, kgopt= const id}) NoCxt
-  where
-  altOrCatGrading c i xs = gradeChar (lookupCGMap c (gr i)):
-                           if any (not . null) xs then "("++concat (intersperse "," $ filter (not . null) xs)++")"
-                           else ""
-
-gradeChar :: Grade -> Char
-gradeChar g = case g of
-              {NoGrade -> 'n'; Kata -> 'k'; Fused -> 'f' ; Catalogued -> 'c'; Pressed -> 'p' ; Refactorized -> 'r';
-               Shrunk -> 's'; Stellar -> '*'; Auto -> 'a' ; Minimal -> 'm'; Promoted -> 'o'; BottomCatalogued -> 'b';
-               Topshrunk -> 't' }
-
-subalts, subcats :: [RE]->[([RE],[RE]->[RE])]
-subcats os = [ (ys,\ys'->xs++ys'++zs)
-             | m<-[2 .. length os - 1], (xs,ys,zs)<-segPreSuf m os ]
-
-subalts os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
-             | (xs,ys)<-powerSplits os, plural xs ]
-
-subaltsPred, subcatsPred :: (RE->Bool) -> [RE]->[([RE],[RE]->[RE])]
-subcatsPred p os = [ (ys,\ys'->xs++ys'++zs)
-                   | (xs,ys,zs)<-segmentsPred p os, plural ys, not(null xs && null ys)]
-
-subaltsPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
-                   | (xs,ys)<-powerSplitsPred p os, plural xs ]
-
-subaltsLPred, subcatsLPred :: ([RE]->Bool) -> [RE]->[([RE],[RE]->[RE])]
-subcatsLPred p os = [ (ys,\ys'->xs++ys'++zs)
-                    | (xs,ys,zs)<-segmentsLPred p os, plural ys, not(null xs && null ys)]
-
-subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
-                    | (xs,ys)<-powerSplitsLPred p os, plural xs ]
 
 
 

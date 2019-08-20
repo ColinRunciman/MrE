@@ -1,7 +1,7 @@
 module Info (
   Info(..), ExpInfo(..), Grade(..), Cxt(..), CGMap,
   emptyInfo, lamInfo, charInfo, newInfo, newInfo5, extractInfo,
-  nocxt, nullcxt, noCxtCG, noCxtCG2, outerCxt, ok, lookupCGMap, upgradeCGMap ) where
+  nocxt, nullcxt, outerCxt, ok, lookupCGMap, upgradeCGMap, subAltCGMap, subCatCGMap ) where
 
 import Alphabet
 
@@ -109,16 +109,35 @@ upgradeCGMap c g cgm  |  ok c g cgm
                       |  otherwise
                       =  (c,g): [(c',g')|(c',g')<-cgm, c'<c && g'>g || c'>c && g'<g]
 
-noCxtCG :: CGMap -> CGMap
-noCxtCG []  = []
-noCxtCG cgm = [(NoCxt,lookupCGMap NoCxt cgm)]
+-- noCxtCG :: CGMap -> CGMap
+-- noCxtCG []  = []
+-- noCxtCG cgm = [(NoCxt,lookupCGMap NoCxt cgm)]
 
 -- arises when an expression is a common subexpression of two expressions
-noCxtCG2 :: CGMap -> CGMap -> CGMap
-noCxtCG2 [] x = noCxtCG x
-noCxtCG2 x [] = noCxtCG x
-noCxtCG2 x y  = [(NoCxt,max(lookupCGMap NoCxt x)(lookupCGMap NoCxt y))]
+-- noCxtCG2 :: CGMap -> CGMap -> CGMap
+-- noCxtCG2 [] x = noCxtCG x
+-- noCxtCG2 x [] = noCxtCG x
+-- noCxtCG2 x y  = [(NoCxt,max(lookupCGMap NoCxt x)(lookupCGMap NoCxt y))]
 
 upgradeInfo :: Cxt -> Grade -> Info -> Info
 upgradeInfo c g i = i { gr = upgradeCGMap c g (gr i)}
+
+-- which grade maps can we give to subcats of graded cats, subalts of graded alts?
+-- both context and grade may be affected
+subAltCxt :: Cxt -> Cxt
+subAltCxt RootCxt = NoCxt
+subAltCxt x       = x
+
+-- the catalogue-builds do not guarantee that subcats/subalts are catalogued, so defer to previous level
+subGrade :: Grade -> Grade
+subGrade Catalogued       = Promoted
+subGrade BottomCatalogued = Promoted
+subGrade x                = x
+
+subAltCGMap :: CGMap -> CGMap
+subAltCGMap m = [(subAltCxt c,subGrade g) | (c,g)<-m]
+
+subCatCGMap :: CGMap -> CGMap
+subCatCGMap m = [(NoCxt,subGrade g)|(c,g)<-m]
+
 

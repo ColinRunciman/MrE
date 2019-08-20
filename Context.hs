@@ -114,6 +114,19 @@ eitherRepOpt redundant inRep body  |  redundant
                                    =  okmap Opt body
                                       where
                                       x = valOf body
+
+
+mkAltCG :: CGMap -> [RE] -> RE
+mkAltCG _ []   = Emp
+mkAltCG _ [x]  = x
+mkAltCG cgm xs = Alt (altInfo xs){gr=cgm} xs
+
+mkCatCG :: CGMap -> [RE] -> RE
+mkCatCG _ []   = Lam
+mkCatCG _ [x]  = x
+mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
+
+
 -- input is set-like 
 total :: [Char] -> RE
 total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
@@ -302,6 +315,27 @@ optKataP _ (Alt i _) =  not (ew i)
 optKataP _ (Cat i _) =  not (ew i)
 optKataP _  _        =  False
 
+subalts, subcats :: [RE]->[([RE],[RE]->[RE])]
+subcats os = [ (ys,\ys'->xs++ys'++zs)
+             | m<-[2 .. length os - 1], (xs,ys,zs)<-segPreSuf m os ]
+
+subalts os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
+             | (xs,ys)<-powerSplits os, plural xs ]
+
+subaltsPred, subcatsPred :: (RE->Bool) -> [RE]->[([RE],[RE]->[RE])]
+subcatsPred p os = [ (ys,\ys'->xs++ys'++zs)
+                   | (xs,ys,zs)<-segmentsPred p os, plural ys, not(null xs && null ys)]
+
+subaltsPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
+                   | (xs,ys)<-powerSplitsPred p os, plural xs ]
+
+subaltsLPred, subcatsLPred :: ([RE]->Bool) -> [RE]->[([RE],[RE]->[RE])]
+subcatsLPred p os = [ (ys,\ys'->xs++ys'++zs)
+                    | (xs,ys,zs)<-segmentsLPred p os, plural ys, not(null xs && null ys)]
+
+subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
+                    | (xs,ys)<-powerSplitsLPred p os, plural xs ]
+
 -- brutal closure operators,
 -- rearranging trafos on subexpressions not recognised because of termination worries
 altClosure :: RewRule -> RewRule
@@ -424,5 +458,6 @@ minimalAssert :: RE -> RE
 minimalAssert (Rep x) = Rep (upgradeRE RepCxt Minimal x)
 minimalAssert (Opt x) = Opt (upgradeRE OptCxt Minimal x)
 minimalAssert x       = upgradeRE NoCxt Minimal x
+
 
 
