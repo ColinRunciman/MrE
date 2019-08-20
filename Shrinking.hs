@@ -148,20 +148,24 @@ coShrunkenCat2Seg [Alt _ xs, Rep y]
                                   |  not (null candidates)
                                   =  [ cat[alt ca, Rep y] | ca<-candidates ]
                                      where
-                                     candidates = [mkCat(init zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==last zs]
+                                     candidates = [ mkCat(init zs):xs'
+                                                  | (Cat _ zs,xs')<-itemRest xs, y==last zs]
 coShrunkenCat2Seg [Rep y, Alt _ xs] 
                                   |  not (null candidates)
                                   =  [ cat[Rep y, alt ca] | ca<-candidates ]
                                      where
-                                     candidates = [mkCat(tail zs):xs' | (Cat _ zs,xs')<-itemRest xs, y==head zs]
+                                     candidates = [ mkCat(tail zs):xs'
+                                                  | (Cat _ zs,xs')<-itemRest xs, y==head zs]
 coShrunkenCat2Seg [Opt x,     y]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ alt [y,Opt x] | (xs,Rep y')<-rMostCom' x, eqv y y']
+                                     candidates = [ alt [y,Opt x]
+                                                  | (xs,Rep y')<-rMostCom' x, y === y']
 coShrunkenCat2Seg [y,     Opt x]  |  not $ null candidates
                                   =  take 1 candidates
                                      where
-                                     candidates = [ alt [y,Opt x] | (Rep y',xs)<-lMostCom' x, eqv y y']
+                                     candidates = [ alt [y,Opt x]
+                                                  | (Rep y',xs)<-lMostCom' x, y === y']
 coShrunkenCat2Seg [Rep x,     y]  |  x == y
                                   =  [Rep x]
 coShrunkenCat2Seg [x    , Rep y]  |  y == x

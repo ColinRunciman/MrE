@@ -48,7 +48,7 @@ gruGulAssoc alpha = memo
    from n = sizeat n : from (n+1)
    sizeat 2 = map Rep (memo!!1) ++ map Opt (memo!!1)
    sizeat n = catat n ++ altat n ++ repat n ++ optat n
-   catat n = [ mkCat xs | k<-[1..(n-2)], x<-memo!! k, y<-memo!!(n-k-1), (c,xs) <- simCat x y ]
+   catat n = [ mkCat xs | k<-[1..(n-2)], x<-memo!! k, y<-memo!!(n-k-1), Just xs <- [simCat x y] ]
    altat n = [ consalt x y | k<-[1..(n-2)], x<-memo!! k, not(isAlt x), y<-memo!!(n-k-1) ]
    repat n = [ Rep re | re <- memo !! (n-1), not (ewp re) ]
    optat n = [ Opt re | re <- memo !! (n-1), not (ewp re) ]
@@ -63,22 +63,24 @@ gruGulAssocO alpha = memo
    from n = sizeat n : from (n+1)
    sizeat 2 = map Rep (memo!!1) ++ map Opt (memo!!1)
    sizeat n = catat n ++ altat n ++ repat n ++ optat n
-   catat n = [ mkCat xs | k<-[1..(n-2)], x<-memo!! k, y<-memo!!(n-k-1), (c,xs) <- simCat x y ]
-   altat n = [ consalt x y | k<-[1..(n-2)], x<-memo!! k, not(isAlt x||isOpt x), y<-memo!!(n-k-1) ]
+   catat n = [ mkCat xs
+             | k<-[1..(n-2)], x<-memo!! k, y<-memo!!(n-k-1), Just xs <- [simCat x y] ]
+   altat n = [ consalt x y
+             | k<-[1..(n-2)], x<-memo!! k, not(isAlt x||isOpt x), y<-memo!!(n-k-1) ]
    repat n = [ Rep re | re <- memo !! (n-1), not (ewp re) ]
    optat n = [ Opt re | re <- memo !! (n-1), not (ewp re) ]
    consalt x (Alt b xs) = mkAlt (x:xs)
    consalt x y          = mkAlt [x,y]
 
-simCat :: RE -> RE -> [(Bool,[RE])]
-simCat (Cat i1 xs) re          = []
-simCat re          (Cat i2 ys) = [(ew i2&&ewp re, re:ys)]
-simCat re1         re2         = [(ewp re1 && ewp re2, [re1,re2])]
+simCat :: RE -> RE -> Maybe [RE]
+simCat (Cat i1 xs) re          = Nothing
+simCat re          (Cat i2 ys) = Just (re:ys)
+simCat re1         re2         = Just [re1,re2]
 
-simAlt :: RE -> RE -> [(Bool,[RE])]
-simAlt (Alt i1 xs) re          = []
-simAlt re          (Alt i2 ys) = [(ew i2||ewp re,re:ys) | re<=head ys]
-simAlt re1         re2         = [(ewp re1||ewp re2,[re1,re2]) | re1<=re2 ]
+simAlt :: RE -> RE -> Maybe [RE]
+simAlt (Alt i1 xs) re          = Nothing
+simAlt re          (Alt i2 ys) = justIf (re<=head ys) (re:ys)
+simAlt re1         re2         = justIf (re1<=re2) [re1,re2]
 
 createGradedCarrier :: Alphabet -> KataPred -> Carrier
 createGradedCarrier alpha kp = memo

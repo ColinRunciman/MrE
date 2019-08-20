@@ -686,7 +686,7 @@ factAltElem c xs = list2OK xs
 catSplit :: [PressRE] -> OK [PressRE]
 catSplit xs = list2OK xs
                 [ [press nx] | (pre,suf)<- prefixCom x, not(null suf), let suft=fuseCat suf,
-                  let nx=fuseAlt[pre,suft], eqv nx x]
+                  let nx=fuseAlt[pre,suft], nx === x]
               where
               x     = fuseCat xs
 

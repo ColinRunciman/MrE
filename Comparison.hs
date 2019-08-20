@@ -1,5 +1,5 @@
 module Comparison (
-  (===), (<<==), (====), eqr, eqv, subExpr, strictSubExpr, sublang, compRE,
+  (===), (<<==), (====), eqr, subExpr, strictSubExpr, sublang, compRE,
   (&&&), sizeOrder, pickMin, pickMinList ) where
 
 import Data.Maybe
@@ -208,10 +208,6 @@ compREHyp2n o fir x y goals hyp
 eqr :: RE -> RE -> Maybe RE
 eqr x y  =  justIf (x === y) (pickMin x y)
 
-equivMin :: RE -> RE -> (Bool,RE)
-equivMin x y  =  (isJust m, fromJust m)
-              where  m  =  eqr x y
-
 -- Using eqrList is more efficient than pair-wise comparison of consecutive
 -- items, because (i) the hypothesis is shared and (ii) the UF structure picks
 -- the minimum, possibly even smaller than any RE in list.
@@ -219,9 +215,6 @@ equivMin x y  =  (isJust m, fromJust m)
 eqrList :: [RE] -> Maybe RE
 eqrList xs = justIf (rel==EQ) (rootUF uf (head xs))
              where UFO rel uf = solveGoals ufo (makeGoals xs) emptyHyp
-
-eqv :: RE -> RE -> Bool
-eqv x y = isJust $ eqr x y
 
 -- safe sublang, and lang
 (<<==) :: RE -> RE -> Bool
