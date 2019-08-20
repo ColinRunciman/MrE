@@ -83,18 +83,21 @@ katahom kh c (Rep x)       =  eitherRepOpt (c==RepCxt) True (katahom kh RepCxt x
 katahom kh c (Opt x)       =  eitherRepOpt (c>=OptCxt) False (katahom kh (max OptCxt c) x)
 
 reOpt ::  Cxt -> RE -> RE -> RE
-reOpt c old new  | c>=OptCxt =  new
-                 | ewp old && not(ewp new) = if isEmp new then Lam else Opt new
-                 | otherwise = new
+reOpt c old new  |  c>=OptCxt
+                 =  new
+                 |  ewp old && not(ewp new)
+                 =  if isEmp new then Lam else Opt new
+                 |  otherwise
+                 =  new
 
 eitherAltCat :: (CGMap->[RE]->RE) -> Cxt -> Grade -> CGMap -> RE -> OK [RE] -> OK RE
 eitherAltCat cstr c g m xold xso  |  ok c g m
-                                  =  unchanged xold
-                                  |  not (plural xs) -- first look at xso, so this triggers the katahom
+                                  =  unchanged xold  -- without ever evaluating xso
+                                  |  not (plural xs)
                                   =  okmap (cstr m) xso
-                                  |  all isSym xs -- all subs are symbols, thus minimal in any context
+                                  |  all isSym xs    -- all subs are symbols, so minimal
                                   =  okmap (cstr [(RepCxt,Minimal)]) xso
-                                  |  hasChanged xso -- we build a new expression
+                                  |  hasChanged xso  -- we build a new expression
                                   =  okmap (cstr [(c,g)]) xso
                                   |  otherwise
                                   =  okmap (cstr (upgradeCGMap c g m)) xso
@@ -115,7 +118,6 @@ eitherRepOpt redundant inRep body  |  redundant
                                       where
                                       x = valOf body
 
-
 mkAltCG :: CGMap -> [RE] -> RE
 mkAltCG _ []   = Emp
 mkAltCG _ [x]  = x
@@ -125,7 +127,6 @@ mkCatCG :: CGMap -> [RE] -> RE
 mkCatCG _ []   = Lam
 mkCatCG _ [x]  = x
 mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
-
 
 -- input is set-like 
 total :: [Char] -> RE
@@ -370,6 +371,7 @@ altSizeBound n r c i xs | si i <= n
                         = r c i xs
                         | otherwise
                         = altClosureLPred (\t->listSize t<=n) r c i xs
+
 catSizeBound :: Int -> RewRule -> RewRule
 catSizeBound n r c i xs | si i <= n
                         = r c i xs
@@ -382,6 +384,7 @@ catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-su
 					            yso <- [r NoCxt j ys],
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j]
+
 catClosureLPred :: ([RE]->Bool) -> RewRule -> RewRule
 catClosureLPred p r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLPred p xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
@@ -435,16 +438,16 @@ data RecPred =
 checkWith :: RecPred -> RE -> Bool
 checkWith p = checkWith' RootCxt
     where
-	checkWith' c Emp             =  empP p c
-	checkWith' c Lam             =  lamP p c
-	checkWith' c (Sym d)         =  symP p c d
-	checkWith' c (Cat i xs)      =  all (checkWith' NoCxt) xs && catP p oc i xs
-				        where oc = outerCxt (ew i) c 
-	checkWith' c (Alt i xs)      =  all (checkWith' oc) xs && altP p oc i xs
-				        where oc = outerCxt (ew i) c
-	checkWith' c (Rep re)        =  checkWith' RepCxt re && repP p c re
-        checkWith' c (Opt re)        =  checkWith' oc re && optP p c re
-                                        where oc = max OptCxt c
+    checkWith' c Emp             =  empP p c
+    checkWith' c Lam             =  lamP p c
+    checkWith' c (Sym d)         =  symP p c d
+    checkWith' c (Cat i xs)      =  all (checkWith' NoCxt) xs && catP p oc i xs
+                                    where oc = outerCxt (ew i) c 
+    checkWith' c (Alt i xs)      =  all (checkWith' oc) xs && altP p oc i xs
+                                    where oc = outerCxt (ew i) c
+    checkWith' c (Rep re)        =  checkWith' RepCxt re && repP p c re
+    checkWith' c (Opt re)        =  checkWith' oc re && optP p c re
+                                    where oc = max OptCxt c
 
 upgradeRE :: Cxt -> Grade -> RE -> RE
 upgradeRE c g (Alt i xs) =  Alt i{ gr = upgradeCGMap c g (gr i)} xs
@@ -458,6 +461,3 @@ minimalAssert :: RE -> RE
 minimalAssert (Rep x) = Rep (upgradeRE RepCxt Minimal x)
 minimalAssert (Opt x) = Opt (upgradeRE OptCxt Minimal x)
 minimalAssert x       = upgradeRE NoCxt Minimal x
-
-
-

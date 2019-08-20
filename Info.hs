@@ -5,6 +5,9 @@ module Info (
 
 import Alphabet
 
+-- This module defines the field of memoised information in Alt and Cat REs, and
+-- various functions for extracting or maintaining this information.
+
 data Info = Info {gr :: CGMap, ew :: Bool, 
                   al :: Alphabet,
                   fi,la,sw :: Alphabet, si :: Int} deriving Show
@@ -109,16 +112,6 @@ upgradeCGMap c g cgm  |  ok c g cgm
                       |  otherwise
                       =  (c,g): [(c',g')|(c',g')<-cgm, c'<c && g'>g || c'>c && g'<g]
 
--- noCxtCG :: CGMap -> CGMap
--- noCxtCG []  = []
--- noCxtCG cgm = [(NoCxt,lookupCGMap NoCxt cgm)]
-
--- arises when an expression is a common subexpression of two expressions
--- noCxtCG2 :: CGMap -> CGMap -> CGMap
--- noCxtCG2 [] x = noCxtCG x
--- noCxtCG2 x [] = noCxtCG x
--- noCxtCG2 x y  = [(NoCxt,max(lookupCGMap NoCxt x)(lookupCGMap NoCxt y))]
-
 upgradeInfo :: Cxt -> Grade -> Info -> Info
 upgradeInfo c g i = i { gr = upgradeCGMap c g (gr i)}
 
@@ -139,5 +132,3 @@ subAltCGMap m = [(subAltCxt c,subGrade g) | (c,g)<-m]
 
 subCatCGMap :: CGMap -> CGMap
 subCatCGMap m = [(NoCxt,subGrade g)|(c,g)<-m]
-
-

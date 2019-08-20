@@ -29,62 +29,6 @@ isPressed = checkWith pressP
 
 HomTrans { falt = pressAlt, fcat = pressCat, frep = pressRep, fopt = pressOpt } = pressH
 
--- Results encode outcomes as follows.
--- no subsumption: Nothing
--- order preserving subsumption (so mkAlt will be safe): Just(True,_)
--- at least one alternative replaced: Just(False,_)
-
-subsumeAltListP :: Bool -> [PressRE] -> Maybe (Bool,[PressRE])
-subsumeAltListP r xs  =  sal [] xs 0
-  where
-  -- The third argument accumulates an integer indicating the outcome
-  -- of processing earlier in the list of alternative.
-  -- 0: nothing found, 1: standard subsumption, 2: modified alternative
-  sal ms []     0 =  Nothing
-  sal ms []     n =  Just(n==1,ms)
-  sal ms (y:ys) n |  y `sublang` (if r then rep (alt ys') else alt ys')
-                  =  sal ms ys (max 1 n)
-                  |  r && isCat y && isJust my'
-                  =  sal ms (y':ys) (max 2 n)
-                  |  otherwise
-                  =  sal (ms++[y]) ys n
-                  where
-                    my'  =  subsumePreSuf ys' (unCat y)
-                    y'   =  fromJust my'
-                    ys'  =  ms++ys
-
--- Subsumption of prefix by suffix, or vice versa, for cat alternatives
--- in a rep body. The 'others' are the other alternatives.
-
-subsumePreSuf :: [PressRE] -> [PressRE] -> Maybe PressRE
-subsumePreSuf others xs |  null candidates
-                        =  Nothing
-                        |  otherwise
-                        =  Just $ head candidates
-  where
-  candidates      =  [ c
-                     | (pre,suf) <- splits xs,
-                       c <- candsFor pre suf ++ candsFor suf pre ]
-  candsFor ys zs  =  [ mkCat $ valOf $ pressCatK RepCxt (newInfo (all ewp zs)) zs
-                     | all ewp ys,
-                       cat ys `sublang` rep(alt(mkCat zs:others)) ]
-
-pressCatListM :: [PressRE] -> Maybe [FuseRE]
-pressCatListM xs
-    | isNothing candidate   =  Nothing
-    | isNothing newresult   =  candidate
-    | otherwise             =  newresult
-    where
-    newresult               =  pressCatListM (fromJust candidate)
-    candidate               =  listToMaybe $ candidatesFrom [] xs
-    candidatesFrom _   []   =  []
-    candidatesFrom pre suf  =  concat [ [ pre'++mid++suf'
-                                        | not $ null pre,
-                                          (pre',x) <- rMostComList pre,
-                                          Just mid <- [x *===* y] ] ++
-                                        candidatesFrom (pre++[y]) suf'
-                                      | (y,suf') <- lMostComList suf ] 
-
 (*///*) :: RE -> [RE] -> Maybe [RE]
 x *///* xs = fmap (filter (not . isEmp)) $ lift2SeqAll (x *//*) xs
 
@@ -439,13 +383,6 @@ x *==* y              |  ewp x && ewp y && subTransitive x y
 subTransitive :: PressRE -> PressRE -> Bool
 subTransitive x y  =  let e = cat [x,y] in e === rep e
 
--- Cheap syntactic comparison is used here to boost commuting performance.
-equalCommute :: RE -> RE -> (Bool,RE)
-equalCommute x y | x==y
-                 = (True, x)
-                 | otherwise
-                 = (False,undefined)
-
 eqrListCommute :: [RE] -> Maybe RE
 eqrListCommute (x:y:xs) |  x==y
                         =  eqrListCommute (y:xs)
@@ -458,8 +395,8 @@ eqrCommute :: RE -> RE -> Maybe RE
 eqrCommute x y = justIf (x==y) x
 
 commute :: (RE,RE) -> Maybe (RE,RE)
-commute (x, y) |  eq
-               =  Just (x2,x2)
+commute (x, y) |  x == y
+               =  Just (y,x)
                |  isJust cr
                =  cr
                |  isJust cl
@@ -469,7 +406,6 @@ commute (x, y) |  eq
                   where
                   cr           = commuteR (x,y)
                   cl           = commuteL (x,y)
-                  (eq,x2)      = equalCommute x y
 
 -- commuteStrict does not commute identical elements
 
@@ -510,21 +446,18 @@ commuteR (x, Rep (Cat i ys)) |  not $ null candidates
                                 candidates = [x' : init' | (init',x'') <- rMostCom'(Cat i ys),
                                                            Just x' <- [eqrCommute x'' x]]
                                 nl=head candidates
-commuteR (x, Rep y)          |  isJust com && eqx && eqy
-                             =  Just (fuseRep y'', x'') 
+commuteR (x, Rep y)          |  isJust com && x == x' && y == y'
+                             =  Just (fuseRep y, x) 
                                 where com = commute (x,y); Just (y',x') = com
-                                      (eqx,x'') = equalCommute x x'
-                                      (eqy,y'') = equalCommute y y'
 commuteR (x, Opt (Cat i ys)) |  not $ null candidates
                              =  Just (pressOpt $ cat nl, head nl)
                                 where
                                 candidates = [x':init'| (init',x'') <- rMostCom'(Cat i ys),
                                                         Just x' <- [eqrCommute x'' x]]
                                 nl=head candidates
-commuteR (x, Opt y)          |  isJust com && eq
-                             =  Just (Opt y', x'') 
+commuteR (x, Opt y)          |  isJust com && x == x'
+                             =  Just (Opt y', x) 
                                 where com = commute (x,y); Just (y',x') = com
-                                      (eq,x'') = equalCommute x x'
 commuteR _                   =  Nothing 
 
 
@@ -544,21 +477,18 @@ commuteL (Rep (Cat i xs), y) |  not $ null candidates
                                 candidates = [tail'++[y'] | (y'',tail') <- lMostCom'(Cat i xs),
                                                            Just y' <- [eqrCommute y'' y]]
                                 nl=head candidates
-commuteL (Rep x, y)          |  isJust com && eqx && eqy
-                             =  Just (y'', fuseRep x'') 
+commuteL (Rep x, y)          |  isJust com && x == x' && y == y'
+                             =  Just (y, fuseRep x) 
                                 where com = commute (x,y); Just (y',x') = com
-                                      (eqy,y'') = equalCommute y y'
-                                      (eqx,x'') = equalCommute x x'
 commuteL (Opt (Cat i xs), y) |  not $ null candidates
                              =  Just (last c, pressOpt $ cat c)
                                 where
                                 candidates = [tail'++[y'] | (y'',tail') <- lMostCom'(Cat i xs),
                                                         Just y' <- [eqrCommute y'' y]]
                                 c = head candidates
-commuteL (Opt x, y)          |  isJust com && eq
-                             =  Just (y'', Opt x') 
+commuteL (Opt x, y)          |  isJust com && y == y'
+                             =  Just (y, Opt x') 
                                 where com = commute (x,y); Just (y',x') = com
-                                      (eq,y'') = equalCommute y y'
 commuteL _                   =  Nothing
     
 -- lCom xs y = Just y' if y can commute through xs backwards
@@ -705,23 +635,6 @@ pressAltListOne c i xs = symbolFactorTrafo i xs `orOK`
                          thinAltList c xs `orOK`
                          factAltElem c xs `orOK`
                          factList xs
-
--- preservation of order ignored in OK version
-subsumeAltListOK :: Bool -> [PressRE] -> OK [PressRE]
-subsumeAltListOK r xs  =  sal [] xs 0 
-  where
-  sal ms []     0 =  unchanged xs
-  sal ms []     n =  changed ms
-  sal ms (y:ys) n |  y `sublang` (if r then rep (alt ys') else alt ys')
-                  =  sal ms ys (max 1 n)
-                  |  r && isCat y && isJust my'
-                  =  sal ms (y':ys) (max 2 n)
-                  |  otherwise
-                  =  sal (ms++[y]) ys n
-                  where
-                    my'  =  subsumePreSuf ys' (unCat y)
-                    y'   =  fromJust my'
-                    ys'  =  ms++ys
 
 thinAltList :: Cxt -> [PressRE] -> OK [PressRE]
 thinAltList c xs = list2OK xs $ [ (z:ys) | (y,ys)<- itemRest xs,
@@ -947,5 +860,4 @@ plus2star c ys   =  repfix $ list2OK ys cands
 
 istransitive :: RE -> Bool
 istransitive x = opt x === rep x
-
 

@@ -247,29 +247,8 @@ size (Cat i _) = si i
 size (Rep x)   = 1 + size x
 size (Opt x)   = 1 + size x
 
-grf :: RE -> CGMap
-grf (Alt i _) = gr i
-grf (Cat i _) = gr i
-grf e         = error ("no CGMap for " ++ (show e))
-
 -- RE homomorphisms are conveniently defined in terms of a family
 -- of generalised constructors.
-
-{-
-data Hom a = Hom { hemp,hlam :: a,
-                   hsym      :: Char -> a,
-                   halt,hcat :: [a]  -> a,
-                   hrep,hopt :: a    -> a}
-
-foldHom :: Hom a -> RE -> a
-foldHom h Emp         =  hemp h
-foldHom h Lam         =  hlam h
-foldHom h (Sym s)     =  hsym h s
-foldHom h (Alt _ xs)  =  halt h $ map (foldHom h) xs
-foldHom h (Cat _ xs)  =  hcat h $ map (foldHom h) xs
-foldHom h (Rep x)     =  hrep h $ foldHom h x
-foldHom h (Opt x)     =  hopt h $ foldHom h x
--}
 
 data HomInfo a = HomInfo { hiemp, hilam :: a,
                            hisym        :: Char -> a,
@@ -292,6 +271,24 @@ alphaL = foldHomInfo $ HomInfo { hiemp = [], hilam = [], hisym = (:[]),
                                  hicat = const (nub . concat),
                                  hirep = id, hiopt = id }
 
+-- A more general class of homomorphisms is applied with information about
+-- context (type Cxt).
+
+data KatahomGeneral a =  KatahomGeneral {
+    kgemp :: a, kglam :: Cxt -> a, kgsym :: Char -> a,
+    kgalt, kgcat :: Cxt -> Info -> [a] -> a,
+    kgopt, kgrep :: Cxt -> a -> a }
+
+katahomGeneral :: KatahomGeneral a -> Cxt -> RE -> a
+katahomGeneral kh _ Emp        = kgemp kh
+katahomGeneral kh c Lam        = kglam kh c
+katahomGeneral kh c (Sym d)    = kgsym kh d
+katahomGeneral kh c (Alt i xs) = kgalt kh c i (map (katahomGeneral kh c) xs)
+                                 where nc = if ew i then max c OptCxt else c
+katahomGeneral kh c (Cat i xs) = kgcat kh c i (map (katahomGeneral kh NoCxt) xs)
+katahomGeneral kh c (Rep x)    = kgrep kh c $ katahomGeneral kh RepCxt x
+katahomGeneral kh c (Opt x)    = kgopt kh c $ katahomGeneral kh (max c OptCxt) x
+
 -- Homomorphic RE -> RE transformations: always the identity for Emp, Lam and Sym
 -- but with specific behaviours for Alt, Cat, Rep and Opt.
 
@@ -307,6 +304,11 @@ mirror  =  homTrans $ HomTrans { falt = alt,
                                  fcat = cat . reverse,
                                  frep = Rep,
                                  fopt = Opt }
+
+-- In some transformations it is convenient to work directly with the lists of
+-- Cat or Alt item REs.  These may or may not end up being re-assembled into
+-- a Cat or Alt final result.  Typically a singleton result indicates the end
+-- of the list-processing transformation.
 
 -- Flatten sequences one level down, but preserve singletons.
 concatCatItems :: [RE] -> [RE]
@@ -330,15 +332,7 @@ nubMergeAltItems xs  = unions $ map altList xs
   altList (Opt x)    = altList x
   altList y          = [y]
 
--- Info is language-correct, but not re-correct
--- mkAltI :: Info -> [RE] -> RE
--- mkAltI _ []  = Emp
--- mkAltI _ [x] = x
--- mkAltI i xs  = Alt (newInfo5 (ew i) (fi i) (la i) (al i) (sw i)){ si=listSize xs} xs
-
-altGradedInfo :: CGMap -> [RE] -> Info
-altGradedInfo cgm xs  =  (altInfo xs) { gr = cgm }
-
+-- Precondition: xs' is a subsequence of xs.
 altSubseq :: RE -> [RE] -> RE
 altSubseq (Alt i xs) xs'  =  altSubseq' $
                              claim ("subsequence of "++show xs) (`isSublistOf` xs) xs'
@@ -348,16 +342,10 @@ altSubseq (Alt i xs) xs'  =  altSubseq' $
   altSubseq' xs'  =  Alt (altGradedInfo (subAltCGMap $ gr i) xs') xs'
 altSubseq _          _    =  error "altSegment of a noi?"
 
+altGradedInfo :: CGMap -> [RE] -> Info
+altGradedInfo cgm xs  =  (altInfo xs) { gr = cgm }
 
--- used when cat is created binary, with unknown size
--- mkCatI :: Info -> [RE] -> RE
--- mkCatI _ []   =  Lam
--- mkCatI _ [x]  =  x
--- mkCatI i xs   =  Cat i{si=listSize xs} xs
-
-catGradedInfo :: CGMap -> [RE] -> Info
-catGradedInfo cgm xs  =  (catInfo xs) { gr = cgm }
-
+-- Precondition: xs' is a segment of xs.
 catSegment :: RE -> [RE] -> RE
 catSegment (Cat i xs) xs'  =  catSegment' $
                               claim ("segment of "++show xs) (`isInfixOf` xs) xs'
@@ -367,6 +355,8 @@ catSegment (Cat i xs) xs'  =  catSegment' $
   catSegment' xs'  =  Cat (catGradedInfo (subCatCGMap $ gr i) xs') xs'
 catSegment _          _    =  error "catSegment of a dog?"
 
+catGradedInfo :: CGMap -> [RE] -> Info
+catGradedInfo cgm xs  =  (catInfo xs) { gr = cgm }
 
 -- REs are read and shown in a form as close to usual conventions
 -- as ASCII permits.
@@ -488,9 +478,12 @@ charListMatch r cs ds = clm r cs ds
     clm []         cs  ds   =  [ r | compareLength cs ds==EQ]
     clm ((x,y):r') cs  ds   = 
       case (removeFromSet x cs, removeFromSet y ds) of
-      (Nothing,Nothing)   -> clm r' cs ds   -- neither char in its respective set, ignore binding
-      (Just cs',Just ds') -> clm r' cs' ds' -- both char in their sets, continue with reduced sets
-      _                   -> []             -- one char is in its set, the other is not: fail
+      (Nothing,Nothing)   -> clm r' cs ds
+                             -- neither char in its respective set, ignore binding
+      (Just cs',Just ds') -> clm r' cs' ds'
+                             -- both char in their sets, continue with reduced sets
+      _                   -> []
+                             -- one char is in its set, the other is not: fail
 
 -- currently no assumption is made about ordering in the renaming itself
 charMatch :: Renaming -> Char -> Char -> [Renaming]
@@ -522,32 +515,13 @@ renameInfo ren i = i { fi= rename (fi i), la=rename (la i), al=rename (al i),
     where
     rename  =  string2Alpha . map (fromJust . flip lookup ren) . alpha2String
 
---- ************* end of renaming operations *****************
+-- Alpha conversion.
 
--- KatahomGeneral: not currently used other than in Catalogue?
-data KatahomGeneral a =  KatahomGeneral {
-    kgemp :: a, kglam :: Cxt -> a, kgsym :: Char -> a,
-    kgalt, kgcat :: Cxt -> Info -> [a] -> a,
-    kgopt, kgrep :: Cxt -> a -> a }
-
--- note: always goes deep, so not good for ping-ponging
-katahomGeneral :: KatahomGeneral a -> Cxt -> RE -> a
-katahomGeneral kh _ Emp        = kgemp kh
-katahomGeneral kh c Lam        = kglam kh c
-katahomGeneral kh c (Sym d)    = kgsym kh d
-katahomGeneral kh c (Alt i xs) = kgalt kh c i (map (katahomGeneral kh c) xs)
-                                 where nc = if ew i then max c OptCxt else c
-katahomGeneral kh c (Cat i xs) = kgcat kh c i (map (katahomGeneral kh NoCxt) xs)
-katahomGeneral kh c (Rep x)    = kgrep kh c $ katahomGeneral kh RepCxt x
-katahomGeneral kh c (Opt x)    = kgopt kh c $ katahomGeneral kh (max c OptCxt) x
-
--- renaming function, for active alpha conversion
--- important: this is only sound for injective renamings
 rename :: Renaming -> RE -> RE
 rename ren re  =  katahomGeneral
-                  (KatahomGeneral {kgemp=Emp, kglam=const Lam, kgsym= \c -> Sym $ fromJust $lookup c ren,
-                                   kgalt= \_ i xs->Alt (renameInfo ren i)(sort xs),
-                                   kgcat= \_ i xs->Cat (renameInfo ren i) xs, kgrep= const Rep, kgopt= const Opt}) NoCxt re
-
-
-
+                    (KatahomGeneral {kgemp=Emp, kglam=const Lam,
+                                     kgsym= \c -> Sym $ fromJust $lookup c ren,
+                                     kgalt= \_ i xs->Alt (renameInfo ren i)(sort xs),
+                                     kgcat= \_ i xs->Cat (renameInfo ren i) xs,
+                                     kgrep= const Rep, kgopt= const Opt})
+                    NoCxt re
