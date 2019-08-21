@@ -1,42 +1,15 @@
 module Main where
 
-import Alphabet
 import Data.List (sort)
 import Expression
-import Pressing
-import Fuse
-import StarPromotion
-import Shrinking
-import TopShrink
-import SyntaxCatalogue -- was ProfileCatalogue
-import qualified Catalogue as C
+import Parameters
+
 import System.Environment
 import Data.Time.Clock
 import System.IO.Unsafe (unsafePerformIO)
 import Numeric
 import Info
-import OK
-import Context
--- import Gruber
-
-shrinkBound :: Int
-shrinkBound = 80 -- up to 100 is OK
-
-localshrinkEX :: Extension
-localshrinkEX = mkExtension (altSizeBound shrinkBound shrinkAltList)
-                            (catSizeBound shrinkBound shrinkCatList) minByCatalogueKP Shrunk
-
-localshrink :: RE -> RE
-localshrink x = valOf $ katahom (trg localshrinkEX) NoCxt x
-
-pressBound :: Int
-pressBound = 20 -- up to 40 is OK
-
-localpressEX = mkExtension (altSizeBound pressBound pressAltListOne)
-                           (catSizeBound pressBound pressCatListOne) (target localshrinkEX) Pressed
-
-localpress :: RE -> RE
-localpress x = valOf $ katahom (trg localpressEX) NoCxt x
+import Alphabet
 
 -- Input, Time, Output
 data ITO = ITO {inp :: RE, tim :: Float, out :: RE}
@@ -67,41 +40,51 @@ isTotal _        =  False
 countTotal :: [ITO] -> Int
 countTotal is = length $ (filter (isTotal . out)) is
 
+effectITOs :: Trafo -> [ITO] -> Float
+effectITOs t itos = (sum $ map (sizeForT t . out) itos) `asPercentageOf` (sum $ map (sizeForT t . inp) itos)
+
+totalITOs :: [ITO] -> Float
+totalITOs itos = countTotal itos `asPercentageOf` length itos
+
+totalTime :: [ITO] -> Float
+totalTime itos = sum $ map tim itos
+
+averageTime :: [ITO] -> Float
+averageTime itos = sum (map tim itos) / fromIntegral (length itos)
+
+showTime :: Float -> String
+showTime f = showFFloat Nothing f ""
+
 main = do
-  input <- getContents
-  let itos = sort $ map process (lines input)
-  mapM_ print itos
-  putStrLn $ "total output size as percentage of total input size: " ++
-             show ((sum $ map (size . out) itos) `asPercentageOf` (sum $ map (size . inp) itos)) ++
---             show ((sum $ map (oldSize . out) itos) `asPercentageOf` (sum $ map (oldSize . inp) itos)) ++
+  args <- getArgs
+  let par = argsToParams args
+  input <- contents (inputsource par)
+  let itos = map (process (trafo par)) $ lines input
+  if verbose par then verboseContinuation itos par
+  else plainContinuation itos par
+
+verboseContinuation :: [ITO] -> Parameters -> IO ()
+verboseContinuation itos p = do
+    mapM_ print $ sort itos
+    putStrLn $ "total output size as percentage of total input size: " ++
+             show (effectITOs (trafo p) itos) ++
              " %\n" ++
-             "total time: " ++ (showFFloat Nothing (sum $ map tim itos) "") ++
-             "\npercentage of total languages: " ++ (show (countTotal itos `asPercentageOf` length itos))
+             "total time: " ++
+             showTime (totalTime itos) ++
+             "\npercentage of total languages: " ++ (show $ totalITOs itos)
 
-ymain = do
-  input <- getContents
-  let itos = map process (lines input)
-  mapM_ print itos
+-- just reporting average time per item and where the input came from
+plainContinuation :: [ITO] -> Parameters -> IO ()
+plainContinuation itos p = do
+    putStrLn $ reportInput (inputsource p) ++ showTime (averageTime itos)
 
-process :: String -> ITO
-process s  =  ITO e t e' -- ITO (re eg) te e''  --ITO e t e'
+process :: Trafo -> String -> ITO
+process tr s  =  ITO e t e'
   where
-  e  =  read s
---  eg =  read s
---  et =  blop eg
---  eu =  blopEWP eg
-  e0 =  fuse e
-  e1 =  promote e
-  e2 =  syncat e1
-  e3 =  localshrink e2
-  e4 =  localpress e3 
-  e5 =  C.catalogue e1
-  e6 =  press e1
-  e7 =  topshrink e2 
-  e' =  e5 -- change this to e1/e4/whatever for a weaker/stronger trafo
---  e'' = eu -- or et
-  t  =  timeToCompute e e' (size e' <= size e)
---  te =  timeToCompute (re eg) e'' (ggsize eg >= oldSize e'') -- different as GG use a different parser
+  e  =  readBeforeT tr s
+  e' =  transFun tr e
+  t  =  timeToCompute e e' (sizeForT tr e' <= sizeForT tr e)
+
 
 timeToCompute :: RE -> RE -> Bool -> Float
 timeToCompute e0 e1 x  =  unsafePerformIO $ do
