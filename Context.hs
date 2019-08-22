@@ -3,7 +3,7 @@ module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), R
   mkExtension, mkHomTrans, mkTransform,
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
-  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith) where
+  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop) where
 
 import List
 import Info
@@ -461,3 +461,11 @@ minimalAssert :: RE -> RE
 minimalAssert (Rep x) = Rep (upgradeRE RepCxt Minimal x)
 minimalAssert (Opt x) = Opt (upgradeRE OptCxt Minimal x)
 minimalAssert x       = upgradeRE NoCxt Minimal x
+
+-- for testing purpose (Generator) we lose the topmost grade of an expression
+degradeTop :: RE -> RE
+degradeTop (Alt i xs) = Alt i{gr=[]} xs
+degradeTop (Cat i xs) = Cat i{gr=[]} xs
+degradeTop (Rep x)    = Rep $ degradeTop x
+degradeTop (Opt x)    = Opt $ degradeTop x
+degradeTop x          = x -- symbols, Lam, Emp

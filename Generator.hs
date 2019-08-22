@@ -11,10 +11,9 @@ import Data.List
 import Control.Monad
 import PreOrderTrees
 
-type Alphabet = String
 type Carrier = [[RE]]
 
-totalCarrier :: Alphabet -> Carrier
+totalCarrier :: String -> Carrier
 totalCarrier alpha = memo
     where
     memo = [Emp, Lam] : (map Sym alpha ++ sizeat 1) : from 2
@@ -28,7 +27,7 @@ totalCarrier alpha = memo
 -- Gruber Gulan Carriers, not created using createCarrier,
 -- because they have even less structure
 -- Gruber Gulan SSNF, without assoc
-gruGul :: Alphabet -> Carrier
+gruGul :: String -> Carrier
 gruGul alpha = memo
    where
    memo = [Emp, Lam] : map Sym alpha : from 2
@@ -41,7 +40,7 @@ gruGul alpha = memo
    optat n = [ Opt re | re <- memo !! (n-1), not (ewp re) ]
 
 -- Gruber Gulan SSNF, with assoc
-gruGulAssoc :: Alphabet -> Carrier
+gruGulAssoc :: String -> Carrier
 gruGulAssoc alpha = memo
    where
    memo = [Emp, Lam] : map Sym alpha : from 2
@@ -56,7 +55,7 @@ gruGulAssoc alpha = memo
    consalt x y          = mkAlt [x,y]
 
 -- Gruber Gulan SSNF, with assoc and normalized options
-gruGulAssocO :: Alphabet -> Carrier
+gruGulAssocO :: String -> Carrier
 gruGulAssocO alpha = memo
    where
    memo = [Emp, Lam] : map Sym alpha : from 2
@@ -82,7 +81,7 @@ simAlt (Alt i1 xs) re          = Nothing
 simAlt re          (Alt i2 ys) = justIf (re<=head ys) (re:ys)
 simAlt re1         re2         = justIf (re1<=re2) [re1,re2]
 
-createGradedCarrier :: Alphabet -> KataPred -> Carrier
+createGradedCarrier :: String -> KataPred -> Carrier
 createGradedCarrier alpha kp = memo
     where
     g     =  grade (khom kp)
@@ -187,7 +186,7 @@ checkSurjectivity hom carrier = surTest 2 sampleSize
     cutOff = 14
     sampleSize = 5
     process (x,y) = putStrLn (show x++ " vs " ++ show y)
-    toCheck n = carrier!!n
+    toCheck n = map degradeTop $ carrier!!n -- lose the top grade, as we probably operate on graded carrier
     test a@(Alt _ xs) = testPair a $ falt hom xs
     test a@(Cat _ xs) = testPair a $ fcat hom xs
     test a@(Rep x)    = testPair a $ frep hom x
@@ -195,7 +194,10 @@ checkSurjectivity hom carrier = surTest 2 sampleSize
     testPair x y | x==y      = []
                  | otherwise = [(x,y)]
 
-checkAlgebra :: Alphabet -> KataPred -> IO()
+checkSurKP :: String -> KataPred -> IO()
+checkSurKP s kp = checkSurjectivity (mkHomTrans $ khom kp) (createGradedCarrier s kp)
+
+checkAlgebra :: String -> KataPred -> IO()
 checkAlgebra alpha kp = closedA 0 sampleSize
     where
     hom        = mkHomTrans (khom kp)
@@ -227,7 +229,7 @@ checkViolation fp (re1,re2)
 -- create unary application result at size n
 applyUnary :: HomTrans -> Carrier -> Int -> [(RE,RE)]
 applyUnary    h      c          n      =
-    [(Rep a,frep h a)|a<-c!!n] ++[(Opt a,fopt h a)|a<-c!!n]
+    [(Rep a,frep h $ degradeTop a)|a<-c!!n] ++[(Opt a,fopt h $ degradeTop a)|a<-c!!n]
 
 applyNary :: HomTrans -> Carrier -> Int -> [(RE,RE)]
 applyNary    h      c          n      =

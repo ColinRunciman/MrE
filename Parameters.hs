@@ -73,8 +73,10 @@ resetBy (s:ss) p  =  resetBy ss $
                        '-':letter:digits  =  s
                        number             =  read digits 
 
-usage :: String
-usage = "hello there!"
+-- options -i, -v not explained here
+usage, explanation :: String
+usage       = "MrE [-l|-k|-*|-q|-c|-y|-p ] \n" ++ explanation
+explanation = "REs are taken from stdin, unless options -sno -wno specify a file in the populations directory"
 
 contents :: Source -> IO String
 contents Nothing   = getContents
