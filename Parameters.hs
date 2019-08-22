@@ -10,6 +10,7 @@ import SyntaxCatalogue (syncat)
 import GruberP
 import Parser
 import Fuse
+import Museum
 import Data.Maybe (fromMaybe)
 -- this module defines program paramters for various transformation programs
 
@@ -27,7 +28,7 @@ data Parameters =
 -- and their composition would be:
 -- fixOK $ t1 `aft` (fmap degrade . t2 . degrade)
 -- the degrading (at least some form of it) would be needed because these could operate outside their hierarchy
-data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation
+data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum
 
 data PopulationFile = PopulationFile { width :: Int, ofsize :: Int }
 
@@ -65,6 +66,7 @@ resetBy (s:ss) p  =  resetBy ss $
                      'c' -> p { trafo  = SemCat }
                      'y' -> p { trafo  = SynCat }
                      'p' -> p { trafo  = Press }
+                     'm' -> p { trafo  = Museum }
                      'v' -> p { verbose = True }
                      's' -> p { inputsource = updateSize  (inputsource p) number }
                      'w' -> p { inputsource = updateWidth (inputsource p) number }
@@ -75,7 +77,7 @@ resetBy (s:ss) p  =  resetBy ss $
 
 -- options -i, -v not explained here
 usage, explanation :: String
-usage       = "MrE [-l|-k|-*|-q|-c|-y|-p ] \n" ++ explanation
+usage       = "MrE [-l|-k|-*|-q|-c|-y|-p|-m] \n" ++ explanation
 explanation = "REs are taken from stdin, unless options -sno -wno specify a file in the populations directory"
 
 contents :: Source -> IO String
@@ -93,6 +95,7 @@ transFun Press       =  press
 transFun SemCat      =  catalogue
 transFun SynCat      =  syncat
 transFun Stellation  =  stellate
+transFun Museum      =  museum
 
 -- does the trafo expect/produce validated REs with attributes?
 unvalidatedTrafo :: Trafo -> Bool 

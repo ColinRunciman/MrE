@@ -1,15 +1,14 @@
 module Generator where
 
+import Alphabet
 import Expression
 import Info
 import Context
 import Function
 import OK
-import Comparison
 import List
 import Data.List
 import Control.Monad
-import PreOrderTrees
 
 type Carrier = [[RE]]
 
@@ -105,36 +104,6 @@ createGradedCarrier alpha kp = memo
     set n p =  [ [x] | x <- memo !! n, p x ] ++ pluralSet n p
     pluralSet n p = [ x:xs | k<-[1..(n-2)], x<-memo!!k, p x, xs<-set(n-k-1) (\y->y>x && p y) ]
 
-crossF :: [[a]] -> [[b]] -> (a-> Bool) -> (a->b->Bool) -> (a->b->c) -> [c]
-crossF (xs:xss)(ys:yss) p q f = [ f x y | x<-xs, p x, y<-ys, q x y ] ++ crossF xss yss p q f
-crossF [] _ _ _ _ = []
-crossF _ [] _ _ _ = []
-
--- we need a predicate anyway, we may as well find simple early reasons for rejection
-catCheck x       (Cat _ xs) = catCheck x (head xs)
-catCheck (Opt x) (Rep y)    = x/=y
-catCheck (Rep x) (Rep y)    = x/=y
-catCheck (Rep x) (Opt y)    = x/=y
-catCheck (Rep x) (Alt _ xs) = all (catCheck (Rep x)) xs -- too strong for fusion, OK for Minimal
-catCheck x y                = True
-
--- stronger test for single-letter alphabet
-catCheck1 x (Cat _ xs)       = all (catCheck1 x) xs
-catCheck1 (Rep x) y          | swa x/=0 && ewp y = False
-catCheck1 (Rep x) (Rep y)    = x<y
-catCheck1 (Rep x) (Opt y)    = x/=y
-catCheck1 x y                = x<=y
-
-altCheck x (Alt _ xs) = x<head xs
-altCheck x y          = x<y
-
-catCons :: RE -> RE -> RE
-catCons x (Cat _ xs) = mkCat (x:xs)
-catCons x y          = mkCat [x,y]
-
-altCons :: RE -> RE -> RE
-altCons x (Alt _ xs) = mkAlt (x:xs)
-altCons x y          = mkAlt [x,y]
 
 -- True result means here: condition passed
 addContext :: RecPred -> Grade -> RE -> OK RE
@@ -240,4 +209,8 @@ applyNary    h      c          n      =
 genList :: Carrier -> Int -> [[RE]]
 genList c 0 = [[]]
 genList c n = [ r:rs | m<-[0..n-1], r<-c!!m, rs<-genList c (n-1-m)]
+
+                     
+
+
 
