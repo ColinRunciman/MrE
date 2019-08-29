@@ -70,7 +70,7 @@ semcatalogue syncatalogue
 Tom: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tom.hs TopShrink.hs \
+SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs \
 semcatalogue syncatalogue
 	ghc -O Tom
 
