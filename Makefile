@@ -15,7 +15,7 @@ StarPromotion.hs SyntaxCatalogue.hs
 Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs \
+Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs \
 SyntaxCatalogue.hs semcatalogue syncatalogue populations
 	ghc -O Effect
 	chmod +x allEffect
@@ -28,7 +28,7 @@ effects: Effect allEffect populations
 MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs \
+Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs \
 SyntaxCatalogue.hs semcatalogue syncatalogue
 	ghc -O MrE
 
@@ -63,7 +63,7 @@ syncatalogue: CreateSynCatalogue
 Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tim.hs TopShrink.hs \
+SyntaxCatalogue.hs Tim.hs TopShrink.hs Parameters.hs \
 semcatalogue syncatalogue
 	ghc -O Tim
 
