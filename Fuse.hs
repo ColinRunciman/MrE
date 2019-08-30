@@ -1,6 +1,6 @@
 module Fuse (
   FuseRE, fuse, fuseH, fuseP, fuseKP, fuseAlt, fuseCat, fuseOpt, fuseRep,
-  isFused, whiteAltList ) where
+  isFused, whiteAltList, fuseListProcess ) where
 
 import List
 import Expression

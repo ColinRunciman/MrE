@@ -4,6 +4,7 @@ module StarPromotion (
 
 import Expression
 import Fuse
+import OneLetterFactorization
 import OK
 import Context
 import Info
@@ -17,6 +18,9 @@ import Alphabet
 -- fields of REs.  For example, if the Rep x occurs in an Alt or a Cat it may
 -- absorb other Alt or Cat items, either wholly or in part.
 -- (see altPromotion and catPromotion)
+-- it also deals with transformations based on the notion that
+-- concatenation of REs over a singular alphabet is commutative;
+-- this is exploited for enhanced factorization/fusion in OneLetterFactorization module
 
 promoteExtension :: Extension
 promoteExtension = mkExtension altPromotion catPromotion fuseKP Promoted
@@ -37,9 +41,9 @@ isPromoted = checkWith promoteP
 
 altPromotion, catPromotion :: RewRule
 altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
-                      altCharSubsumption i xs
+                      altCharSubsumption i xs `orkOK` altFactor1 c i xs
 
-catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs
+catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs `orOK` cat1Crush
 
 catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs

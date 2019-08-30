@@ -3,19 +3,19 @@ progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Tim Tom
 CreateSemCatalogue: Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs
+Shrinking.hs StarPromotion.hs OneLetterFactorization.hs
 	ghc -O CreateSemCatalogue
 
 CreateSynCatalogue: Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
 OK.hs PreOrderTrees.hs Pressing.hs Queue.hs Shrinking.hs \
-StarPromotion.hs SyntaxCatalogue.hs
+StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs
 	ghc -O CreateSynCatalogue
 
 Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs \
+Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
 SyntaxCatalogue.hs semcatalogue syncatalogue populations
 	ghc -O Effect
 	chmod +x allEffect
@@ -28,14 +28,14 @@ effects: Effect allEffect populations
 MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs \
+Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
 SyntaxCatalogue.hs semcatalogue syncatalogue
 	ghc -O MrE
 
 laboratory: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs Info.hs Laboratory.hs List.hs \
 Metrics.hs OK.hs PreOrderTrees.hs Pressing.hs Properties.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs \
+Shrinking.hs StarPromotion.hs Stellation.hs OneLetterFactorization.hs \
 SyntaxCatalogue.hs semcatalogue syncatalogue
 	ghc -O Laboratory.hs
 	touch laboratory
@@ -63,14 +63,14 @@ syncatalogue: CreateSynCatalogue
 Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tim.hs TopShrink.hs Parameters.hs \
+SyntaxCatalogue.hs Tim.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
 semcatalogue syncatalogue
 	ghc -O Tim
 
 Tom: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs \
+SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
 semcatalogue syncatalogue
 	ghc -O Tom
 
