@@ -41,7 +41,8 @@ isPromoted = checkWith promoteP
 
 altPromotion, catPromotion :: RewRule
 altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
-                      altCharSubsumption i xs `orOK` altFactor1 c i xs
+                      altCharSubsumption i xs `orOK` altFactor1 c i xs `orOK`
+                      altFactor1 c i xs
 
 catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs `orOK`
                       cat1Crush c i xs
