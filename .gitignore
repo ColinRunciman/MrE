@@ -3,3 +3,7 @@
 *.o
 *.exe
 populations/*
+semcatalogue/*
+syncatalogue/*
+effects/*
+allEffect.ps1
