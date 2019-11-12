@@ -53,7 +53,6 @@ catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                            swx = sw i
 catStarPrune c _ xs = innerPrune (c>=OptCxt) xs
 
--- new 24072019 SMK
 innerPrune :: Bool -> [RE] -> OK [RE]
 innerPrune True [x,Rep y] | x==y
                           = changed [Rep y]

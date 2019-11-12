@@ -96,7 +96,14 @@ fixMerge b ((p1:ps,e1):xs)  |  null xs1 && null ps -- p1 not shared, no remainin
 
 -- rewrite rule for cats, context & info are ignored
 cat1Crush :: RewRule
-cat1Crush _ _ = singularCatSort . partSegments
+--cat1Crush _ _ = singularCatSort . partSegments
+cat1Crush _ _ xs  |  hasChanged nxs
+                  =  nxs
+                  |  xs == valOf nxs
+                  =  nxs
+                  |  otherwise -- rearrangment, but no size change; report change
+                  =  unsafeChanged nxs
+                     where nxs = singularCatSort (partSegments xs)
 
 data ReSegment = Plain [RE] | Special Alphabet [RE]
 

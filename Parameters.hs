@@ -28,8 +28,7 @@ data Parameters =
 -- and their composition would be:
 -- fixOK $ t1 `aft` (fmap degrade . t2 . degrade)
 -- the degrading (at least some form of it) would be needed because these could operate outside their hierarchy
-data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum
-
+data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum 
 data PopulationFile = PopulationFile { width :: Int, ofsize :: Int }
 
 defaultWidth :: Int
