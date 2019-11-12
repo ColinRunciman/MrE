@@ -3,6 +3,7 @@ module RegexpCount where
 import BigNum
 import Data.Ratio
 import Test.QuickCheck
+import Data.List (sort)
 
 type PopNumber = BigNum -- was Integer
 
@@ -16,6 +17,8 @@ prefixSizes k = s1 : follow s1
                 next1 (x:y:xs)       = (2*x+kn*y) : next2 (x:y:xs)
                 next2 (x:y:z:xs)     = (2*x+2*y+kn*z) : next2 (y:z:xs)
                 next2 [x,y]          = [2*x+2*y,2*y]
+
+
 
 nextp :: BigNum -> [BigNum] -> [BigNum]
 nextp kn ( _ : x : y : xs ) = (kn * x) : next1p kn (x:y:xs)
@@ -99,6 +102,100 @@ altPrec = 2
 catPrec = 4
 optPrec = 6
 repPrec = optPrec
+
+
+-------------------------------------------------------- population count under assoc ------------------
+data PopCount a = PopCount { unary :: a, binary :: a, nullary :: a } deriving Show
+tote :: PopCount BigNum -> BigNum
+tote pc = unary pc + nullary pc + binary pc
+
+leftArg :: PopCount BigNum -> BigNum
+leftArg pc = unary pc + nullary pc + (binary pc / 2)
+
+popInit :: BigNum -> PopCount BigNum
+popInit kn = PopCount { unary =0, binary=0, nullary=kn }
+
+popSizes :: BigNum -> [PopCount BigNum]
+popSizes kn = x1 : next [x1]
+              where
+              x1 = popInit kn
+              next xs = let ys=follow xs (reverse (tail xs)) in
+                        ys : next (ys:xs)
+              follow (x:xs) ys = PopCount { unary=(binary x+nullary x)*2,
+                                            binary=sum [binary pc*pdk + 2*unary pc*pdk + 2*nullary pc*pdk|
+                                                        (pc,pd)<-zip xs ys, let pdk = tote pd ],
+                                            nullary=0 }
+
+data Constraint = None | ParentUnary | ParentOtherBinary Bool
+
+generateAssocExp :: [Char] -> Int -> Gen Exp
+generateAssocExp cs n = gAssocExp cs n (computeDist (reverse $ take n pc)) None
+                        where pc = popSizes (fromIntegral(length cs))
+
+gAssocExp :: [Char] -> Int -> Distribution -> Constraint -> Gen Exp
+gAssocExp cs 1 _ _      = elements $ map Sym cs -- size 1, must be symbol
+gAssocExp cs 2 _ _      = elements [ f (Sym c) | f <- [ Rep, Opt ], c<- cs] -- size 2, no bin
+gAssocExp cs 3 _ _      = elements [ f (Sym c) (Sym d) | f <- [ Alt, Cat ], c<-cs, d<- cs] -- size 3, no un
+gAssocExp cs k (x:xs) c = generateArity x c >>= process c
+    where
+    process _ 1 = do
+                      e <- gAssocExp cs (k-1) xs ParentUnary
+                      f <- elements [Rep, Opt]
+                      return $ f e
+    process (ParentOtherBinary b) 2 = bin b
+    process _ 2                     = elements [ True, False ] >>= bin
+    bin b = do
+              i <- generateSplit (binarySplits x)
+              el <- gAssocExp cs i (lastN (i-1) xs) (ParentOtherBinary (not b))
+              er <- gAssocExp cs (k-i-1) (lastN (k-i-2) xs) None
+              return (binFunc b el er)
+              
+        
+lastN n xs = reverse $ take n $ reverse xs
+binFunc True  = Alt
+binFunc False = Cat       
+
+generateArity :: DistElem -> Constraint -> Gen Int
+generateArity de ParentUnary           = return 2 -- ok as it is not used for size 2
+generateArity de (ParentOtherBinary _) = frequency [ (2*unaryFreq de, return 1),(binaryFreq de,return 2) ]
+generateArity de None                  = frequency [ (unaryFreq de,return 1),(binaryFreq de,return 2)]
+
+perbillion :: BigNum -> BigNum -> (Int,Int)
+perbillion b1 b2 = (f b1,f b2) where f x = round(bigNumToDouble $ x*1000000000/(b1+b2))
+
+perbillionList :: [BigNum] -> [Int]
+perbillionList xs = map f xs
+                    where
+                    s = sum xs
+                    f x = round(bigNumToDouble $ x*1000000000/s)
+                  
+data DistElem = DistElem { unaryFreq, binaryFreq :: Int, binarySplits :: [Int] }
+type Distribution = [ DistElem ]
+
+computeDist :: [PopCount BigNum] -> Distribution
+computeDist [_] = [] -- size 1, chars, are not included here
+computeDist (pc:pcs) =
+    DistElem {unaryFreq=u, binaryFreq=b,binarySplits=perbillionList $ binSplits (tail pcs)}: computeDist pcs
+    where
+    (u,b)=perbillion (unary pc)(binary pc)
+
+binSplits :: [PopCount BigNum] -> [BigNum]
+binSplits xs = zipWith f xs (reverse xs)
+               where
+               f pc1 pc2 = leftArg pc1 * tote pc2
+
+generateSplit :: [Int] -> Gen Int
+generateSplit xs = frequency (zip xs (map return [1..]))
+               
+
+
+              
+               
+
+
+
+                         
+                         
 
 
 
