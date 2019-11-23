@@ -3,6 +3,6 @@ sizes="10 20 40 80 160 320 640 1280 2560"
 asizes="1 2 3 4 8 16"
 for i in $sizes
 do for j in $asizes
-do ./Reg -s${i} -w${j} -q1000 > "populations/s${i}w${j}"
+do ./Reg -S${i} -W${j} -Q1000 > "populations/S${i}W${j}"
 done
 done

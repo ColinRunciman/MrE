@@ -60,15 +60,15 @@ resetBy (s:ss) p  =  resetBy ss $
                      'i' -> p { trafo  = ID }
                      'l' -> p { trafo  = Linear }
                      'k' -> p { trafo  = KataTrafo }
-                     '*' -> p { trafo  = Stellation }
+                     's' -> p { trafo  = Stellation }
                      'q' -> p { trafo  = Fuse }
                      'c' -> p { trafo  = SemCat }
                      'y' -> p { trafo  = SynCat }
                      'p' -> p { trafo  = Press }
                      'm' -> p { trafo  = Museum }
                      'v' -> p { verbose = True }
-                     's' -> p { inputsource = updateSize  (inputsource p) number }
-                     'w' -> p { inputsource = updateWidth (inputsource p) number }
+                     'S' -> p { inputsource = updateSize  (inputsource p) number }
+                     'W' -> p { inputsource = updateWidth (inputsource p) number }
                      _   -> error usage
                      where
                        '-':letter:digits  =  s
@@ -76,8 +76,8 @@ resetBy (s:ss) p  =  resetBy ss $
 
 -- options -i, -v not explained here
 usage, explanation :: String
-usage       = "MrE [-l|-k|-*|-q|-c|-y|-p|-m] \n" ++ explanation
-explanation = "REs are taken from stdin, unless options -sno -wno specify a file in the populations directory"
+usage       = "MrE [-l|-k|-s|-q|-c|-y|-p|-m] \n" ++ explanation
+explanation = "REs are taken from stdin, unless options -Sno -Wno specify a file in the populations directory"
 
 contents :: Source -> IO String
 contents Nothing   = getContents

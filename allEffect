@@ -1,19 +1,30 @@
+# TO DO: [for (1)-(3) see runTimes]
+# (1) run with a timeout as argument
+# (2) truncate the asize sequence for the current size after a timeout triggers
+# (3) run both Effect and Tim
+# (4) adjust the option repertoire to match all recognised parameters
+# (5) develop a Windows equivalent to this script
+
 sizes="10 20 40 80 160 320 640 1280 2560"
 asizes="1 2 3 4 8 16"
+
+timelimit=$1
 
 allsizes() {
 for i in $sizes
 do for j in $asizes
-do ./Effect $1 -s${i} -w${j} >> effects/$2
+do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
+   ./Tim $1 -S${i} -W${j} >> timings/$2
 done
 done
 }
 
-allsizes -v prom
+allsizes "" prom
 allsizes -l linear-l
 allsizes -k kata-k
 allsizes -q fuse-q
 allsizes -p press-p
-allsizes "-*" "stellate-*"
+allsizes -s stellate-s
 allsizes -c semcat-c
 allsizes -y syncat-y
+allsizes -m museum-m
