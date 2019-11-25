@@ -51,22 +51,22 @@ disjoint a b = isEmptyAlpha (alpha a .&&. alpha b)
 -- (ii) e3===e2 => f e3===f e2
 -- (iii) a minimal-size version of e1 is of the form f e0 for some e0
 -- (iv) either f=id, e1=e2 or size e2<size e1
-splitCxt :: RE -> Cxt-> (RE->RE,RE,Cxt)
-splitCxt (Alt _ xs) c      | not (null csplit)
-                           = head csplit
-                             where
-                             csplit = [ (\e'-> alt[f e',s],e,d)
-                                      | (s,ys)<-itemRest xs, isSym s, all (disjoint s) ys, let (f,e,d)=splitCxt (alt ys) (max c NoCxt) ]
-splitCxt (Cat _ (x:xs)) c  | singleChar x
-                           = let (f,e,d)=splitCxt (cat xs) NoCxt in (\e'->cat[x,f e'],e,d)
-                           | singleChar l
-                           = let (f,e,d)=splitCxt (cat ini) NoCxt in (\e'->cat[f e',l],e,d)
-                             where Just(ini,l) = unsnoc (x:xs)
-splitCxt (Rep x)  _        = let (f,e,d)=splitCxt x RepCxt in (Rep . f,e,d)
-splitCxt re   c            = (id,re,c)
+splitCxt :: RE -> Cxt-> Bool -> (RE->RE,RE,Cxt)
+splitCxt (Alt _ xs) c False | not (null csplit)
+                            = head csplit
+                              where
+                              csplit = [ (\e'-> alt[f e',s],e,d)
+                                      | (s,ys)<-itemRest xs, singleCharC s, all (disjoint s) ys, let (f,e,d)=splitCxt (alt ys) (max c NoCxt) True ]
+splitCxt (Cat _ (x:xs)) c b | singleChar x
+                            = let (f,e,d)=splitCxt (cat xs) NoCxt b in (\e'->cat[x,f e'],e,d)
+                            | singleChar l
+                            = let (f,e,d)=splitCxt (cat ini) NoCxt b in (\e'->cat[f e',l],e,d)
+                              where Just(ini,l) = unsnoc (x:xs)
+splitCxt (Rep x)  _ False   = let (f,e,d)=splitCxt x RepCxt True in (Rep . f,e,d)
+splitCxt re   c   _         = (id,re,c)
 
 splitContext :: RE -> (RE->RE,RE,Cxt)
-splitContext e = splitCxt e RootCxt
+splitContext e = splitCxt e RootCxt False
 
 refactor :: Bool -> RE -> Maybe (Char,RE)
 refactor b (Sym c)     = Just (c,Lam)
@@ -113,8 +113,13 @@ refactorRoll (Opt x) d b    = Opt (refactorRoll x d b)
 
 singleChar :: RE -> Bool
 singleChar (Sym _)    = True
-singleChar (Alt _ xs) = all singleChar xs
+singleChar (Alt _ xs) = all isSym xs
 singleChar _          = False
+
+singleCharC :: RE -> Bool
+singleCharC (Sym _)    = True
+singleCharC (Cat _ xs) = all isSym xs
+singleCharC _          = False
 
 
 museum :: RE -> RE
