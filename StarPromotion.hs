@@ -48,7 +48,7 @@ catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs `orO
                       cat1Crush c i xs
 
 catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
-                         = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs
+                         = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs `orOK` wholyCrush swx xs
                            where
                            swx = sw i
 catStarPrune c _ xs = innerPrune (c>=OptCxt) xs
@@ -68,6 +68,7 @@ altStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = list2OK xs [ catSegment x xs':ys | (x@(Cat _ xs),ys) <-itemRest xs,
                                         xs' <- [ valOf xs1 | let xs1=crushRightWrt swx xs, hasChanged xs1 ]
                                             ++ [ valOf xs2 | let xs2=crushLeftWrt swx xs, hasChanged xs2 ]
+                                            ++ [ valOf xs3 | let xs3=wholyCrush swx xs, hasChanged xs3 ]
                                       ]
                            where
                            swx = sw i
@@ -118,6 +119,7 @@ demote css (Rep y) | isAlphabet y
                      ys=alpha y
 demote css x       = any (subAlpha (alpha x)) css
 
+-- removes chars from alternatives that are subsumed by other alternatives
 altCharSubsumption :: Info -> [RE] -> OK [RE]
 altCharSubsumption i xs = list2OK xs [ filter (goodElem cs) xs
                                      | not(isEmptyAlpha(sw i)), let cs=droppableAltSymbols xs,
@@ -209,3 +211,36 @@ crushLeftInCxt _ al1 (Opt re)    = okmap Opt   $ crushLeftInCxt True al1 re
 crushLeftInCxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
                               = changed $ Rep (kataAlt [r,catSegment c ys])
 crushLeftInCxt _ _   e           = unchanged e
+
+isCharSet :: RE -> Bool
+isCharSet (Sym x)    = True
+isCharSet (Alt _ xs) = all isSym xs
+isCharSet _          = False
+
+-- removes sigma* from a center expression of a Cat if its prefix/suffix are contained in sigma*
+wholyCrush :: Alphabet -> [RE] -> OK [RE]
+wholyCrush al1 [e,Rep d] | isCharSet e
+                         = okmap (\nd->[e,rep nd]) $ remSig (alpha e) False d
+wholyCrush al1 [Rep d,e] | isCharSet e
+                         = okmap (\nd->[rep nd,e]) $ remSig (alpha e) False d
+wholyCrush al1 xs    | not (null mid) && null (tail mid) -- mid needs to be a singleton
+                     = okmap (\x->pr++(x:reverse suop)) (remSig al1 (b1&&b2) (head mid))
+                     | otherwise
+                     = unchanged xs
+                     where
+                     pred e      = subAlpha (alpha e) al1
+                     (pr,remain) = span pred xs
+                     (suop,mid)  = span pred (reverse remain)
+                     b1          = all ewp pr
+                     b2          = all ewp suop
+
+-- removes al1* from e, but if the boolean is True it must ensure al1 itself remains
+-- it will always be False if the other trafos have been exhausted
+remSig :: Alphabet -> Bool -> RE -> OK RE
+remSig al1 b (Sym c)    | not b && elemAlpha c al1
+                        = changed Emp
+remSig al1 b (Alt i xs) = okmap alt $ katalift (remSig al1 (b && not(ew i))) xs
+remSig al1 b (Cat i xs) | not b && subAlpha (al i) al1
+                        = changed Emp
+remSig al1 b (Opt x)    = okmap opt $ remSig al1 False x
+remSig _ _ e            = unchanged e
