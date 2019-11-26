@@ -6,7 +6,7 @@ import Expression
 import OK
 import Context
 import Comparison
-import Pressing
+-- import Pressing
 import Shrinking
 
 -- The motivating observation for the transformation here: if any expression x has
@@ -67,4 +67,16 @@ catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                                    let suft=mkCat suf, ewp pre || ewp suft,
                                    let body=alt[pre,suft],
                                    let brep=shrinkRep body, brep===Rep me ]
+
+-- cheap version of pressing's prefixCom
+prefixCom :: RE -> [(RE,[RE])]
+prefixCom e@(Cat _ xs) = (e,[]) : [ (cat as,bs) | (as,bs)<- splits xs ]
+prefixCom e            = [(e,[])]
+
+suffixCom :: RE -> [([RE],RE)]
+suffixCom e@(Cat _ xs) = ([],e) : [ (as,cat bs) | (as,bs) <- splits xs]
+
+
+istransitive :: RE -> Bool
+istransitive x = opt x === rep x
 
