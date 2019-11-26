@@ -223,7 +223,10 @@ wholyCrush al1 [e,Rep d] | isCharSet e
                          = okmap (\nd->[e,rep nd]) $ remSig (alpha e) False d
 wholyCrush al1 [Rep d,e] | isCharSet e
                          = okmap (\nd->[rep nd,e]) $ remSig (alpha e) False d
-wholyCrush al1 xs    | not (null mid) && null (tail mid) -- mid needs to be a singleton
+wholyCrush al1 xs        = wholyCrush2 al1 xs
+
+-- for use inside subexpressions as well
+wholyCrush2 al1 xs   | not (null mid) && null (tail mid) -- mid needs to be a singleton
                      = okmap (\x->pr++(x:reverse suop)) (remSig al1 (b1&&b2) (head mid))
                      | otherwise
                      = unchanged xs
@@ -241,6 +244,10 @@ remSig al1 b (Sym c)    | not b && elemAlpha c al1
                         = changed Emp
 remSig al1 b (Alt i xs) = okmap alt $ katalift (remSig al1 (b && not(ew i))) xs
 remSig al1 b (Cat i xs) | not b && subAlpha (al i) al1
+                        = changed Emp
+                        | otherwise
+                        = okmap cat $ wholyCrush2 al1 xs
+remSig al1 b (Rep x)    | subAlpha (alpha x) al1
                         = changed Emp
 remSig al1 b (Opt x)    = okmap opt $ remSig al1 False x
 remSig _ _ e            = unchanged e
