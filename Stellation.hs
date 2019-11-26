@@ -75,6 +75,7 @@ prefixCom e            = [(e,[])]
 
 suffixCom :: RE -> [([RE],RE)]
 suffixCom e@(Cat _ xs) = ([],e) : [ (as,cat bs) | (as,bs) <- splits xs]
+suffixCom e            = [([],e)]
 
 
 istransitive :: RE -> Bool
