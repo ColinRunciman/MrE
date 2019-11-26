@@ -8,13 +8,6 @@ import Generator
 import List
 import StarPromotion
 
--- same as x===y, but the attribute test throws out some later fails early
--- note that swa/fir/ewp are tested early in === anyway
-equiv :: (RE->RE) -> RE -> RE -> Bool
-equiv f x y = alpha x == alpha y && las x == las y && f x === f y
-
-           
-
 -- IO return type, so we can report stage of progress
 britishMuseumMethod :: RE -> KataPred -> IO RE
 britishMuseumMethod re kp =
@@ -26,14 +19,14 @@ britishMuseumMethod re kp =
                       return result
     stage n car = do
                      putStrLn $ "trying REs of size " ++ show n
-                     let equis = filter (equiv id nre) (head car)
+                     let equis = filter (===nre) (head car)
                      if null equis then stage (n+1)(tail car)
                      else give (head equis)
 
 -- same as britishMuseumMethod, but does not report on progress
 silentMuseumMethod :: RE -> RE
 silentMuseumMethod re =
-    head [ f r | sz <- car, r <- sz, okGradeCxt Promoted c r, equiv f e r ]
+    head [ ne | sz <- car, r <- sz, okGradeCxt Promoted c r, let ne = f r, ne===re ]
     where
     (f,e,c) = splitContext (promote re)
     car     = makeCarrier (alpha2String $ alpha e)

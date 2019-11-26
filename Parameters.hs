@@ -20,7 +20,8 @@ data Parameters =
      Parameters {
          trafo  :: Trafo,
          inputsource :: Source,
-         verbose :: Bool
+         verbose :: Bool,
+         allTrafos :: [Trafo]
      }
 
 -- note: in principle, one could compose transformations:
@@ -28,7 +29,7 @@ data Parameters =
 -- and their composition would be:
 -- fixOK $ t1 `aft` (fmap degrade . t2 . degrade)
 -- the degrading (at least some form of it) would be needed because these could operate outside their hierarchy
-data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum 
+data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum deriving Show
 data PopulationFile = PopulationFile { width :: Int, ofsize :: Int }
 
 defaultWidth :: Int
@@ -42,7 +43,7 @@ defaultPopFile = PopulationFile { width = defaultWidth, ofsize = defaultREsize }
 
 -- Nothing inputsource means: stdin
 defaults :: Parameters
-defaults = Parameters { trafo = Promote, inputsource = Nothing, verbose=False }
+defaults = Parameters { trafo = Promote, inputsource = Nothing, verbose=False, allTrafos=[] }
 
 updateWidth :: Source -> Int -> Source
 updateWidth inputsource w   = Just $ (fromMaybe defaultPopFile inputsource) { width = w}
@@ -57,20 +58,21 @@ resetBy :: [String] -> Parameters -> Parameters
 resetBy []     p  =  p
 resetBy (s:ss) p  =  resetBy ss $
                      case letter of
-                     'i' -> p { trafo  = ID }
-                     'l' -> p { trafo  = Linear }
-                     'k' -> p { trafo  = KataTrafo }
-                     's' -> p { trafo  = Stellation }
-                     'q' -> p { trafo  = Fuse }
-                     'c' -> p { trafo  = SemCat }
-                     'y' -> p { trafo  = SynCat }
-                     'p' -> p { trafo  = Press }
-                     'm' -> p { trafo  = Museum }
+                     'i' -> pushTrafo ID
+                     'l' -> pushTrafo Linear
+                     'k' -> pushTrafo KataTrafo
+                     's' -> pushTrafo Stellation
+                     'q' -> pushTrafo Fuse
+                     'c' -> pushTrafo SemCat
+                     'y' -> pushTrafo SynCat
+                     'p' -> pushTrafo Press
+                     'm' -> pushTrafo Museum
                      'v' -> p { verbose = True }
                      'S' -> p { inputsource = updateSize  (inputsource p) number }
                      'W' -> p { inputsource = updateWidth (inputsource p) number }
                      _   -> error usage
                      where
+                       pushTrafo t = p { trafo = t, allTrafos = t:allTrafos p }
                        '-':letter:digits  =  s
                        number             =  read digits 
 
