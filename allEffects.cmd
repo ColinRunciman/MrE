@@ -5,6 +5,6 @@ call allSizes.cmd -l linear-l
 call allSizes.cmd -k kata-k
 call allSizes.cmd -q fuse-q
 call allSizes.cmd -p press-p
-call allSizes.cmd "-*" "stellate-*"
+call allSizes.cmd "-s" stellate-s
 call allSizes.cmd -c semcat-c
 call allSizes.cmd -y syncat-y

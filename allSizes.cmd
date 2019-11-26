@@ -3,5 +3,5 @@ set asizes=(1,2,3,4,8,16)
 
 FOR %%i in %sizes% DO (
     FOR %%j in %asizes% DO (
-        Effect.exe %1 -s%%i -w%%j >> effects/%2
+        Effect.exe %1 -S%%i -W%%j >> effects/%2
 ))
