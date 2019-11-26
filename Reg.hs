@@ -3,7 +3,7 @@ import Test.QuickCheck
 import System.Environment
 import RegexpCount
 
-usage = "Reg [-w<no.>] [-s<no.>] [-q<no.>] [-a]\n"
+usage = "Reg [-W<no.>] [-S<no.>] [-Q<no.>] [-A]\n"
 
 data Params  =  Params {width, size, quantity :: Int, assocQ:: Bool} deriving Show
 
@@ -15,10 +15,10 @@ resetBy :: [String] -> Params -> Params
 resetBy []     p  =  p
 resetBy (s:ss) p  =  resetBy ss $
                      case letter of
-                     'w' -> p {width    = number}
-                     's' -> p {size     = number}
-                     'q' -> p {quantity = number}
-                     'a' -> p {assocQ   = True}
+                     'W' -> p {width    = number}
+                     'S' -> p {size     = number}
+                     'Q' -> p {quantity = number}
+                     'A' -> p {assocQ   = True}
                      _   -> error usage
                      where
                        '-':letter:digits  =  s

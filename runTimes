@@ -1,0 +1,45 @@
+# Generate latex tables of run-times for MrE, for inputs
+# of varying sizes (ss), using each of the available
+# simplification options.  A table is generated for each
+# of several alphabet widths (ws).
+
+ss="10 20 40 80 160 320 640 1280 2560"
+ws="1 2 3 4 8 16"
+
+allsizes() {
+echo $3
+status="ok"
+for s in $ss
+do echo -n ' & '
+   if [ $status == "ok" ]; then
+   ( cat populations/S${s}W$1 | time -p ./timeOut -t 60 ./MrE $2) > /dev/null 2> time.out
+     if [ $(grep -c -F '60.' time.out) -gt 0 ]; then
+       status="timeout"
+       echo "--"
+     else
+       grep real time.out | sed "s/[^0-9]*\(.*\)/\1/"
+     fi
+   else
+     echo "--"
+   fi
+done
+echo ' \\'
+}
+
+for w in $ws
+do
+echo '\begin{figure}\begin{tabular}{rrrrrrrrrr}'
+echo ' & \multicolumn{9}{c}{Time to simplify 1000 expressions of size:} \\'
+for s in $ss ; do echo -n " & $s" ; done
+echo ' \\'
+allsizes $w "" prom
+allsizes $w -l linear
+allsizes $w -k kata
+allsizes $w -q fuse
+allsizes $w -p press
+allsizes $w -s stellate
+allsizes $w -c semcat
+allsizes $w -y syncat
+allsizes $w -m museum
+echo '\end{tabular}\caption{Run-times for alphabets of size' $w.'}\end{figure}'
+done
