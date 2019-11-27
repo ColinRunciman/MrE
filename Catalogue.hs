@@ -25,7 +25,9 @@ import Alphabet
 -- induces a corresponding pre-order on expressions.
 
 minimalEquiv :: Cxt -> RE -> Maybe RE
-minimalEquiv c re  |  n >= length theForest -- alphabet too large
+minimalEquiv c re  |  n >= length theForest     -- alphabet too large
+                   =  Nothing
+                   |  size re > 2 * sizeFor n   -- candidate key too large
                    =  Nothing
                    |  otherwise
                    =  case lookupPT (fwd re) compRE pickMinList tree of
@@ -50,15 +52,18 @@ theForest = [(sizeFor n,tree n) | n <- [0..maxSigmaSize]]
                        readFile (treeFileName (sigmaFor n) (sizeFor n)) >>= (return . (pruneTree (map gradeMinimal)). read)
 
 -- max size of REs in tree-files for alphabet of size n
+treeSizes :: [Int]
+treeSizes  =  [0,15,11,9,8] 
+
 sizeFor :: Int -> Int
-sizeFor n  =  [0,14,11,9,8]!!n
+sizeFor n  =  treeSizes!!n
 
 -- alphabet of stored REs for alphabet of size n
 sigmaFor :: Int -> [Char]
 sigmaFor n  =  take n ['a'..]
 
 maxSigmaSize :: Int
-maxSigmaSize  =  4
+maxSigmaSize  =  length treeSizes - 1
 
 treeFileName :: String -> Int -> String
 treeFileName sigma n = "semcatalogue/TREE-"++sigma++"-"++show n++".txt"

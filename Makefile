@@ -95,3 +95,9 @@ Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
 SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
 semcatalogue syncatalogue
 	ghc -O Tom
+
+runTimes.pdf: runTimes.tex runTimesTables.tex
+	pdflatex runTimes.tex
+
+runTimesTables.tex: runTimes MrE populations
+	./runTimes > runTimesTables.tex

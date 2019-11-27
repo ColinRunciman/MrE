@@ -1,6 +1,6 @@
 module Comparison (
-  (===), (<<==), (====), eqr, subExpr, strictSubExpr, sublang, compRE,
-  (&&&), sizeOrder, pickMin, pickMinList ) where
+  (===), (<<==), (====), istransitive, eqr, subExpr, strictSubExpr,
+  sublang, compRE, (&&&), sizeOrder, pickMin, pickMinList ) where
 
 import Data.Maybe
 import Data.Bits
@@ -128,6 +128,9 @@ sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 
 (===) :: RE -> RE -> Bool
 x === y  =  compRE x y == EQ
+
+istransitive :: RE -> Bool
+istransitive x = opt x === rep x
 
 compRE :: RE -> RE -> Ordering
 compRE x y = solveGoals ido (makeGoal x y) emptyHyp
