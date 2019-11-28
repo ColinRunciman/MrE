@@ -6,8 +6,8 @@ import Expression
 import OK
 import Context
 import Comparison
--- import Pressing
-import Shrinking
+-- import Shrinking
+import StarPromotion
 
 -- The motivating observation for the transformation here: if any expression x has
 -- the empty-word property, and is also transitive, so L(1) <= L(xx) <= L(x), then
@@ -18,8 +18,17 @@ type StelRE = RE
 isStellar :: RE -> Bool
 isStellar = checkWith stelP
 
+previousKP :: KataPred
+previousKP = promoteKP
+
+previousCxt :: Cxt -> RE -> OK RE
+previousCxt = katahom $ khom previousKP
+
+previousRep :: RE -> RE
+previousRep = frep $ mkHomTrans $ khom previousKP
+
 stelEX :: Extension
-stelEX = mkExtension altTrans catTrans shrinkKP Stellar
+stelEX = mkExtension altTrans catTrans previousKP Stellar
 
 stelK :: Katahom
 stelK = khom stelKP
@@ -42,22 +51,22 @@ stelCxt = katahom stelK
 
 -- end of boilerplate section
 
-altTrans :: Cxt -> Info -> [StelRE] -> OK [ShrunkRE]
+altTrans :: Cxt -> Info -> [StelRE] -> OK [RE]
 altTrans c i xs =  list2OK xs [ Rep body' : zs
                               | c>=OptCxt, (ys,zs)<-allPowerSplits xs, not(null ys),
                                 let body=altSubseq (Alt i xs) ys, istransitive body,
-                                let body'=valOf $ shrinkCxt RepCxt body,
+                                let body'=valOf $ previousCxt RepCxt body,
                                 size body'+1 < size body ||
                                      size body' < size body && (not $ ew i) ]
 
-catTrans :: Cxt -> Info -> [StelRE] -> OK [ShrunkRE]
+catTrans :: Cxt -> Info -> [StelRE] -> OK [RE]
 catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                    where
                    me = Cat i xs
                    normalcands = [ pre++[Rep newmidBody]++suf
                                  | (le,suf)<-prefixCom me, (pre,mid)<-suffixCom le,
                                    not(isRep mid) && ewp mid && istransitive mid,
-                                   let newmidBody=valOf $ shrinkCxt RepCxt mid,
+                                   let newmidBody=valOf $ previousCxt RepCxt mid,
                                    size newmidBody+1 < size mid ]
                    repcxtcands = [ [unRep brep] | c==RepCxt, brep <- bodyreps ]
                    optcxtcands = [ [brep]
@@ -66,7 +75,7 @@ catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                                  | not (ew i), (pre,suf)<-prefixCom me, not(null suf),
                                    let suft=mkCat suf, ewp pre || ewp suft,
                                    let body=alt[pre,suft],
-                                   let brep=shrinkRep body, brep===Rep me ]
+                                   let brep=previousRep body, brep===Rep me ]
 
 -- cheap version of pressing's prefixCom
 prefixCom :: RE -> [(RE,[RE])]
@@ -76,8 +85,4 @@ prefixCom e            = [(e,[])]
 suffixCom :: RE -> [([RE],RE)]
 suffixCom e@(Cat _ xs) = ([],e) : [ (as,cat bs) | (as,bs) <- splits xs]
 suffixCom e            = [([],e)]
-
-
-istransitive :: RE -> Bool
-istransitive x = opt x === rep x
 

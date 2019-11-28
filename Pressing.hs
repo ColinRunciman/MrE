@@ -1,6 +1,6 @@
 module Pressing (
   press, pressAltListOne, pressCatListOne, pressP,
-  rollList, prefixCom, suffixCom, istransitive ) where
+  rollList, prefixCom, suffixCom ) where
 
 import Data.List (minimumBy, nubBy, partition)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust, listToMaybe, catMaybes)
@@ -857,7 +857,4 @@ plus2star c ys   =  repfix $ list2OK ys cands
 -- (XY*)? --> X?Y* if Y `sublang` X? and mirror
 -- (XY?)? --> X?Y? if Y `sublang` X? and mirror
 -- (XX*)? --> X* and mirror
-
-istransitive :: RE -> Bool
-istransitive x = opt x === rep x
 

@@ -1,3 +1,4 @@
+#! /bin/bash
 # Generate latex tables of run-times for MrE, for inputs
 # of varying sizes (ss), using each of the available
 # simplification options.  A table is generated for each
@@ -12,8 +13,8 @@ status="ok"
 for s in $ss
 do echo -n ' & '
    if [ $status == "ok" ]; then
-   ( cat populations/S${s}W$1 | time -p ./timeOut -t 60 ./MrE $2) > /dev/null 2> time.out
-     if [ $(grep -c -F '60.' time.out) -gt 0 ]; then
+   ( cat populations/S${s}W$1 | time -p ./timeOut -t 100 ./MrE $2) > /dev/null 2> time.out
+     if [ $(grep -c "1..\." time.out) -gt 0 ]; then
        status="timeout"
        echo "--"
      else
@@ -29,17 +30,17 @@ echo ' \\'
 for w in $ws
 do
 echo '\begin{figure}\begin{tabular}{rrrrrrrrrr}'
-echo ' & \multicolumn{9}{c}{Time to simplify 1000 expressions of size:} \\'
+echo ' & \multicolumn{9}{c}{Simplifying 1000 expressions of size:} \\'
 for s in $ss ; do echo -n " & $s" ; done
 echo ' \\'
-allsizes $w "" prom
-allsizes $w -l linear
-allsizes $w -k kata
-allsizes $w -q fuse
-allsizes $w -p press
-allsizes $w -s stellate
-allsizes $w -c semcat
-allsizes $w -y syncat
-allsizes $w -m museum
-echo '\end{tabular}\caption{Run-times for alphabets of size' $w.'}\end{figure}'
+allsizes $w -l "Gruber-Gulan+"
+allsizes $w -k "N: normalise"
+allsizes $w -q "F: N + fuse"
+allsizes $w "" "P: F + promote"
+# allsizes $w -p press
+allsizes $w -s "P + stellate"
+allsizes $w -y "P + syn. search"
+allsizes $w -c "P + sem. search"
+# allsizes $w -m museum
+echo '\end{tabular}\caption{Run-times (s) for alphabets of size' $w.'}\end{figure}'
 done

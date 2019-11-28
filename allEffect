@@ -14,7 +14,7 @@ allsizes() {
 for i in $sizes
 do for j in $asizes
 do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
-   ./Tim $1 -S${i} -W${j} >> timings/$2
+#  ./Tim $1 -S${i} -W${j} >> timings/$2
 done
 done
 }
