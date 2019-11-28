@@ -610,7 +610,8 @@ rolled (x:xs) = all (\(y,ys)->x<=y)(lMostComList (x:xs)) && rolled xs
 
 --------------- NEW STUFF BELOW ---------------------------------------------------------------------------------
 pressEX :: Extension
-pressEX = mkExtension pressAltListOne pressCatListOne promoteKP Pressed
+pressEX = extensionLtd 15 20 $
+          mkExtension pressAltListOne pressCatListOne promoteKP Pressed
 
 pressK :: Katahom
 pressK = khom pressKP

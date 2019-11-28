@@ -1,7 +1,7 @@
 module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
    nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
-   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
+   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred, segsLtd, subsLtd,
    splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
    compareLength, itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
@@ -222,8 +222,32 @@ segmentsLPred p (x:xs) |  p [x]
                       =  [ (x:a,b,c) | (a,b,c)<-rec ]
                         where
                         rec = segmentsLPred p xs
- 
 
+-- Non-empty segments and sublists, limited by weight, in context.
+-- *** NB *** Weights increased by one as if for "listsize". ***
+
+segsLtd :: (a->Int) -> Int -> [a] -> [([a],[a],[a])]
+segsLtd _ _ []  =  []
+segsLtd w m xs  =  f True m (map w xs) xs
+  where
+  f _ 0 _      xs      =  []
+  f _ _ _      []      =  []
+  f p m (w:ws) (x:xs)  =  [ (x:pre,seg,suf)
+                          | p, (pre,seg,suf) <- f True m ws xs ] ++
+                          [ ([], [x], xs)
+                          | w <= m ] ++
+                          [ ([],x:pre,suf)
+                          | w <  m, ([],pre,suf) <- f False (m-w-1) ws xs ]
+
+subsLtd :: (a->Int) -> Int -> [a] -> [([a],[a])]
+subsLtd _ _ []  =  []
+subsLtd w m xs  =  f m (map w xs) xs
+  where
+  f 0 _      xs      =  []
+  f _ _      []      =  []
+  f m (w:ws) (x:xs)  =  [ (sub,x:cxt) | (sub,cxt) <- f m ws xs ] ++
+                        [ ([x],xs)    | w <= m ] ++
+                        [ (x:sub,cxt) | w <  m, (sub,cxt) <- f (m-w-1) ws xs ]
 
 isSublistOf :: Eq a => [a] -> [a] -> Bool
 isSublistOf []     _       =  True

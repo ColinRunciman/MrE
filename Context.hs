@@ -3,7 +3,8 @@ module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), R
   mkExtension, mkHomTrans, mkTransform,
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
-  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop) where
+  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop,
+  extensionLtd) where
 
 import List
 import Info
@@ -337,6 +338,13 @@ subcatsLPred p os = [ (ys,\ys'->xs++ys'++zs)
 subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
                     | (xs,ys)<-powerSplitsLPred p os, plural xs ]
 
+subaltsLtd, subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
+subcatsLtd m os  =  [ (ys,\ys'->xs++ys'++zs)
+                    | (xs,ys,zs)<- segsLtd size m os, plural ys, not (null xs && null ys)]
+
+subaltsLtd m os  =  [ (xs,\xs'->nubMerge (nubSort xs') ys)
+                    | (xs,ys)<- subsLtd size m os, plural xs, not (null ys) ]
+
 -- brutal closure operators,
 -- rearranging trafos on subexpressions not recognised because of termination worries
 altClosure :: RewRule -> RewRule
@@ -359,8 +367,8 @@ altClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-su
                                                     yso <- [r c j ys],
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j ]
-altClosureLPred :: ([RE]->Bool) -> RewRule -> RewRule
-altClosureLPred p r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLPred p xs,
+altClosureLtd :: Int -> RewRule -> RewRule
+altClosureLtd n r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLtd n xs,
                                                     let Alt j _ = altSubseq (Alt i xs) ys,
                                                     yso <- [r c j ys],
 					            hasChanged yso, let ys'=valOf yso,
@@ -370,13 +378,13 @@ altSizeBound :: Int -> RewRule -> RewRule
 altSizeBound n r c i xs | si i <= n
                         = r c i xs
                         | otherwise
-                        = altClosureLPred (\t->listSize t<=n) r c i xs
+                        = altClosureLtd n r c i xs
 
 catSizeBound :: Int -> RewRule -> RewRule
 catSizeBound n r c i xs | si i <= n
                         = r c i xs
                         | otherwise
-                        = catClosureLPred (\t->listSize t<=n) r c i xs
+                        = catClosureLtd n r c i xs
 
 catClosurePred :: (RE->Bool) -> RewRule -> RewRule
 catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subcatsPred p xs,
@@ -385,17 +393,17 @@ catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-su
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j]
 
-catClosureLPred :: ([RE]->Bool) -> RewRule -> RewRule
-catClosureLPred p r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLPred p xs,
+catClosureLtd :: Int -> RewRule -> RewRule
+catClosureLtd n r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLtd n xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
 					            yso <- [r NoCxt j ys],
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j]
 
-limitExtension :: Int -> Extension -> Extension
-limitExtension n ext = mkExtension altR catR (source ext) (grd $ target ext)
+extensionLtd :: Int -> Int -> Extension -> Extension
+extensionLtd m n ext = mkExtension altR catR (source ext) (grd $ target ext)
                        where
-                       altR = altSizeBound n (altStep ext)
+                       altR = altSizeBound m (altStep ext)
                        catR = catSizeBound n (catStep ext)
 
 -- REs stored in either of the catalogues are just strings; for use they must be
