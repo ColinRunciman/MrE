@@ -396,7 +396,7 @@ limitExtension :: Int -> Extension -> Extension
 limitExtension n ext = mkExtension altR catR (source ext) (grd $ target ext)
                        where
                        altR = altSizeBound n (altStep ext)
-                       catR = altSizeBound n (catStep ext)
+                       catR = catSizeBound n (catStep ext)
 
 -- REs stored in either of the catalogues are just strings; for use they must be
 -- marked throughout as of Minimal grade.
