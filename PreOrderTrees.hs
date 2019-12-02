@@ -1,5 +1,5 @@
 module PreOrderTrees
-  (RB, buildTree, addUniqTree, pruneTree, lookupPT, classReps, groupOrder) where
+  (RB, buildTree, addUniqTree, pruneTree, lookupPT, classReps, groupOrder, quotientMap, quotMap) where
 
 import List (plural)
 import qualified Data.Map.Strict as M
