@@ -5,6 +5,7 @@ import Parameters
 import Parser
 import GruberP
 import Data.List.Split
+import Text.Printf
 
 -- Effect runs a transformation on random input data
 -- and outputs how effective the trafo is on inputs of varying
@@ -26,7 +27,8 @@ main = do
   let average = (fromIntegral (sum outs) / fromIntegral n) :: Double
   let ratios = zipWith (\i o -> (fromIntegral o / fromIntegral i) :: Double) ins outs
   putStrLn $ reportInput (inputsource p)  ++
-             show average ++" "++ show (geomean $ map geomean (chunksOf 20 ratios))
+             show average
+  putStrLn $ printf "%.1f" (100.0 * geomean (map geomean $ chunksOf 20 ratios))
 
 
 

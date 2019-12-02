@@ -1,4 +1,4 @@
-progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Tim Tom
+progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Test Tim Tom
 
 CreateSemCatalogue: Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
@@ -101,3 +101,13 @@ runTimes.pdf: runTimes.tex runTimesTables.tex
 
 runTimesTables.tex: runTimes MrE populations
 	./runTimes > runTimesTables.tex
+
+sizeRatios.pdf: sizeRatios.tex sizeRatiosTables.tex
+	pdflatex sizeRatios.tex
+
+sizeRatiosTables.tex: sizeRatios MrE populations
+	./sizeRatios > sizeRatiosTables.tex
+
+Test: List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
+Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs Test.hs
+	ghc -O Test.hs

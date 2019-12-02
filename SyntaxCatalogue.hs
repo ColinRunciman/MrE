@@ -67,7 +67,6 @@ sizeFor :: Int -> Int
 sizeFor n  =  catalogueSizes!!n
 
 catalogueSizes :: [Int]
--- catalogueSizes = [0,14,11,10]  -- 4-letter size 9 is not size reducing
 catalogueSizes = [0,15,12,11,10]
 
 -- alphabet of stored REs for alphabet of size n

@@ -28,7 +28,8 @@ previousRep :: RE -> RE
 previousRep = frep $ mkHomTrans $ khom previousKP
 
 stelEX :: Extension
-stelEX = mkExtension altTrans catTrans previousKP Stellar
+stelEX = extensionLtd 15 20 $
+         mkExtension altTrans catTrans previousKP Stellar
 
 stelK :: Katahom
 stelK = khom stelKP

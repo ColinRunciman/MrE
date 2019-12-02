@@ -1,4 +1,4 @@
-module Parameters (Parameters(..), argsToParams, Trafo, transFun, stringTrafo, readBeforeT, sizeForT, sizeTrafo, PopulationFile(..), contents, reportInput) where
+module Parameters (Parameters(..), argsToParams, Trafo(..), transFun, stringTrafo, readBeforeT, sizeForT, sizeTrafo, PopulationFile(..), contents, reportInput) where
 
 import Context
 import Expression
@@ -29,7 +29,7 @@ data Parameters =
 -- and their composition would be:
 -- fixOK $ t1 `aft` (fmap degrade . t2 . degrade)
 -- the degrading (at least some form of it) would be needed because these could operate outside their hierarchy
-data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum deriving Show
+data Trafo = ID | Linear | KataTrafo | Fuse | Promote | Press | SemCat | SynCat | Stellation | Museum deriving (Show,Enum)
 data PopulationFile = PopulationFile { width :: Int, ofsize :: Int }
 
 defaultWidth :: Int

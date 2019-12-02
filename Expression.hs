@@ -36,10 +36,13 @@ data RE = Emp
         | Opt RE
         deriving (Eq,Ord)
 
--- RE Invariant: (1) no Cat item occurs in a Cat argument list; (2) no Alt or Opt
--- item occurs in an Alt argument list; (3) Alt argument lists are strictly ordered
--- using the derived RE ordering (4) no Opt argment satisfies ewp (5) no Rep argument is
--- a Rep or an Opt (6) no Emp or Lam occurs anywhere as a strict subexpression.
+-- RE Invariant:
+-- (1) every Cat argument is plural and has no Cat items;
+-- (2) every Alt argument is plural, and has no Alt or Opt items;
+-- (3) every Alt argument is strictly ordered (by the derived RE ordering);
+-- (4) no Opt argument satisfies ewp;
+-- (5) no Rep argument is a Rep or an Opt
+-- (6) no Emp or Lam occurs anywhere as a strict subexpression.
 -- The following smart constructors establish this invariant.
 -- TO DO: and that the Info is correct!
 

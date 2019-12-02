@@ -340,10 +340,12 @@ subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
 
 subaltsLtd, subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
 subcatsLtd m os  =  [ (ys,\ys'->xs++ys'++zs)
-                    | (xs,ys,zs)<- segsLtd size m os, plural ys, not (null xs && null ys)]
+                    | (xs,ys,zs)<- maxSegsLtd size m os,
+                      plural ys, not (null xs && null ys) ]
 
 subaltsLtd m os  =  [ (xs,\xs'->nubMerge (nubSort xs') ys)
-                    | (xs,ys)<- subsLtd size m os, plural xs, not (null ys) ]
+                    | (xs,ys)<- maxSubsLtd size m os,
+                      plural xs, not (null ys) ]
 
 -- brutal closure operators,
 -- rearranging trafos on subexpressions not recognised because of termination worries

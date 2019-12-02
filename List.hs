@@ -1,7 +1,8 @@
 module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
    nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
-   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred, segsLtd, subsLtd,
+   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
+   segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
    splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
    compareLength, itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
@@ -232,12 +233,12 @@ segsLtd w m xs  =  f True m (map w xs) xs
   where
   f _ 0 _      xs      =  []
   f _ _ _      []      =  []
-  f p m (w:ws) (x:xs)  =  [ (x:pre,seg,suf)
-                          | p, (pre,seg,suf) <- f True m ws xs ] ++
-                          [ ([], [x], xs)
+  f p m (w:ws) (x:xs)  =  [ ([],[x],xs)
                           | w <= m ] ++
                           [ ([],x:pre,suf)
-                          | w <  m, ([],pre,suf) <- f False (m-w-1) ws xs ]
+                          | w <  m, ([],pre,suf) <- f False (m-w-1) ws xs ] ++
+                          [ (x:pre,seg,suf)
+                          | p, (pre,seg,suf) <- f True m ws xs ]
 
 subsLtd :: (a->Int) -> Int -> [a] -> [([a],[a])]
 subsLtd _ _ []  =  []
@@ -245,9 +246,45 @@ subsLtd w m xs  =  f m (map w xs) xs
   where
   f 0 _      xs      =  []
   f _ _      []      =  []
-  f m (w:ws) (x:xs)  =  [ (sub,x:cxt) | (sub,cxt) <- f m ws xs ] ++
-                        [ ([x],xs)    | w <= m ] ++
-                        [ (x:sub,cxt) | w <  m, (sub,cxt) <- f (m-w-1) ws xs ]
+  f m (w:ws) (x:xs)  =  [ ([x],xs)
+                        | w <= m ] ++
+                        [ (x:sub,cxt)
+                        | w <  m, (sub,cxt) <- f (m-w-1) ws xs ] ++
+                        [ (sub,x:cxt)
+                        | (sub,cxt) <- f m ws xs ]
+
+-- maxSegsLtd and maxSubLtd are like segsLtd and subsLtd but their
+-- results include only maximal segments
+
+maxSegsLtd :: (a->Int) -> Int -> [a] -> [([a],[a],[a])]
+maxSegsLtd _ _ []  =  []
+maxSegsLtd w m xs  =  map fst $ f True m (map w xs) xs
+  where
+  f _ 0 _      xs      =  []
+  f _ _ _      []      =  []
+  f p m (w:ws) (x:xs)  =  [ (([],[x],xs), w)
+                          | w <= m,
+                            null xs || w + head ws > m ] ++
+                          [ (([],x:pre,suf), n+w+1)
+                          | w <  m, (([],pre,suf), n) <- f False (m-w-1) ws xs ] ++
+                          [ ((x:pre,seg,suf), n)
+                          | p, ((pre,seg,suf), n) <- f True m ws xs,
+                            n+w+1 > m ]
+
+maxSubsLtd :: (a->Int) -> Int -> [a] -> [([a],[a])]
+maxSubsLtd _ _ []  =  []
+maxSubsLtd w m xs  =  map fst $ f m (map w xs) xs
+  where
+  f 0 _      xs      =  []
+  f _ _      []      =  []
+  f m (w:ws) (x:xs)  =  [ (([x],xs), w)
+                        | w <= m,
+                          all (\n -> n+w+1 > m) ws ] ++
+                        [ ((x:sub,cxt), n+w+1)
+                        | w <  m, ((sub,cxt), n) <- f (m-w-1) ws xs ] ++
+                        [ ((sub,x:cxt),n)
+                        | ((sub,cxt),n) <- f m ws xs,
+                          n+w+1 > m ]
 
 isSublistOf :: Eq a => [a] -> [a] -> Bool
 isSublistOf []     _       =  True
