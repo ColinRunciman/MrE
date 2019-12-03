@@ -29,6 +29,12 @@ hu_extract nfa = alt [ rhu n (start nfa) s | s<-states nfa, final nfa s ]
     rhu 0 s1 s2 = alt $ [ Sym c | (x,c,y)<-trans nfa, x==s1, y==s2] ++ [ Lam | elem (s1,s2) (eps nfa) || s1==s2 ]
     rhu m s1 s2 = alt (rhu (m-1) s1 s2:[cat[rhu (m-1)s1 s3,rep(rhu (m-1) s3 s3),rhu(m-1)s3 s2]|s3<-states nfa])
 
+rhu_top :: Ord a => NFA a Char -> Int -> a -> a -> RE
+rhu_top nfa 0 s1 s2 = alt $ [ Sym c | (x,c,y)<-trans nfa, x==s1, y==s2] ++
+                      [ Lam | elem (s1,s2) (eps nfa) || s1==s2 ]
+rhu_top nfa m s1 s2 = alt (rhu_top nfa (m-1) s1 s2:[cat[rhu_top nfa (m-1)s1 s3,rep(rhu_top nfa (m-1) s3 s3),rhu_top nfa (m-1)s3 s2]|s3<-states nfa])
+
+
 finalStates :: NFA a b -> [a]
 finalStates nfa = filter (final nfa)(states nfa)
 
@@ -111,13 +117,13 @@ removeUnreachable aut = NFA { states = prodstates,
     coreach [] xs = xs
     coreach (y:ys) xs = coreach (newstates ++ ys) (nubMerge xs newstates)
         where
-        newstates = [ z | (z,y')<-eps aut, y'==y, not(elem z xs)] `nubMerge`
+        newstates = nubSort $ [ z | (z,y')<-eps aut, y'==y, not(elem z xs)] ++
                     [ z | (z,_,y')<- trans aut, y'==y, not(elem z xs)]
     reachable = reach [start aut] [start aut]
     reach [] xs     = xs
     reach (y:ys) xs = reach (newstates ++ ys) (nubMerge xs newstates)
         where
-        newstates = [ z | (y',z)<-eps aut, y'==y, not(elem z xs)] `nubMerge`
+        newstates = nubSort $ [ z | (y',z)<-eps aut, y'==y, not(elem z xs)] ++
                     [ z | (y',_,z)<- trans aut, y'==y, not(elem z xs)]
 
 -- NFA with a single final state; no incoming trans into initial state, no outgoing trans from final state
