@@ -277,7 +277,9 @@ elimState aut |  null ss
               =  changed $ aut { states=[Start,End] ++ tail ss,
                                  trans = elimState' (head ss)(trans aut) }
                  where
-                 ss = sortOn (elimCount aut) [ NormalS x | NormalS x <- states aut ]
+                 ss = sortBy (\s1 s2 -> compare (elimCount aut s1) (elimCount aut s2))
+                      -- sortOn (elimCount aut)
+                        [ NormalS x | NormalS x <- states aut ]
 
 elimCount :: Ord a => NFA a b -> a -> Int
 elimCount nfa a = indegree a nfa * outdegree a nfa
