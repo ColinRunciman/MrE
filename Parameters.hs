@@ -1,4 +1,4 @@
-module Parameters (Parameters(..), argsToParams, Trafo(..), transFun, stringTrafo, readBeforeT, sizeForT, sizeTrafo, PopulationFile(..), contents, reportInput) where
+module Parameters (Parameters(..), argsToParams, Trafo(..), transFun, stringTrafo, readBeforeT, sizeForT, sizeTrafo, PopulationFile(..), contents, reportInput, transKP) where
 
 import Context
 import Expression
@@ -6,7 +6,7 @@ import Pressing
 import StarPromotion
 import Stellation
 import Catalogue
-import SyntaxCatalogue (syncat)
+import SyntaxCatalogue (syncat, synCatalogueKP)
 import GruberP
 import Parser
 import Fuse
@@ -97,6 +97,16 @@ transFun SemCat      =  catalogue
 transFun SynCat      =  syncat
 transFun Stellation  =  stellate
 transFun Museum      =  museum
+
+transKP :: Trafo -> KataPred
+transKP KataTrafo  = kataGradeKP
+transKP Fuse       = fuseKP
+transKP Promote    = promoteKP
+transKP Press      = pressKP
+transKP SemCat     = catalogueKP
+transKP SynCat     = synCatalogueKP
+transKP Stellation = stelKP
+transKP _          = error "outside the core transformational system"
 
 -- does the trafo expect/produce validated REs with attributes?
 unvalidatedTrafo :: Trafo -> Bool 

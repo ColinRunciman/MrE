@@ -31,7 +31,6 @@ silentMuseumMethod re =
     (f,e,c) = splitContext (promote re)
     car     = makeCarrier (alpha2String $ alpha e)
 
-
 makeCarrier :: String -> Carrier
 makeCarrier s = createGradedCarrier s promoteKP
 
@@ -61,49 +60,6 @@ splitCxt re   c   _         = (id,re,c)
 splitContext :: RE -> (RE->RE,RE,Cxt)
 splitContext e = splitCxt e RootCxt False
 
-refactor :: Bool -> RE -> Maybe (Char,RE)
-refactor b (Sym c)     = Just (c,Lam)
-refactor b (Alt i xs)  | ew i || b && not (singularAlpha (fi i)) || not b && not (singularAlpha (la i))
-                       = Nothing
-                       | otherwise
-                       = Just (c,alt ys)
-                          where
-                          (c,ys) = process (map (refactor b) xs)
-                          process (Just (d,x):ys) = (d,x:[y|Just(_,y)<- ys])
-refactor b (Cat i xs)  | ew i || b && not (singularAlpha (fi i)) || not b && not (singularAlpha (la i))
-                       = Nothing
-                       | otherwise
-                       = Just (c, (cat $ if b then ys else reverse ys))
-                         where (c,ys) = refactorSequence b (if b then xs else reverse xs)
-refactor b _           = Nothing
-
-
-refactorSequence :: Bool -> [RE] -> (Char,[RE])
-refactorSequence b (x:xs) | not (ewp x)
-                          = (c,e:xs)
-                          | otherwise
-                          = (d,refactorRoll x d b:ys)
-                            where
-                            Just (c,e) = refactor b x
-                            (d,ys)     = refactorSequence b xs
-refactorSequence _ []     = error "empty sequence not factorisable"
-
-
-
--- add the char at the end/beginning, remove it from the other end 
-refactorRoll :: RE -> Char -> Bool -> RE
-refactorRoll Emp  _ _       = error "invariant violation in rolling"
-refactorRoll Lam  _ _       = Lam -- not needed because of options
-refactorRoll (Sym c) _ _    = Sym c
-refactorRoll (Alt _ xs) d b = alt [ refactorRoll x d b | x<- xs ]
-refactorRoll (Cat _ xs) d True =   cat ys
-                                   where (_,ys) = refactorSequence True (xs ++ [Sym d])
-refactorRoll (Cat _ xs) d False =  cat (reverse ys)
-                                   where (_,ys) = refactorSequence False $ reverse (Sym d: xs)
-refactorRoll (Rep x) d b    = Rep (refactorRoll x d b)
-refactorRoll (Opt x) d b    = Opt (refactorRoll x d b)
-
-
 singleChar :: RE -> Bool
 singleChar (Sym _)    = True
 singleChar (Alt _ xs) = all isSym xs
@@ -113,7 +69,6 @@ singleCharC :: RE -> Bool
 singleCharC (Sym _)    = True
 singleCharC (Cat _ xs) = all isSym xs
 singleCharC _          = False
-
 
 museum :: RE -> RE
 museum x = silentMuseumMethod x

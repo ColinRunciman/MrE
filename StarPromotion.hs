@@ -42,7 +42,7 @@ isPromoted = checkWith promoteP
 altPromotion, catPromotion :: RewRule
 altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
                       altCharSubsumption i xs `orOK` altFactor1 c i xs `orOK`
-                      altFactor1 c i xs
+                      altFactor1 c i xs `orOK` charFactor i xs
 
 catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs `orOK`
                       cat1Crush c i xs
@@ -251,3 +251,64 @@ remSig al1 b (Rep x)    | subAlpha (alpha x) al1
                         = changed Emp
 remSig al1 b (Opt x)    = okmap opt $ remSig al1 False x
 remSig _ _ e            = unchanged e
+
+
+charFactor :: Info -> [RE] -> OK [RE]
+charFactor i res =
+    list2OK res $
+    [ cat[Sym c,re2]:ys | c<-alpha2String (fi i), let (xs,ys)=partition (leftChar c) res, plural xs,
+                          Just (_,re2) <- [refactor True (alt xs)]] ++
+    [ cat[re2,Sym c]:ys | c<-alpha2String (la i), let (xs,ys)=partition (rightChar c) res, plural xs,
+                          Just (_,re2) <- [refactor False (alt xs)]]
+
+
+-- regexps satisfying these predicates can have the char left-factorised/right-factorised
+leftChar, rightChar :: Char -> RE -> Bool
+leftChar c re  = not (ewp re) && fir re==char2Alpha c
+rightChar c re = not (ewp re) && las re==char2Alpha c
+                                               
+
+-- tries to factor out a single Character from an RE, support for Museum and alt-refactoring
+refactor :: Bool -> RE -> Maybe (Char,RE)
+refactor b (Sym c)     = Just (c,Lam)
+refactor b (Alt i xs)  | ew i || b && not (singularAlpha (fi i)) || not b && not (singularAlpha (la i))
+                       = Nothing
+                       | otherwise
+                       = Just (c,alt ys)
+                          where
+                          (c,ys) = process (map (refactor b) xs)
+                          process (Just (d,x):ys) = (d,x:[y|Just(_,y)<- ys])
+refactor b (Cat i xs)  | ew i || b && not (singularAlpha (fi i)) || not b && not (singularAlpha (la i))
+                       = Nothing
+                       | otherwise
+                       = Just (c, (cat $ if b then ys else reverse ys))
+                         where (c,ys) = refactorSequence b (if b then xs else reverse xs)
+refactor b _           = Nothing
+
+
+refactorSequence :: Bool -> [RE] -> (Char,[RE])
+refactorSequence b (x:xs) | not (ewp x)
+                          = (c,e:xs)
+                          | otherwise
+                          = (d,refactorRoll x d b:ys)
+                            where
+                            Just (c,e) = refactor b x
+                            (d,ys)     = refactorSequence b xs
+refactorSequence _ []     = error "empty sequence not factorisable"
+
+
+
+-- add the char at the end/beginning, remove it from the other end 
+refactorRoll :: RE -> Char -> Bool -> RE
+refactorRoll Emp  _ _       = error "invariant violation in rolling"
+refactorRoll Lam  _ _       = Lam -- not needed because of options
+refactorRoll (Sym c) _ _    = Sym c
+refactorRoll (Alt _ xs) d b = alt [ refactorRoll x d b | x<- xs ]
+refactorRoll (Cat _ xs) d True =   cat ys
+                                   where (_,ys) = refactorSequence True (xs ++ [Sym d])
+refactorRoll (Cat _ xs) d False =  cat (reverse ys)
+                                   where (_,ys) = refactorSequence False $ reverse (Sym d: xs)
+refactorRoll (Rep x) d b    = Rep (refactorRoll x d b)
+refactorRoll (Opt x) d b    = Opt (refactorRoll x d b)
+
+

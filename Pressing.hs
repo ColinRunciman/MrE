@@ -1,6 +1,6 @@
 module Pressing (
   press, pressAltListOne, pressCatListOne, pressP,
-  rollList, prefixCom, suffixCom ) where
+  rollList, prefixCom, suffixCom, pressKP ) where
 
 import Data.List (minimumBy, nubBy, partition)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust, listToMaybe, catMaybes)
@@ -674,6 +674,7 @@ factAltElem c xs = list2OK xs
                                     let result=pressCat[pre,Opt suft]: nys,
                                     listSize result<listSize xs ] ++
                                   [ result
+
                                   | (pre,suf)<- suffixCom y, let pret=mkCat pre,
                                     not $ ewp pret, suf `sublang` lang,
                                     Just nys<- [cf suf *///* ys],

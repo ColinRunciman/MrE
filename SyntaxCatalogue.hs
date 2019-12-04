@@ -153,11 +153,11 @@ minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP 
                               | otherwise
                               = sizeFor n
 
-minByCatalogueKP = target minByCatalogueExtension
-minByCatalogueK  = khom minByCatalogueKP
+synCatalogueKP = target minByCatalogueExtension
+synCatalogueK  = khom synCatalogueKP
 
 syncat :: RE -> RE
-syncat = mkTransform minByCatalogueK
+syncat = mkTransform synCatalogueK
 
 -- new names to make changes easier
 beforeKP :: KataPred
@@ -170,4 +170,4 @@ beforeTrans :: Cxt -> RE -> RE
 beforeTrans c r = valOf $ katahom beforeK c r
 
 minByCatalogue :: RE -> OK RE
-minByCatalogue re  =  katahom minByCatalogueK NoCxt re
+minByCatalogue re  =  katahom synCatalogueK NoCxt re

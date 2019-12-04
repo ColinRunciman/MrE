@@ -1,4 +1,4 @@
-module Stellation (stellate, altTrans, catTrans) where
+module Stellation (stellate, altTrans, catTrans, stelKP) where
 
 import List
 import Info
