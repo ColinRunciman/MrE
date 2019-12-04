@@ -6,7 +6,7 @@ module Expression (
   altSubseq, catSegment,
   ewp, alpha, alphaL, alphaEquiv, canonicalRE, isCanonical,
   swa, fir, las, firAlt, firCat, lasAlt, lasCat, altInfo, catInfo,
-  size, listSize,
+  size, listSize, listAlpha,
   mirror, rename,
   homTrans, foldHomInfo, katahomGeneral,
   validate ) where
@@ -464,6 +464,7 @@ infoMatch r i1 i2  =
     r3 <- charListMatch r2 (swf i1) (swf i2) ]
   where
   fif i = alpha2String $ fi i
+
   laf i = alpha2String $ la i
   swf i = alpha2String $ sw i
         

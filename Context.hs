@@ -4,12 +4,13 @@ module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), R
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
   isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop,
-  extensionLtd) where
+  extensionLtd, extensionCatalogue) where
 
+import Alphabet
 import List
 import Info
 import Expression
-import Function ((===>))
+import Function
 import OK
 import Data.Maybe
 import Data.List
@@ -326,14 +327,14 @@ subalts os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
 
 subaltsPred, subcatsPred :: (RE->Bool) -> [RE]->[([RE],[RE]->[RE])]
 subcatsPred p os = [ (ys,\ys'->xs++ys'++zs)
-                   | (xs,ys,zs)<-segmentsPred p os, plural ys, not(null xs && null ys)]
+                   | (xs,ys,zs)<-segmentsPred p os, plural ys, not(null xs && null zs)]
 
 subaltsPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
                    | (xs,ys)<-powerSplitsPred p os, plural xs ]
 
 subaltsLPred, subcatsLPred :: ([RE]->Bool) -> [RE]->[([RE],[RE]->[RE])]
 subcatsLPred p os = [ (ys,\ys'->xs++ys'++zs)
-                    | (xs,ys,zs)<-segmentsLPred p os, plural ys, not(null xs && null ys)]
+                    | (xs,ys,zs)<-segmentsLPred p os, plural ys, not(null xs && null zs)]
 
 subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
                     | (xs,ys)<-powerSplitsLPred p os, plural xs ]
@@ -341,11 +342,20 @@ subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
 subaltsLtd, subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
 subcatsLtd m os  =  [ (ys,\ys'->xs++ys'++zs)
                     | (xs,ys,zs)<- maxSegsLtd size m os,
-                      plural ys, not (null xs && null ys) ]
+                      plural ys, not (null xs && null zs) ]
 
-subaltsLtd m os  =  [ (xs,\xs'->nubMerge (nubSort xs') ys)
+subaltsLtd m os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                     | (xs,ys)<- maxSubsLtd size m os,
                       plural xs, not (null ys) ]
+
+subaltsCatalogue, subcatsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
+subcatsCatalogue f os  =  [ (ys,\ys'->xs++ys'++zs)
+                          | (xs,ys,zs)<- segsLtd size (f 1) os,
+                             plural ys, not (null xs && null zs), f (alphaLength $ listAlpha ys) >= listSize ys ]
+
+subaltsCatalogue f os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
+                          | (xs,ys)<- subsLtd size (f 1) os,
+                             plural xs, not (null ys), f (alphaLength $ listAlpha xs) >= listSize xs ]
 
 -- brutal closure operators,
 -- rearranging trafos on subexpressions not recognised because of termination worries
@@ -353,8 +363,8 @@ altClosure :: RewRule -> RewRule
 altClosure r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subalts xs,
                                               let Alt j _ = altSubseq (Alt i xs) ys,
                                               yso <- [r c j ys],
-					      hasChanged yso, let ys'=valOf yso,
-					      listSize ys' < si j ]
+                                              hasChanged yso, let ys'=valOf yso,
+                                              listSize ys' < si j ]
 
 catClosure :: RewRule -> RewRule
 catClosure r c i xs = foldr orOK (r c i xs) [changed $ f ys' | (ys,f)<-subcats xs,
@@ -376,6 +386,13 @@ altClosureLtd n r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLtd n xs,
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j ]
 
+altClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
+altClosureCatalogue g r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsCatalogue g xs,
+                                                    let Alt j _ = altSubseq (Alt i xs) ys,
+                                                    yso <- [r c j ys],
+					            hasChanged yso, let ys'=valOf yso,
+					            listSize ys' < si j ]
+
 altSizeBound :: Int -> RewRule -> RewRule
 altSizeBound n r c i xs | si i <= n
                         = r c i xs
@@ -387,6 +404,18 @@ catSizeBound n r c i xs | si i <= n
                         = r c i xs
                         | otherwise
                         = catClosureLtd n r c i xs
+
+altSizeBoundCatalogue :: (Int->Int) -> RewRule -> RewRule
+altSizeBoundCatalogue f r c i xs | si i <= f (alphaLength $ al i)
+                                 = r c i xs
+                                 | otherwise
+                                 = altClosureCatalogue f r c i xs
+
+catSizeBoundCatalogue :: (Int->Int) -> RewRule -> RewRule
+catSizeBoundCatalogue f r c i xs | si i <= f (alphaLength $ al i)
+                                 = r c i xs
+                                 | otherwise
+                                 = catClosureCatalogue f r c i xs
 
 catClosurePred :: (RE->Bool) -> RewRule -> RewRule
 catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subcatsPred p xs,
@@ -402,11 +431,25 @@ catClosureLtd n r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLtd n xs,
 					            hasChanged yso, let ys'=valOf yso,
 					            listSize ys' < si j]
 
+catClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
+catClosureCatalogue g r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsCatalogue g xs,
+                                                    let Cat j _ = catSegment (Cat i xs) ys,
+					            yso <- [r NoCxt j ys],
+					            hasChanged yso, let ys'=valOf yso,
+					            listSize ys' < si j]
+
 extensionLtd :: Int -> Int -> Extension -> Extension
 extensionLtd m n ext = mkExtension altR catR (source ext) (grd $ target ext)
                        where
                        altR = altSizeBound m (altStep ext)
                        catR = catSizeBound n (catStep ext)
+
+extensionCatalogue :: (Int->Int) -> Extension -> Extension
+extensionCatalogue  f ext = mkExtension altR catR (source ext) (grd $ target ext)
+                               where
+                               altR = altSizeBoundCatalogue f (altStep ext)
+                               catR = catSizeBoundCatalogue f (catStep ext)
+
 
 -- REs stored in either of the catalogues are just strings; for use they must be
 -- marked throughout as of Minimal grade.

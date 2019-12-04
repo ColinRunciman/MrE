@@ -146,7 +146,12 @@ minByList constr c i xs =
           unwrap NoCxt x  =  x
 
 minByCatalogueExtension :: Extension
-minByCatalogueExtension = mkExtension mbcA mbcC beforeKP BottomCatalogued
+minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP BottomCatalogued
+                          where
+                          f n | n>maxSigmaSize
+                              = 0
+                              | otherwise
+                              = sizeFor n
 
 minByCatalogueKP = target minByCatalogueExtension
 minByCatalogueK  = khom minByCatalogueKP
