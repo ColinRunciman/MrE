@@ -155,7 +155,7 @@ type FromRE = RE -- source of boilerplate
 type ToRE   = RE -- target of boilplate
 type KataRE = RE -- REs that are of Kata grade
 
-data KataPred = KataPred { khom :: Katahom, kpred :: RecPred }
+data KataPred = KataPred { khom :: Katahom, kpred :: RecPred, thisfun :: RE->RE }
 
 data Extension = Extension { source, target   :: KataPred,
                              altStep, catStep :: RewRule }
@@ -174,7 +174,7 @@ mkExtension ar cr bottomKP gradeMarker =
               target = topKP,
               altStep = ar,
               catStep = cr }
-    topKP = KataPred { khom = topK, kpred = predK }
+    topKP = KataPred { khom = topK, kpred = predK, thisfun = extension2trafo ext }
     topK  = Katahom { kalt = genericAltK ext, kcat = genericCatK ext, grade = gradeMarker }
     predK = (kpred bottomKP) { altP = topAltP, catP = topCatP }
     topAltP c i xs = altP (kpred bottomKP) nc i xs && not (hasChanged(ar nc i xs))
@@ -263,7 +263,10 @@ kataGrade = mkTransform kataGradeKatahom
 mkTransform :: Katahom -> RE -> RE
 mkTransform kh = valOf . katahom kh RootCxt
 
-kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP }
+extension2trafo :: Extension -> RE -> RE
+extension2trafo ext = mkTransform (khom $ target ext) . thisfun (source ext)
+
+kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP, thisfun = kataGrade }
 
 isKata :: RE -> Bool
 isKata = checkWith kataP
