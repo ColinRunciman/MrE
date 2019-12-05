@@ -354,11 +354,13 @@ subaltsLtd m os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered x
 subaltsCatalogue, subcatsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
 subcatsCatalogue f os  =  [ (ys,\ys'->xs++ys'++zs)
                           | (xs,ys,zs)<- segsLtd size (f 1) os,
-                             plural ys, not (null xs && null zs), f (alphaLength $ listAlpha ys) >= listSize ys ]
+                             plural ys, not (null xs && null zs),
+                             f (alphaLength $ listAlpha ys) >= listSize ys ]
 
 subaltsCatalogue f os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                           | (xs,ys)<- subsLtd size (f 1) os,
-                             plural xs, not (null ys), f (alphaLength $ listAlpha xs) >= listSize xs ]
+                             plural xs, not (null ys),
+                             f (alphaLength $ listAlpha xs) >= listSize xs ]
 
 -- brutal closure operators,
 -- rearranging trafos on subexpressions not recognised because of termination worries
@@ -452,7 +454,6 @@ extensionCatalogue  f ext = mkExtension altR catR (source ext) (grd $ target ext
                                where
                                altR = altSizeBoundCatalogue f (altStep ext)
                                catR = catSizeBoundCatalogue f (catStep ext)
-
 
 -- REs stored in either of the catalogues are just strings; for use they must be
 -- marked throughout as of Minimal grade.
