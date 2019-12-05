@@ -625,7 +625,7 @@ pressP = kpred pressKP
 Katahom { kalt = pressAltK, kcat = pressCatK } = pressK
 
 pressH = mkHomTrans pressK
-press = mkTransform pressK 
+press = extension2trafo pressEX
 
 pressCxt :: Cxt -> RE -> OK RE
 pressCxt = katahom pressK

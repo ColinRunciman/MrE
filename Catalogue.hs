@@ -154,7 +154,7 @@ catalogueP = kpred catalogueKP
 Katahom { kalt = catalogueAltK, kcat = catalogueCatK } = catalogueK
 
 catalogueH = mkHomTrans catalogueK
-catalogue = mkTransform catalogueK
+catalogue = extension2trafo minByCatalogueExtension
 
 catalogueCxt :: Cxt -> RE -> OK RE
 catalogueCxt = katahom catalogueK

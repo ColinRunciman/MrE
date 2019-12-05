@@ -157,7 +157,7 @@ synCatalogueKP = target minByCatalogueExtension
 synCatalogueK  = khom synCatalogueKP
 
 syncat :: RE -> RE
-syncat = mkTransform synCatalogueK
+syncat = extension2trafo minByCatalogueExtension
 
 -- new names to make changes easier
 beforeKP :: KataPred

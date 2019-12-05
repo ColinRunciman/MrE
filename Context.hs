@@ -1,6 +1,6 @@
 module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), RewRule,
   okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
-  mkExtension, mkHomTrans, mkTransform,
+  mkExtension, mkHomTrans, mkTransform, extension2trafo,
   altClosure, catClosure, altClosurePred, catClosurePred,
   kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
   isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop,
@@ -174,7 +174,8 @@ mkExtension ar cr bottomKP gradeMarker =
               target = topKP,
               altStep = ar,
               catStep = cr }
-    topKP = KataPred { khom = topK, kpred = predK, thisfun = extension2trafo ext }
+    topKP = KataPred { khom = topK, kpred = predK,
+                       thisfun = mkTransform (khom $ target ext) . thisfun (source ext) }
     topK  = Katahom { kalt = genericAltK ext, kcat = genericCatK ext, grade = gradeMarker }
     predK = (kpred bottomKP) { altP = topAltP, catP = topCatP }
     topAltP c i xs = altP (kpred bottomKP) nc i xs && not (hasChanged(ar nc i xs))
@@ -264,7 +265,7 @@ mkTransform :: Katahom -> RE -> RE
 mkTransform kh = valOf . katahom kh RootCxt
 
 extension2trafo :: Extension -> RE -> RE
-extension2trafo ext = mkTransform (khom $ target ext) . thisfun (source ext)
+extension2trafo ext = thisfun (target ext)
 
 kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP, thisfun = kataGrade }
 

@@ -45,7 +45,7 @@ Katahom { kalt = stelAltK, kcat = stelCatK } = stelK
 stelH = mkHomTrans stelK
 HomTrans { falt = stelAlt, fcat = stelCat, frep = stelRep, fopt = stelOpt } = stelH
 
-stellate = mkTransform stelK
+stellate = extension2trafo stelEX
 
 stelCxt :: Cxt -> RE -> OK RE
 stelCxt = katahom stelK

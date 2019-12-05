@@ -33,7 +33,7 @@ fuseKP :: KataPred
 fuseKP = target fuseEX
 
 fuse :: RE -> FuseRE
-fuse = mkTransform fuseK
+fuse = extension2trafo fuseEX
 
 fuseCxt :: Cxt -> RE -> OK FuseRE
 fuseCxt = katahom fuseK

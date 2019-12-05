@@ -26,7 +26,7 @@ promoteExtension :: Extension
 promoteExtension = mkExtension altPromotion catPromotion fuseKP Promoted
 
 promote :: RE -> RE
-promote = mkTransform promoteK
+promote = extension2trafo promoteExtension
 
 promoteCxt = katahom promoteK
 
