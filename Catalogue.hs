@@ -16,6 +16,7 @@ import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
 import Context
 import Alphabet
+-- import Debug.Trace
 
 -- As an optional extra, in combination with the algebra-based transformations, one
 -- can look up subREs with small alphabets in a catalogue of known minimal expressions,
@@ -25,7 +26,8 @@ import Alphabet
 -- induces a corresponding pre-order on expressions.
 
 minimalEquiv :: Cxt -> RE -> Maybe RE
-minimalEquiv c re  |  n >= length theForest     -- alphabet too large
+minimalEquiv c re  |  -- trace (show re)
+                      n >= length theForest     -- alphabet too large
                    =  Nothing
                    |  size re > 2 * sizeFor n   -- candidate key too large
                    =  Nothing
@@ -114,8 +116,20 @@ minByList constr c i xs =
                           =  x
           unwrap NoCxt x  =  x
 
+fakeIdExt :: Extension
+fakeIdExt = mkExtension mbcA mbcC beforeKP Catalogued
+
+fakeId :: RE -> RE
+fakeId = mkTransform $ khom $ target fakeIdExt
+
 minByCatalogueExtension :: Extension
-minByCatalogueExtension = mkExtension mbcA mbcC beforeKP Catalogued
+minByCatalogueExtension = extensionCatalogue f $
+                          mkExtension mbcA mbcC beforeKP Catalogued
+                          where
+                          f n | n > maxSigmaSize
+                              = 0
+                              | otherwise
+                              = 2 * sizeFor n
 
 -- single place to change if previous level changes
 
