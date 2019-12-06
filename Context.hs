@@ -346,21 +346,23 @@ subaltsLPred p os = [ (xs,\xs'->nubMerge (nubSort xs') ys)
 subaltsLtd, subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
 subcatsLtd m os  =  [ (ys,\ys'->xs++ys'++zs)
                     | (xs,ys,zs)<- maxSegsLtd size m os,
-                      plural ys, not (null xs && null zs) ]
+                      plural ys, not (null xs && null zs), not (all isSym ys) ]
 
 subaltsLtd m os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                     | (xs,ys)<- maxSubsLtd size m os,
-                      plural xs, not (null ys) ]
+                      plural xs, not (null ys), not (all isSym xs) ]
 
 subaltsCatalogue, subcatsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
 subcatsCatalogue f os  =  [ (ys,\ys'->xs++ys'++zs)
                           | (xs,ys,zs)<- segsLtd size (f 1) os,
                              plural ys, not (null xs && null zs),
+                             not (all isSym ys),
                              f (alphaLength $ listAlpha ys) >= listSize ys ]
 
 subaltsCatalogue f os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                           | (xs,ys)<- subsLtd size (f 1) os,
                              plural xs, not (null ys),
+                             not (all isSym xs),
                              f (alphaLength $ listAlpha xs) >= listSize xs ]
 
 -- brutal closure operators,
