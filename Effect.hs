@@ -23,7 +23,7 @@ main = do
   let lns = lines input
   let n   = length lns
   let ins  = map (gSize . readFullExp) lns
-  let outs = map (sizeTrafo (trafo p)) lns
+  let outs = map (sizeTransFun (trafo p)) lns
   let average = (fromIntegral (sum outs) / fromIntegral n) :: Double
   let ratios = zipWith (\i o -> (fromIntegral o / fromIntegral i) :: Double) ins outs
   putStrLn $ reportInput (inputsource p)  ++

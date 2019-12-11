@@ -19,12 +19,12 @@ done
 done
 }
 
-allsizes "" prom
-allsizes -l linear-l
-allsizes -k kata-k
-allsizes -q fuse-q
-allsizes -p press-p
-allsizes -s stellate-s
-allsizes -c semcat-c
-allsizes -y syncat-y
-allsizes -m museum-m
+allsizes -l promoted
+allsizes -g Gruber-Gulan
+allsizes -n normal
+allsizes -f fused
+allsizes -p pressed
+allsizes -s stellar
+allsizes -c semsearch
+allsizes -y synsearch
+allsizes -m museum

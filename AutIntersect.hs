@@ -74,8 +74,8 @@ convert re = NFA {
 
 epstran :: RE -> [RE]
 epstran (Alt _ xs)     = xs
-epstran (Cat _ (x:xs)) = [ kataCat (x':xs) | x' <- epstran x ] ++ [ mkCat xs | ewp x]
-epstran (Rep x)        = [ kataCat[x,Rep x] ] -- was [x,.., the x not needed
+epstran (Cat _ (x:xs)) = [ cat (x':xs) | x' <- epstran x ] ++ [ mkCat xs | ewp x]
+epstran (Rep x)        = [ cat[x,Rep x] ] -- was [x,.., the x not needed
 epstran (Opt x)        = [x]
 epstran _              = []
 

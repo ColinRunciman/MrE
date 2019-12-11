@@ -1,9 +1,9 @@
 module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), RewRule,
   okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
-  mkExtension, mkHomTrans, mkTransform, extension2trafo,
+  mkTransform, mkExtension, mkPredExtension, mkHomTrans, extension2trafo,
   altClosure, catClosure, altClosurePred, catClosurePred,
-  kataAlt, kataCat, kataOpt, kataliftAlt, kataGrade, kataGradeH, kataGradeKP,
-  isKata, katahom, tpr, trg, altSizeBound, catSizeBound, checkWith, degradeTop,
+  kataliftAlt, katahom, tpr, trg, noChangeRule,
+  altSizeBound, catSizeBound, checkWith, degradeTop,
   extensionLtd, extensionCatalogue) where
 
 import Alphabet
@@ -174,14 +174,17 @@ mkExtension ar cr bottomKP gradeMarker =
               target = topKP,
               altStep = ar,
               catStep = cr }
-    topKP = KataPred { khom = topK, kpred = predK,
+    topKP = KataPred { khom = topK, kpred = mkPredExtension ar cr (kpred bottomKP),
                        thisfun = mkTransform (khom $ target ext) . thisfun (source ext) }
     topK  = Katahom { kalt = genericAltK ext, kcat = genericCatK ext, grade = gradeMarker }
-    predK = (kpred bottomKP) { altP = topAltP, catP = topCatP }
-    topAltP c i xs = altP (kpred bottomKP) nc i xs && not (hasChanged(ar nc i xs))
-                     where nc = max c (if ew i then OptCxt else NoCxt)
-    topCatP c i xs = catP (kpred bottomKP) c i xs && not (hasChanged(cr nc i xs))
-                     where nc = max c (if ew i then OptCxt else NoCxt)
+
+mkPredExtension :: RewRule -> RewRule -> RecPred -> RecPred
+mkPredExtension ar cr rp  =  rp { altP = topAltP, catP = topCatP }
+  where
+  topAltP c i xs = altP rp nc i xs && not (hasChanged(ar nc i xs))
+                   where nc = max c (if ew i then OptCxt else NoCxt)
+  topCatP c i xs = catP rp c i xs && not (hasChanged(cr nc i xs))
+                   where nc = max c (if ew i then OptCxt else NoCxt)
 
 src :: Extension -> Katahom
 src = khom . source
@@ -251,76 +254,11 @@ genericFromCatK rs c i xs       =  genericRepeatCat rs c $ catRuleOK(catStep rs)
 noChangeRule :: RewRule
 noChangeRule c i xs = unchanged xs
 
-kataGradeKatahom = Katahom { kalt = noChangeRule, kcat = noChangeRule, grade = Kata }
-
-kataGradeH :: HomTrans
-kataGradeH = mkHomTrans kataGradeKatahom
-HomTrans { falt = kataAlt, fcat = kataCat, frep = kataRep, fopt = kataOpt } = kataGradeH
-
-kataGrade :: RE -> RE
---kataGrade = valOf . katahom kataGradeKatahom NoCxt
-kataGrade = mkTransform kataGradeKatahom
-
 mkTransform :: Katahom -> RE -> RE
 mkTransform kh = valOf . katahom kh RootCxt
 
 extension2trafo :: Extension -> RE -> RE
 extension2trafo ext = thisfun (target ext)
-
-kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP, thisfun = kataGrade }
-
-isKata :: RE -> Bool
-isKata = checkWith kataP
-
--- predicate for bottom-line system, grade Kata
--- besides checking structural constraints also the info is tested for correctness, except for grading
-kataP :: RecPred
-kataP = RecPred { empP = empKataP, lamP = lamKataP, symP = symKataP,
-                  altP = altKataP, catP = catKataP, repP = repKataP, optP = optKataP }
-
--- 0 and 1 are only allowed at the root
-empKataP, lamKataP :: Cxt -> Bool
-empKataP c = c==RootCxt
-lamKataP c = c==RootCxt
-
--- Symbols are allowed everywhere
-symKataP :: Cxt -> Char -> Bool
-symKataP _ _ = True
-
-altElem :: Cxt -> RE -> Bool
-altElem _ (Sym _)   = True
-altElem _ (Cat _ _) = True
-altElem c (Rep _)   = c/=RepCxt
-altElem _ _         = False
-
-altKataP c i xs = plural xs && all (altElem c) xs && strictlyOrdered xs &&
-                  ew i == any ewp xs && si i == listSize xs &&
-                  la i == lasAlt xs&& fi i == firAlt xs 
-
-catElem :: RE -> Bool
-catElem (Sym _)   = True
-catElem (Alt _ _) = True
-catElem (Rep _)   = True
-catElem (Opt _)   = True
-catElem _         = False
-
-catKataP c i xs =  plural xs && all catElem xs &&
-                   ew i == all ewp xs && si i == listSize xs &&
-                   la i == lasCat xs && fi i == firCat xs 
-                   
-repKataP :: Cxt -> RE -> Bool
-repKataP RepCxt _     =  False
-repKataP _ (Sym _)    =  True
-repKataP _ (Cat _ _)  =  True
-repKataP c (Alt _ xs) =  all (repKataP c) xs
-repKataP _ _          =  False
-
-optKataP :: Cxt -> RE -> Bool
-optKataP RepCxt _    =  False
-optKataP _ (Sym _)   =  True
-optKataP _ (Alt i _) =  not (ew i)
-optKataP _ (Cat i _) =  not (ew i)
-optKataP _  _        =  False
 
 subalts, subcats :: [RE]->[([RE],[RE]->[RE])]
 subcats os = [ (ys,\ys'->xs++ys'++zs)

@@ -1,4 +1,4 @@
-module SyntaxCatalogue where
+module SyntaxCatalogue (createSynForest, synCatalogueKP, syncat) where
 
 import Info
 import Data.List
@@ -8,13 +8,13 @@ import Context
 import Expression
 import Comparison
 import Generator
-import Fuse
 import PreOrderTrees
 import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
 import Context
 import List
 import StarPromotion
+import Pressing
 import Alphabet
 
 -- As an optional extra, in combination with the algebra-based transformations, one
@@ -88,7 +88,7 @@ writeMap sigma n t = writeFile (mapFileName sigma n) $ show t
 
 poMap :: String -> Int -> Catalogue
 poMap sigma n = buildMap $ filter ((== string2Alpha sigma) . alpha) $ concat $
-                take (n+1) $ createGradedCarrier sigma beforeKP
+                take (n+1) $ createGradedCarrier sigma promoteKP
 
 buildMap :: [RE] -> Catalogue
 buildMap xs = M.fromList $ qmap $ groupOrder compRE xs
@@ -99,11 +99,13 @@ qmap :: [[RE]] -> [(RE,RE)]
 qmap []         =  []
 qmap ([_] : xs) =  qmap xs
 qmap ([] :xs)   =  error "found empty quotient list"
-qmap (xs: xss)  =  [ (x,y) | let y=pickMinList xs, x<-xs, size x>size y, canonicalRE x ] ++
-                   qmap xss 
+qmap (xs: xss)  =  [ (x, beforeTrans RootCxt y)
+                   | let y = pickMinList xs, x<-xs, size x>size y, canonicalRE x ]
+                   ++ qmap xss 
 
-createForest :: IO ()
-createForest  =  mapM_ (uncurry createMapFile) [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
+createSynForest :: IO ()
+createSynForest  =  mapM_ (uncurry createMapFile)
+                          [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
 mbcA c i xs = altClosurePred (not . untreatable) minByCatalogueAltList c i xs
 mbcC c i xs = catClosurePred (not . untreatable) minByCatalogueCatList c i xs
@@ -146,7 +148,7 @@ minByList constr c i xs =
           unwrap NoCxt x  =  x
 
 minByCatalogueExtension :: Extension
-minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP BottomCatalogued
+minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP SynCatMinimal
                           where
                           f n | n>maxSigmaSize
                               = 0
@@ -154,6 +156,7 @@ minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP 
                               = sizeFor n
 
 synCatalogueKP = target minByCatalogueExtension
+
 synCatalogueK  = khom synCatalogueKP
 
 syncat :: RE -> RE
@@ -161,7 +164,7 @@ syncat = extension2trafo minByCatalogueExtension
 
 -- new names to make changes easier
 beforeKP :: KataPred
-beforeKP = promoteKP
+beforeKP = pressKP
 
 beforeK :: Katahom
 beforeK = khom beforeKP

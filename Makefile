@@ -64,7 +64,7 @@ ifndef OS
 	chmod +x allReg
 endif
 
-semcatalogue: CreateSemCatalogue
+semcatalogue: CreateSemCatalogue syncatalogue
 ifndef OS
 	if test -d "semcatalogue" ; then rm semcatalogue/* ; else mkdir semcatalogue ; fi
 	./CreateSemCatalogue
@@ -110,4 +110,4 @@ sizeRatiosTables.tex: sizeRatios MrE populations
 
 Test: List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
 Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs Test.hs
-	ghc -O Test.hs
+	ghc -O Test

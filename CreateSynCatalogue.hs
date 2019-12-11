@@ -1,4 +1,4 @@
 import SyntaxCatalogue
 
-main  =  createForest
+main  =  createSynForest
 

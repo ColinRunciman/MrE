@@ -33,14 +33,14 @@ echo '\begin{figure}\begin{tabular}{rrrrrrrrrr}'
 echo ' & \multicolumn{9}{c}{Simplifying 1000 expressions of size:} \\'
 for s in $ss ; do echo -n " & $s" ; done
 echo ' \\'
-allsizes $w -l "G: Gruber-Gulan+"
-allsizes $w -k "N: normalise"
-allsizes $w -q "F: G + N + fuse"
-allsizes $w "" "P: F + promote"
-allsizes $w -p "P + press"
-allsizes $w -s "P + stellate"
-allsizes $w -y "P + syn. search"
-allsizes $w -c "P + sem. search"
+allsizes $w -g "Gruber-Gulan+"
+allsizes $w -n "normalise"
+allsizes $w -f "+ fuse"
+allsizes $w -l "+ promote"
+allsizes $w -p "+ press"
+allsizes $w -s "+ stellate"
+allsizes $w -y "+ syn. search"
+allsizes $w -c "+ sem. search"
 # allsizes $w -m museum
 echo '\end{tabular}\caption{Run-times (s) for alphabets of size' $w.'}\end{figure}'
 done

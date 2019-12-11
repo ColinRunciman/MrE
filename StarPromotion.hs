@@ -81,7 +81,7 @@ altSigmaStarPromotion i xs |  any (==sigmastar) xs -- most common special case, 
                            =  list2OK xs cands                    
     where
     alphabet  = alpha2String (al i)
-    sigmastar = Rep (kataAlt (map Sym alphabet))
+    sigmastar = Rep (alt (map Sym alphabet))
     cands     = [ Rep y: ys2 |
                   (Rep y,ys)<-itemRest xs, let al1=swa y, not(isEmptyAlpha al1),
                   let (ys1,ys2)=partition (\r->subAlpha (alpha r) al1) ys,
@@ -171,12 +171,12 @@ crushRightWrt al1 (re:ps) | isLam nre
 crushRightInCxt :: Bool -> Alphabet -> RE -> OK RE
 crushRightInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
                      = changed Lam
-crushRightInCxt c al1 (Alt i res) = okmap kataAlt $ katalift (crushRightInCxt (c||ew i) al1) res
+crushRightInCxt c al1 (Alt i res) = okmap alt $ katalift (crushRightInCxt (c||ew i) al1) res
 crushRightInCxt _ al1 (Cat _ res) = okmap mkCat $ crushRightWrt al1 res
 crushRightInCxt _ al1 (Opt re)    = okmap Opt   $ crushRightInCxt True al1 re
 crushRightInCxt _ al1 (Rep c@(Cat i xs)) -- a Conway rule, alphaLength condition for efficiency only
                               | alphaLength (al i)>1 && isRep y && subAlpha(alpha r) al1
-                              = changed $ Rep (kataAlt [r,catSegment c ys])
+                              = changed $ rep (alt [r,catSegment c ys])
                                 where
                                 Just(ys,y) = unsnoc xs
                                 Rep r      = y
@@ -205,11 +205,11 @@ crushLeftWrt al1 xs | isLam ny
 crushLeftInCxt :: Bool -> Alphabet -> RE -> OK RE
 crushLeftInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
                      = changed Lam
-crushLeftInCxt c al1 (Alt i res) = okmap kataAlt $ katalift (crushLeftInCxt (c||ew i) al1) res
+crushLeftInCxt c al1 (Alt i res) = okmap alt $ katalift (crushLeftInCxt (c||ew i) al1) res
 crushLeftInCxt _ al1 (Cat _ res) = okmap mkCat $ crushLeftWrt al1 res
 crushLeftInCxt _ al1 (Opt re)    = okmap Opt   $ crushLeftInCxt True al1 re
 crushLeftInCxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
-                              = changed $ Rep (kataAlt [r,catSegment c ys])
+                              = changed $ rep (alt [r,catSegment c ys])
 crushLeftInCxt _ _   e           = unchanged e
 
 isCharSet :: RE -> Bool

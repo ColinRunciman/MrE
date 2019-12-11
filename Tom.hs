@@ -1,6 +1,7 @@
 module Main where
 
 import Data.Maybe
+import Info
 import Expression
 import StarPromotion
 import System.Environment
@@ -24,15 +25,15 @@ main = do
   mapM_ print ipos
   putStrLn ("no of expressions beyond promote: " ++ (show $ length ipos))
 
-process :: Trafo -> String -> Maybe IPO
-process t s  |  e1==e'
+process :: Grade -> String -> Maybe IPO
+process g s  |  e1==e'
              =  Nothing
              |  otherwise
              =  Just (IPO { inp=e, pro=e1, out=e' })
   where
-  e  =  readBeforeT t s
+  e  =  readBeforeT g s
   e1 =  promote e
-  e' =  transFun t e
+  e' =  transFun g e
 
 
 

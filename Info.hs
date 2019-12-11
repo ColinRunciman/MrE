@@ -46,7 +46,7 @@ extractInfo c i =
               expressionSize = si i }
 
 nocxt NoCxt i = i
-nocxt _     i = i { graded = NoGrade }
+nocxt _     i = i { graded = Normal }
 
 nullcxt NoCxt i = i
 nullcxt c     i = i { nullable=True }
@@ -79,10 +79,11 @@ instance Ord Info where
 data Cxt = RootCxt | NoCxt | EwpCxt | OptCxt | RepCxt
   deriving (Eq,Ord,Show)
 
-data Grade = NoGrade | Kata | Fused | Promoted | Recognised | BottomCatalogued |
-             Topshrunk | Shrunk | Pressed | Refactorized | 
-             Catalogued | Stellar | Auto | Minimal
-  deriving (Eq, Ord, Show)
+data Grade = GruberGulan |
+             Normal | Fused | Promoted |
+             Stellar | Pressed | 
+             SynCatMinimal | SemCatMinimal | Minimal
+  deriving (Eq, Ord, Show, Enum)
 
 type CGMap = [(Cxt,Grade)]
 
@@ -101,7 +102,7 @@ outerCxt True _   =  OptCxt
 outerCxt False _  =  NoCxt
 
 lookupCGMap :: Cxt -> CGMap -> Grade
-lookupCGMap c cgm = maximum (NoGrade : [ g | (c',g) <- cgm, c' >=c] )
+lookupCGMap c cgm = maximum (Normal : [ g | (c',g) <- cgm, c' >=c] )
 
 okInfo :: Cxt -> Grade -> Info -> Bool
 okInfo c g i = ok c g (gr i)
@@ -115,20 +116,20 @@ upgradeCGMap c g cgm  |  ok c g cgm
 upgradeInfo :: Cxt -> Grade -> Info -> Info
 upgradeInfo c g i = i { gr = upgradeCGMap c g (gr i)}
 
--- which grade maps can we give to subcats of graded cats, subalts of graded alts?
--- both context and grade may be affected
-subAltCxt :: Cxt -> Cxt
-subAltCxt RootCxt = NoCxt
-subAltCxt x       = x
-
--- the catalogue-builds do not guarantee that subcats/subalts are catalogued, so defer to previous level
-subGrade :: Grade -> Grade
-subGrade Catalogued       = Promoted
-subGrade BottomCatalogued = Promoted
-subGrade x                = x
+-- Which grade maps can we give to subcats of graded cats, subalts of graded alts?
+-- Both context and grade may be affected
 
 subAltCGMap :: CGMap -> CGMap
-subAltCGMap m = [(subAltCxt c,subGrade g) | (c,g)<-m]
+subAltCGMap m = [(subAltCxt c, subGrade g) | (c,g)<-m]
+  where
+  subAltCxt RootCxt = NoCxt
+  subAltCxt x       = x
 
 subCatCGMap :: CGMap -> CGMap
-subCatCGMap m = [(NoCxt,subGrade g)|(c,g)<-m]
+subCatCGMap m = [(NoCxt, subGrade g)|(c,g)<-m]
+
+-- At one stage subcats and subalts were not considered for catalogue look-up,
+-- but now they are so this function has become the identity.
+subGrade :: Grade -> Grade
+subGrade  =  id
+

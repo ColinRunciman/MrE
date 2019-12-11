@@ -95,7 +95,8 @@ mkAlt [x]  =  x
 mkAlt xs   =  Alt (altInfo xs) xs
 
 altInfo :: [RE] -> Info
-altInfo xs =  Info { gr = [], ew = any ewp xs, al = listAlpha xs,
+altInfo xs =  Info { gr = [(RepCxt,Minimal) | all isSym xs],
+                     ew = any ewp xs, al = listAlpha xs,
                      fi = firAlt xs, la = lasAlt xs, sw = swAlt xs,
                      si = listSize xs }
 
@@ -120,7 +121,8 @@ mkCat [x] =  x
 mkCat xs  =  Cat (catInfo xs) xs
 
 catInfo :: [RE] -> Info
-catInfo xs =  Info { gr = [], ew = all ewp xs, al = listAlpha xs,
+catInfo xs =  Info { gr = [(RepCxt,Minimal) | all isSym xs],
+                     ew = all ewp xs, al = listAlpha xs,
                      fi = firCat xs, la = lasCat xs, sw = swCat xs,
                      si = listSize xs } 
 

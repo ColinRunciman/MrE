@@ -11,7 +11,7 @@ main = do
   args <- getArgs
   let p = argsToParams args
   input <- contents (inputsource p)
-  mapM_ (putStrLn . stringTrafo (trafo p)) (lines input)
+  mapM_ (putStrLn . stringTransFun (trafo p)) (lines input)
 
 
 

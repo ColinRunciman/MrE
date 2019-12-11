@@ -3,7 +3,6 @@ module Main where
 import Data.List (sort)
 import Expression
 import Parameters
-
 import System.Environment
 import Data.Time.Clock
 import System.IO.Unsafe (unsafePerformIO)
@@ -40,8 +39,10 @@ isTotal _        =  False
 countTotal :: [ITO] -> Int
 countTotal is = length $ (filter (isTotal . out)) is
 
-effectITOs :: Trafo -> [ITO] -> Float
-effectITOs t itos = (sum $ map (sizeForT t . out) itos) `asPercentageOf` (sum $ map (sizeForT t . inp) itos)
+effectITOs :: Grade -> [ITO] -> Float
+effectITOs g itos = (sum $ map (sizeForT g . out) itos)
+                    `asPercentageOf`
+                    (sum $ map (sizeForT g . inp) itos)
 
 totalITOs :: [ITO] -> Float
 totalITOs itos = countTotal itos `asPercentageOf` length itos
@@ -78,12 +79,12 @@ plainContinuation :: [ITO] -> Parameters -> IO ()
 plainContinuation itos p = do
     putStrLn $ reportInput (inputsource p) ++ showTime (averageTime itos)
 
-process :: Trafo -> String -> ITO
-process tr s  =  ITO e t e'
+process :: Grade -> String -> ITO
+process g s  =  ITO e t e'
   where
-  e  =  readBeforeT tr s
-  e' =  transFun tr e
-  t  =  timeToCompute e e' (sizeForT tr e' <= sizeForT tr e)
+  e  =  readBeforeT g s
+  e' =  transFun g e
+  t  =  timeToCompute e e' (sizeForT g e' <= sizeForT g e)
 
 
 timeToCompute :: RE -> RE -> Bool -> Float

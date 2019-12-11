@@ -16,6 +16,7 @@ import qualified Data.Map.Strict as M
 import System.IO.Unsafe(unsafePerformIO)
 import Context
 import Alphabet
+import SyntaxCatalogue
 -- import Debug.Trace
 
 -- As an optional extra, in combination with the algebra-based transformations, one
@@ -71,13 +72,16 @@ treeFileName :: String -> Int -> String
 treeFileName sigma n = "semcatalogue/TREE-"++sigma++"-"++show n++".txt"
 
 createTreeFile :: String -> Int -> IO()
-createTreeFile sigma n = writeTree sigma n $ pruneTree ((:[]).pickMinList) $ poTree sigma n
+createTreeFile sigma n = writeTree sigma n $
+                         pruneTree ((:[]) . beforeTrans RootCxt . pickMinList) $
+                         poTree sigma n
 
 writeTree :: String -> Int -> RB RE -> IO()
 writeTree sigma n t = writeFile (treeFileName sigma n) $ show t                        
 
 poTree :: String -> Int -> RB RE
-poTree sigma n = buildTree compRE $ concat $ take (n+1) $ createGradedCarrier sigma beforeKP
+poTree sigma n = buildTree compRE $ concat $ take (n+1) $
+                 createGradedCarrier sigma promoteKP
 
 createForest :: IO ()
 createForest  =  mapM_ (uncurry createTreeFile)
@@ -100,7 +104,7 @@ minByList constr c i xs =
     case minimalEquiv c rec of
     Nothing  -> list2OK xs [ [upgradeRE c Minimal rex]
                            | c>=OptCxt, Just rex<- [minimalEquiv NoCxt re], size rex<si i]         
-    Just re' -> changed [upgradeRE c Catalogued $ unwrap c re']  -- termination?!
+    Just re' -> changed [upgradeRE c SemCatMinimal $ unwrap c re']  -- termination?!
     where re  = constr i xs
           rec = contextFunction c re
           unwrap RepCxt x |  isRep x
@@ -117,14 +121,14 @@ minByList constr c i xs =
           unwrap NoCxt x  =  x
 
 fakeIdExt :: Extension
-fakeIdExt = mkExtension mbcA mbcC beforeKP Catalogued
+fakeIdExt = mkExtension mbcA mbcC beforeKP SemCatMinimal
 
 fakeId :: RE -> RE
 fakeId = mkTransform $ khom $ target fakeIdExt
 
 minByCatalogueExtension :: Extension
 minByCatalogueExtension = extensionCatalogue f $
-                          mkExtension mbcA mbcC beforeKP Catalogued
+                          mkExtension mbcA mbcC beforeKP SemCatMinimal
                           where
                           f n | n > maxSigmaSize
                               = 0
@@ -134,7 +138,7 @@ minByCatalogueExtension = extensionCatalogue f $
 -- single place to change if previous level changes
 
 beforeKP::KataPred
-beforeKP = promoteKP
+beforeKP = synCatalogueKP
 
 beforeK :: Katahom
 beforeK = khom beforeKP
@@ -142,23 +146,23 @@ beforeK = khom beforeKP
 beforeTrans :: Cxt -> RE -> RE
 beforeTrans c r = valOf $ katahom beforeK c r
 
-catalogueK :: Katahom
-catalogueK = khom catalogueKP
+semCatalogueK :: Katahom
+semCatalogueK = khom semCatalogueKP
 
-catalogueKP :: KataPred
-catalogueKP = target minByCatalogueExtension
+semCatalogueKP :: KataPred
+semCatalogueKP = target minByCatalogueExtension
 
-catalogueP :: RecPred
-catalogueP = kpred catalogueKP
+semCatalogueP :: RecPred
+semCatalogueP = kpred semCatalogueKP
 
-Katahom { kalt = catalogueAltK, kcat = catalogueCatK } = catalogueK
+Katahom { kalt = semCatalogueAltK, kcat = semCatalogueCatK } = semCatalogueK
 
-catalogueH = mkHomTrans catalogueK
-catalogue = extension2trafo minByCatalogueExtension
+semCatalogueH = mkHomTrans semCatalogueK
 
-catalogueCxt :: Cxt -> RE -> OK RE
-catalogueCxt = katahom catalogueK
+semcat = extension2trafo minByCatalogueExtension
+
+semCatalogueCxt :: Cxt -> RE -> OK RE
+semCatalogueCxt = katahom semCatalogueK
 
 minByCatalogue :: RE -> OK RE
-minByCatalogue re  =  catalogueCxt NoCxt re
-
+minByCatalogue re  =  semCatalogueCxt NoCxt re

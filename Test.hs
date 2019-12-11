@@ -35,14 +35,14 @@ instance Listable RE where
 filterCons1 :: Listable a => (a->Bool) -> (a->b) -> [[b]]
 filterCons1 p f  =  delay $ mapT f $ filterT p tiers
 
-instance Listable Trafo where
-  tiers  =  [[KataTrafo .. Stellation]]
+instance Listable Grade where
+  tiers  =  [[Normal .. SemCatMinimal]]
 
-valid :: RE -> Trafo -> Bool
-valid x t  =  (y ==== x) && (size y <= size x)
+valid :: RE -> Grade -> Bool
+valid x g  =  (y ==== x) && (size y <= size x)
   where
-  y  =  transFun t x
+  y  =  transFun g x
 
 main  =  do [n] <- getArgs          
             mapM_ (putStrLn . unwords)
-                  (counterExamples (read n * length (list :: [Trafo])) valid)
+                  (counterExamples (read n * length (list :: [Grade])) valid)
