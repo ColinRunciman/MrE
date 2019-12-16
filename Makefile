@@ -1,21 +1,21 @@
-progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Test Tim Tom
+progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Test Tim
 
 CreateSemCatalogue: Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs OneLetterFactorization.hs
+StarPromotion.hs OneLetterFactorization.hs
 	ghc -O CreateSemCatalogue
 
 CreateSynCatalogue: Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
-OK.hs PreOrderTrees.hs Pressing.hs Queue.hs Shrinking.hs \
+OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs
 	ghc -O CreateSynCatalogue
 
 Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
+StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
 SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O Effect
 ifndef OS
@@ -33,22 +33,10 @@ endif
 MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
+StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
 SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O MrE
 
-laboratory: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs \
-Expression.hs Function.hs Fuse.hs Generator.hs Info.hs Laboratory.hs List.hs \
-Metrics.hs OK.hs PreOrderTrees.hs Pressing.hs Properties.hs Queue.hs \
-Shrinking.hs StarPromotion.hs Stellation.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semproxy.txt synproxy.txt
-	ghc -O Laboratory.hs
-ifndef OS
-	touch laboratory
-	chmod +x laboratory
-endif
-
-      
 ifndef OS
 popproxy.txt: Reg allReg 
 	./allReg
@@ -84,17 +72,10 @@ endif
 
 Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tim.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
+Pressing.hs Queue.hs StarPromotion.hs \
+SyntaxCatalogue.hs Tim.hs Parameters.hs OneLetterFactorization.hs \
 popproxy.txt semproxy.txt synproxy.txt
 	ghc -O Tim
-
-Tom: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
-Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
-SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
-semproxy.txt synproxy.txt
-	ghc -O Tom
 
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
