@@ -21,28 +21,94 @@ import Data.List
 --     some more specialised transformations for Cats that are Rep bodies
 --     (see catFuseList)
 
+-- KATA STUFF TO BE INCORPORATED APPROPRIATELY
+
+{-
+kataGradeH :: HomTrans
+kataGradeH = mkHomTrans kataGradeKatahom
+HomTrans { falt = kataAlt, fcat = kataCat, frep = kataRep, fopt = kataOpt } = kataGradeH
+
+kataGrade :: RE -> RE
+--kataGrade = valOf . katahom kataGradeKatahom NoCxt
+kataGrade = mkTransform kataGradeKatahom
+
+kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP, thisfun = kataGrade }
+-}
+
+isKata :: RE -> Bool
+isKata = checkWith kataP
+
+-- predicate for bottom-line system, grade Kata
+-- besides checking structural constraints also the info is tested for correctness, except for grading
+kataP :: RecPred
+kataP = RecPred { empP = empKataP, lamP = lamKataP, symP = symKataP,
+                  altP = altKataP, catP = catKataP, repP = repKataP, optP = optKataP }
+
+-- 0 and 1 are only allowed at the root
+empKataP, lamKataP :: Cxt -> Bool
+empKataP c = c==RootCxt
+lamKataP c = c==RootCxt
+
+-- Symbols are allowed everywhere
+symKataP :: Cxt -> Char -> Bool
+symKataP _ _ = True
+
+altElem :: Cxt -> RE -> Bool
+altElem _ (Sym _)   = True
+altElem _ (Cat _ _) = True
+altElem c (Rep _)   = c/=RepCxt
+altElem _ _         = False
+
+altKataP c i xs = plural xs && all (altElem c) xs && strictlyOrdered xs &&
+                  ew i == any ewp xs && si i == listSize xs &&
+                  la i == lasAlt xs&& fi i == firAlt xs 
+
+catElem :: RE -> Bool
+catElem (Sym _)   = True
+catElem (Alt _ _) = True
+catElem (Rep _)   = True
+catElem (Opt _)   = True
+catElem _         = False
+
+catKataP c i xs =  plural xs && all catElem xs &&
+                   ew i == all ewp xs && si i == listSize xs &&
+                   la i == lasCat xs && fi i == firCat xs 
+                   
+repKataP :: Cxt -> RE -> Bool
+repKataP RepCxt _     =  False
+repKataP _ (Sym _)    =  True
+repKataP _ (Cat _ _)  =  True
+repKataP c (Alt _ xs) =  all (repKataP c) xs
+repKataP _ _          =  False
+
+optKataP :: Cxt -> RE -> Bool
+optKataP RepCxt _    =  False
+optKataP _ (Sym _)   =  True
+optKataP _ (Alt i _) =  not (ew i)
+optKataP _ (Cat i _) =  not (ew i)
+optKataP _  _        =  False
+
+-- END OF KATA STUFF
+
 type FuseRE = RE
 
-fuseEX :: Extension
-fuseEX = mkExtension altFuseList catFuseList kataGradeKP Fused
-
 fuseK :: Katahom
-fuseK = trg fuseEX
+fuseK  =  Katahom { kalt = altFuseList, kcat = catFuseList, grade = Fused }
 
 fuseKP :: KataPred
-fuseKP = target fuseEX
+fuseKP  =  KataPred { khom = fuseK, kpred = fuseP, thisfun = fuse }
 
 fuse :: RE -> FuseRE
-fuse = extension2trafo fuseEX
+fuse = mkTransform fuseK
 
 fuseCxt :: Cxt -> RE -> OK FuseRE
 fuseCxt = katahom fuseK
 
-HomTrans { falt=fuseAlt,  fcat=fuseCat, frep= fuseRep, fopt=fuseOpt} = fuseH
+HomTrans { falt=fuseAlt,  fcat=fuseCat, frep=fuseRep, fopt=fuseOpt} = fuseH
 fuseH = mkHomTrans fuseK
 
 fuseP :: RecPred
-fuseP = tpr fuseEX
+fuseP = mkPredExtension altFuseList catFuseList kataP
 
 isFused :: RE -> Bool
 isFused = checkWith fuseP
@@ -186,9 +252,9 @@ suffixCrush cs xs     |  hasChanged rxs
 
 catFuseList :: Cxt -> Info -> [FuseRE] -> OK [KataRE]
 catFuseList RepCxt i xs  |  ew i
-                         =  changed [ kataAlt (whiteList xs) ]
+                         =  changed [ alt (whiteList xs) ]
                          |  sw i==al i
-                         =  changed [ kataAlt (map Sym (alpha2String $ sw i)) ]
+                         =  changed [ alt (map Sym (alpha2String $ sw i)) ]
                          |  not (isEmptyAlpha (sw i)) 
                          =  fuseListProcess `app` fixCrush (sw i) xs
 catFuseList _ i xs       =  fuseListProcess xs
