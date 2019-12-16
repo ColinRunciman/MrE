@@ -1,5 +1,6 @@
 module TopShrink where
 import Info
+import OK
 import Context
 import Expression
 import List

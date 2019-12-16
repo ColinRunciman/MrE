@@ -1,5 +1,4 @@
-module StarRecognition () where
-
+module StarRecognition where
 import Expression
 import Alphabet
 import qualified Data.Set as S
@@ -9,6 +8,10 @@ import Info
 import Context
 import List
 import Derivative
+
+allDerives :: [Char] -> RE -> [RE] -> [RE]
+allDerives [] _ xs = xs
+allDerives (c:cs) re xs = allDerives cs re (derive c re:xs)
 
 -- checks whether an RE is Sigma*, for its alphabet Sigma
 sigmaStarCheck :: RE -> Bool
@@ -30,6 +33,7 @@ checkAlpha2 doneSet alp (r:rs)
 totalLang :: CharSet -> RE
 totalLang cset = kataRep $ mkAlt [ Sym c | c <- enumerateSet cset ]
 
+
 recogniseExtension :: Extension
 recogniseExtension = mkExtension altRecognition catRecognition promoteKP Recognised
 
@@ -48,6 +52,20 @@ recogniseP = tpr recogniseExtension
 isRecognised = checkWith recogniseP
 
 altRecognition, catRecognition :: RewRule
+{- too expensive
+altRecognition RepCxt _ xs = unchanged xs
+altRecognition OptCxt i xs | not (ew i) && starCheck oldo && si i >= size new
+                           = changed [new]
+                             where
+                             old = Alt i xs
+                             oldo = Opt old
+                             new  = recognise (Rep old)
+altRecognition _ i xs | starCheck old -- && si i>=size new
+                      = changed [new]
+                             where
+                             old = Alt i xs
+                             new = recognise (Rep old)
+-}
 altRecognition c i xs        | sigmaStarCheck old
                              = changed [totalLang (sw i)]
                                where old = Alt i xs
@@ -85,4 +103,22 @@ catRecognition OptCxt i xs   | not(ew i) && sigmaStarCheck old2 && si i>=size ne
 catRecognition _ i xs        = list2OK xs [ (li++[totalLang (swa mid)] ++ re) | (li,mi,re) <- segmentsPred ewp xs,
                                             plural mi, not(null li && null re),
                                             let mid = kataCat mi, sigmaStarCheck mid ]
+
+   
+
+{- too expensive
+catRecognition RepCxt _ xs = unchanged xs
+catRecognition OptCxt i xs | not (ew i) && starCheck oldo && si i >= size new
+                           = changed [new]
+                             where
+                             old = Cat i xs
+                             oldo = Opt old
+                             new  = recognise (Rep old)
+catRecognition _ i xs | starCheck old -- && si i>=size new
+                      = changed [new]
+                             where
+                             old = Cat i xs
+                             new = recognise (Rep old)
+catRecognition _ i xs = unchanged xs
+-}
 
