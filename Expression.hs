@@ -374,7 +374,7 @@ rest :: String -> [[[RE]]] -> (RE,String)
 rest ""      (    a:as) = if null as then (a2re a,"")
                           else wrong
 rest ('+':s) ((c:a):as) = if null c then wrong
-			  else rest s (([]:c:a):as)
+                          else rest s (([]:c:a):as)
 rest ('*':s) ((c:a):as) = case c of
                           []     -> wrong
                           (x:xs) -> rest s (((rep x:xs):a):as)
@@ -391,8 +391,8 @@ rest (')':s) (a:as)     = case as of
 rest (' ':s) as         = rest s as
 rest (v  :s) ((c:a):as) = if isAlpha v then rest s (((Sym v:c):a):as)
                           else if null as then (a2re (c:a),v:s)
-			 else wrong
-			      
+                         else wrong
+                              
 a2re :: [[RE]] -> RE
 a2re = alt . reverse . map (cat . reverse)
 

@@ -23,8 +23,6 @@ import Debug.Trace
 -- equivalence or inclusion between REs.  These conditions are tested using
 -- Comparison.(===) or Comparison.sublang.
 
-type PressRE =  RE
-
 isPressed :: RE -> Bool
 isPressed = checkWith pressP
 
@@ -94,7 +92,7 @@ _        *//* _          =  Nothing
 -- (X(X*+Y))? = X*+XY and mirror
 -- (XY?)? = (XY)? if X `sublang` (XY)? and mirror
 
-pressOptCatList :: PressRE -> [PressRE]
+pressOptCatList :: RE -> [RE]
 pressOptCatList x = case pressOpt x of
                     Cat _ xs -> xs
                     y        -> [y]
@@ -381,7 +379,7 @@ x *==* y              |  ewp x && ewp y && subTransitive x y
                       |  otherwise
                       =  Nothing
 
-subTransitive :: PressRE -> PressRE -> Bool
+subTransitive :: RE -> RE -> Bool
 subTransitive x y  =  let e = cat [x,y] in e === rep e
 
 eqrListCommute :: [RE] -> Maybe RE
@@ -588,14 +586,14 @@ rMostComList xs   =  nubBy (kernel snd) $
 
 -- to be used on lists that have no fusion-opportunities
 -- i.e. catP pressP False xs
-rollList :: [PressRE] -> [PressRE]
+rollList :: [RE] -> [RE]
 rollList xs  |  rolled xs
              =  xs
              |  otherwise
              =  rollList (rollPass xs)
 
 -- formerly, rollList was just rollPass
-rollPass :: [PressRE] -> [PressRE]
+rollPass :: [RE] -> [RE]
 rollPass []  = []
 rollPass [x] = [x]
 rollPass xs  = m : rollPass (flat tl)
@@ -605,7 +603,7 @@ rollPass xs  = m : rollPass (flat tl)
     flat (Cat _ xs : ys)  =  flat (xs++ys)
     flat (x: xs)          =  x: flat xs
 
-rolled :: [PressRE] -> Bool
+rolled :: [RE] -> Bool
 rolled [] = True
 rolled (x:xs) = all (\(y,ys)->x<=y)(lMostComList (x:xs)) && rolled xs
 
@@ -641,13 +639,13 @@ pressCxt :: Cxt -> RE -> OK RE
 pressCxt = katahom pressK
 
 -- non-generic
-pressAltListOne :: Cxt -> Info -> [PressRE] -> OK [RE]
+pressAltListOne :: Cxt -> Info -> [RE] -> OK [RE]
 pressAltListOne c i xs = symbolFactorTrafo i xs `orOK`
                          thinAltList c xs `orOK`
                          factAltElem c xs `orOK`
                          factList xs
 
-thinAltList :: Cxt -> [PressRE] -> OK [PressRE]
+thinAltList :: Cxt -> [RE] -> OK [RE]
 thinAltList c xs = list2OK xs $ [ (z:ys) | (y,ys)<- itemRest xs,
                                            let others=contextFunction c (mkAlt ys),
                                            z <- catMaybes [others *//* y] ]   
@@ -655,7 +653,7 @@ thinAltList c xs = list2OK xs $ [ (z:ys) | (y,ys)<- itemRest xs,
 -- factorization modulo rolling; because of symbol-optimizations 
 -- this will not bite for small regexp
 -- because common symbol factors are eliminated before we look at this, we can eliminate the case
-factList :: [PressRE] -> OK [PressRE]
+factList :: [RE] -> OK [RE]
 factList xs = list2OK xs [ match:xs' |([x,y],xs') <- subsetRest 2 xs,
                            match <- [ pressCat[he,mkAlt[mkCat xtl,mkCat ytl]]
                                     | let lmx=lMostCom' x, let lmy=lMostCom' y,
@@ -674,7 +672,7 @@ factList xs = list2OK xs [ match:xs' |([x,y],xs') <- subsetRest 2 xs,
 -- factorization of a single element against the remainder of the alternatives;
 -- context has to be taken into account
 -- size condition is needed because a?b+ba=ab+ba?
-factAltElem :: Cxt -> [PressRE] -> OK [PressRE]
+factAltElem :: Cxt -> [RE] -> OK [RE]
 factAltElem c xs = list2OK xs
                    [ res | (y,ys)<-itemRest xs,
                            res <- [ result
@@ -695,7 +693,7 @@ factAltElem c xs = list2OK xs
                     lang  =  cf (alt xs)
 
 -- is a Cat really an Alt? only try for nullable cats!
-catSplit :: [PressRE] -> OK [PressRE]
+catSplit :: [RE] -> OK [RE]
 catSplit xs = list2OK xs
                 [ [press nx] | (pre,suf)<- prefixCom x, not(null suf), let suft=cat suf,
                   let nx=alt[pre,suft], nx === x]
@@ -705,7 +703,7 @@ catSplit xs = list2OK xs
 -- accelerated factorization for symbols
 -- we can only factorize symbols from cats that are non-nullable
 -- and whose first/last symbol can only be that symbol
-symbolFactorTrafo :: Info -> [PressRE] -> OK [PressRE]
+symbolFactorTrafo :: Info -> [RE] -> OK [RE]
 symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
                         =  list2OK xs (leftCands ++ rightCands)
                         |  otherwise
@@ -730,7 +728,7 @@ symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
 ----------- Cat section for the Katahom ----------------------
    
 -- one rewrite step, result not in pressed form in general
-pressCatListOne :: Cxt -> Info -> [PressRE] -> OK [RE]
+pressCatListOne :: Cxt -> Info -> [RE] -> OK [RE]
 pressCatListOne c i xs  =  
            pressCatListOK xs `orOK`
            ( guardOK (c>=EwpCxt) (plus2star c xs)
@@ -739,7 +737,7 @@ pressCatListOne c i xs  =
            $ guardOK (ew i) (catSplit xs)
            $ rollPress xs )
 
-pressCatListOK :: [PressRE] -> OK [RE]
+pressCatListOK :: [RE] -> OK [RE]
 pressCatListOK xs = list2OK xs $ candidatesFrom [] xs
     where
     candidatesFrom _   []   =  []
@@ -750,7 +748,7 @@ pressCatListOK xs = list2OK xs $ candidatesFrom [] xs
                                         candidatesFrom (pre++[y]) suf'
                                       | (y,suf') <- lMostComList suf ]
 
-pressCatListRepOK :: [PressRE] -> OK [RE]
+pressCatListRepOK :: [RE] -> OK [RE]
 pressCatListRepOK xs = list2OK xs $ 
     [ pre ++ (t:suf)| (p,suf) <- prefixCom(mkCat xs), all ewp suf,
                       (pre,m) <- suffixCom p, all ewp pre,
@@ -785,7 +783,7 @@ _ *<** _          = Nothing
 
 -- Note: size condition necessary, because *//* can succeed with merely knocking a Lam off
 -- SMK 23072019, addition of pressCatListRepOK
-presspreviousCatRepCxt :: [PressRE] -> OK [RE]
+presspreviousCatRepCxt :: [RE] -> OK [RE]
 presspreviousCatRepCxt xs  =  list2OK xs can `orOK` pressCatListRepOK xs
            where
            x    =  previousCat xs
@@ -802,7 +800,7 @@ presspreviousCatRepCxt xs  =  list2OK xs can `orOK` pressCatListRepOK xs
            cands4 = [ (pre++[srep]) | (pre,s)<-suffixCom x, ewp s, not(isRep s),
                       let srep=rep s, cat [s,xr]===srep]
 
-plus2starOpt :: [PressRE] -> Maybe [PressRE]
+plus2starOpt :: [RE] -> Maybe [RE]
 plus2starOpt xs | hasChanged call
                 = Just (valOf call)
                 | otherwise
@@ -813,7 +811,7 @@ plus2starOpt xs | hasChanged call
 -- uses (H*T)?==(H*T?) whenever sound, provided it gives rise to fusion
 -- ditto (H?T)? == H?T?, and mirrors
 -- size condition is needed to stop circular rotations
-presspreviousCatOptCxt :: [PressRE] -> OK [RE]
+presspreviousCatOptCxt :: [RE] -> OK [RE]
 presspreviousCatOptCxt xs = unchanged xs -- now these go in the wrong direction
        where
        x        =  previousCat xs
@@ -828,12 +826,12 @@ presspreviousCatOptCxt xs = unchanged xs -- now these go in the wrong direction
                            Just res <- [ Just (valOf ltn ++ [la]) | plural lt, hasChanged ltn, listSize (valOf ltn)<listSize lt ] ++
                                        [ mkCat lt *===* la] ]
 
-rollPress :: [PressRE] -> OK [PressRE]
+rollPress :: [RE] -> OK [RE]
 rollPress xs = updateEQ xs (rollList xs)
 
 -- plus2star presses cat-sequences in any optional context
 
-plus2star :: Cxt -> [PressRE] -> OK [RE]
+plus2star :: Cxt -> [RE] -> OK [RE]
 plus2star c ys   =  repfix $ list2OK ys cands
     where
     repfix zs    |  hasChanged zs && c==RepCxt && all ewp (valOf zs)

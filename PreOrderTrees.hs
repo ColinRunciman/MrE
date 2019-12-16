@@ -48,38 +48,38 @@ removeSing (T _ l xs r) si ns
 
 insert :: (a->a->Ordering) -> a -> RB a -> RB a
 insert rel x s =
-	T B a z b
-	where
-	T _ a z b = ins s
-	ins E = T R E [x] E
-	ins s@(T B a y@(yh:_) b) =
+        T B a z b
+        where
+        T _ a z b = ins s
+        ins E = T R E [x] E
+        ins s@(T B a y@(yh:_) b) =
             case rel x yh of
-		LT -> balance (ins a) y b
-		GT -> balance a y (ins b)
-		EQ -> T B a (x:y) b
-	ins s@(T R a y@(yh:_) b) =
+                LT -> balance (ins a) y b
+                GT -> balance a y (ins b)
+                EQ -> T B a (x:y) b
+        ins s@(T R a y@(yh:_) b) =
             case rel x yh of
-		LT -> T R (ins a) y b
-		GT -> T R a y (ins b)
-		EQ -> T R a (x:y) b
+                LT -> T R (ins a) y b
+                GT -> T R a y (ins b)
+                EQ -> T R a (x:y) b
 
 -- do not add elements already present
 insertPO :: (a->a->Ordering) -> a -> RB a -> RB a
 insertPO rel x s =
-	T B a z b
-	where
-	T _ a z b = ins s
-	ins E = T R E [x] E
-	ins s@(T B a y@(yh:_) b) =
+        T B a z b
+        where
+        T _ a z b = ins s
+        ins E = T R E [x] E
+        ins s@(T B a y@(yh:_) b) =
             case rel x yh of
-		LT -> balance (ins a) y b
-		GT -> balance a y (ins b)
-		EQ -> s
-	ins s@(T R a y@(yh:_) b) =
+                LT -> balance (ins a) y b
+                GT -> balance a y (ins b)
+                EQ -> s
+        ins s@(T R a y@(yh:_) b) =
             case rel x yh of
-		LT -> T R (ins a) y b
-		GT -> T R a y (ins b)
-		EQ -> s
+                LT -> T R (ins a) y b
+                GT -> T R a y (ins b)
+                EQ -> s
 
 lookupPT :: a -> (a->a->Ordering) -> ([a]->a) -> RB a -> Maybe a
 lookupPT x rel sel E = Nothing

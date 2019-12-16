@@ -1,4 +1,4 @@
-module Context (Extension(..), KataRE, Katahom(..), KataPred(..), RecPred(..), RewRule,
+module Context (Extension(..), Katahom(..), KataPred(..), RecPred(..), RewRule,
   okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
   mkTransform, mkExtension, mkPredExtension, mkHomTrans, extension2trafo,
   altClosure, catClosure, altClosurePred, catClosurePred,
@@ -153,7 +153,6 @@ mkHomTrans kh = HomTrans { falt = foralt, fcat = forcat, frep = forrep, fopt = f
 -- for documentary purposes
 type FromRE = RE -- source of boilerplate
 type ToRE   = RE -- target of boilplate
-type KataRE = RE -- REs that are of Kata grade
 
 data KataPred = KataPred { khom :: Katahom, kpred :: RecPred, thisfun :: RE->RE }
 
@@ -315,29 +314,29 @@ altClosure r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subalts 
 catClosure :: RewRule -> RewRule
 catClosure r c i xs = foldr orOK (r c i xs) [changed $ f ys' | (ys,f)<-subcats xs,
                                               let Cat j _ = catSegment (Cat i xs) ys,
-					      yso <- [r NoCxt j ys],
-					      hasChanged yso, let ys'=valOf yso,
-					      listSize ys' < si j]
+                                              yso <- [r NoCxt j ys],
+                                              hasChanged yso, let ys'=valOf yso,
+                                              listSize ys' < si j]
 
 altClosurePred :: (RE->Bool) -> RewRule -> RewRule
 altClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subaltsPred p xs,
                                                     let Alt j _ = altSubseq (Alt i xs) ys,
                                                     yso <- [r c j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j ]
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j ]
 altClosureLtd :: Int -> RewRule -> RewRule
 altClosureLtd n r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLtd n xs,
                                                     let Alt j _ = altSubseq (Alt i xs) ys,
                                                     yso <- [r c j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j ]
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j ]
 
 altClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
 altClosureCatalogue g r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsCatalogue g xs,
                                                     let Alt j _ = altSubseq (Alt i xs) ys,
                                                     yso <- [r c j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j ]
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j ]
 
 altSizeBound :: Int -> RewRule -> RewRule
 altSizeBound n r c i xs | si i <= n
@@ -366,23 +365,23 @@ catSizeBoundCatalogue f r c i xs | si i <= f (alphaLength $ al i)
 catClosurePred :: (RE->Bool) -> RewRule -> RewRule
 catClosurePred p r c i xs = foldr orOK (r c i xs) [ changed $ f ys' | (ys,f)<-subcatsPred p xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
-					            yso <- [r NoCxt j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j]
+                                                    yso <- [r NoCxt j ys],
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j]
 
 catClosureLtd :: Int -> RewRule -> RewRule
 catClosureLtd n r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLtd n xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
-					            yso <- [r NoCxt j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j]
+                                                    yso <- [r NoCxt j ys],
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j]
 
 catClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
 catClosureCatalogue g r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsCatalogue g xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
-					            yso <- [r NoCxt j ys],
-					            hasChanged yso, let ys'=valOf yso,
-					            listSize ys' < si j]
+                                                    yso <- [r NoCxt j ys],
+                                                    hasChanged yso, let ys'=valOf yso,
+                                                    listSize ys' < si j]
 
 extensionLtd :: Int -> Int -> Extension -> Extension
 extensionLtd m n ext = mkExtension altR catR (source ext) (grd $ target ext)

@@ -1,5 +1,4 @@
 module Shrinking (
-  ShrunkRE,
   shrink, shrinkP, shrinkKP, shrinkCxt, shrinkRep, shrinkAltList, shrinkCatList,
   isShrunk) where
 
@@ -49,8 +48,6 @@ rMostComList xs  =  [(init xs, last xs)]
 shrinkDepth, coShrinkDepth :: Int
 shrinkDepth    =  100
 coShrinkDepth  =  100
-
-type ShrunkRE = RE
 
 isShrunk :: RE -> Bool
 isShrunk = checkWith shrinkP

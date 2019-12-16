@@ -6,14 +6,11 @@ import Expression
 import OK
 import Context
 import Comparison
--- import Shrinking
 import StarPromotion
 
 -- The motivating observation for the transformation here: if any expression x has
 -- the empty-word property, and is also transitive, so L(1) <= L(xx) <= L(x), then
 -- x === Rep x, enabling simplification of x because of the Rep context.
-
-type StelRE = RE
 
 isStellar :: RE -> Bool
 isStellar = checkWith stelP
@@ -52,7 +49,7 @@ stelCxt = katahom stelK
 
 -- end of boilerplate section
 
-altTrans :: Cxt -> Info -> [StelRE] -> OK [RE]
+altTrans :: Cxt -> Info -> [RE] -> OK [RE]
 altTrans c i xs =  list2OK xs [ Rep body' : zs
                               | c>=OptCxt, (ys,zs)<-allPowerSplits xs, not(null ys),
                                 let body=altSubseq (Alt i xs) ys, istransitive body,
@@ -60,7 +57,7 @@ altTrans c i xs =  list2OK xs [ Rep body' : zs
                                 size body'+1 < size body ||
                                      size body' < size body && (not $ ew i) ]
 
-catTrans :: Cxt -> Info -> [StelRE] -> OK [RE]
+catTrans :: Cxt -> Info -> [RE] -> OK [RE]
 catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                    where
                    me = Cat i xs

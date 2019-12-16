@@ -194,7 +194,7 @@ segPreSuf :: Int -> [a] -> [([a],[a],[a])]
 segPreSuf n xs = [ (pre,seg,suf)
                  | m <- [0..(length xs - n)],
                    (pre,xs') <- prefixRest m xs,
-		   (seg,suf) <- prefixRest n xs' ]
+                   (seg,suf) <- prefixRest n xs' ]
 
 -- spec: segElemSuf xs == [(ys,x,zs)|(ys,[x],zs)<-segPreSuf 1 xs]
 segElemSuf :: [a] -> [([a],a,[a])]
