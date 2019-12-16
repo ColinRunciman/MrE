@@ -112,11 +112,11 @@ eitherRepOpt redundant inRep body  |  redundant
                                    |  isEmp x
                                    =  changed Lam
                                    |  inRep
-                                   =  okmap Rep body
+                                   =  okmap rep body
                                    |  ewp x
                                    =  changed x
                                    |  otherwise
-                                   =  okmap Opt body
+                                   =  okmap opt body
                                       where
                                       x = valOf body
 

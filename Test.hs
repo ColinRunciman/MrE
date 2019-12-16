@@ -29,7 +29,7 @@ instance Listable RE where
             a xs  =  plural xs && not (any (\x -> isAlt x || isOpt x) xs) &&
                      strictlyOrdered xs
             c xs  =  plural xs && not (any isCat xs)
-            r x   =  not (isOpt x || isRep x)
+            r x   =  not (isRep x || isOpt x)
             o x   =  not (ewp x)
 
 filterCons1 :: Listable a => (a->Bool) -> (a->b) -> [[b]]
@@ -45,4 +45,4 @@ valid x g  =  (y ==== x) && (size y <= size x)
 
 main  =  do [n] <- getArgs          
             mapM_ (putStrLn . unwords)
-                  (counterExamples (read n * length (list :: [Grade])) valid)
+                  (counterExamples (abs (read n) * length (list :: [Grade])) valid)

@@ -9,7 +9,7 @@ module Expression (
   size, listSize, listAlpha,
   mirror, rename,
   homTrans, foldHomInfo, katahomGeneral,
-  validate, whiteAltList ) where
+  validate ) where
 
 import List
 import Data.List
@@ -41,7 +41,7 @@ data RE = Emp
 -- (2) every Alt argument is plural, and has no Alt or Opt items;
 -- (3) every Alt argument is strictly ordered (by the derived RE ordering);
 -- (4) no Opt argument satisfies ewp;
--- (5) no Rep argument satisfies ewp;
+-- (5) no Rep argument is an Opt or Rep;
 -- (6) no Emp or Lam occurs anywhere as a strict subexpression.
 -- The following smart constructors establish this invariant.
 -- TO DO: and that the Info is correct!
@@ -73,48 +73,17 @@ cat xs   |  any isEmp xs'
 
 rep :: RE -> RE
 rep Emp      =  Lam
-rep x        =  Rep (white x)
-
--- The following laws are included here:
--- X** --> X*
--- (...+X*+...)* --> (...+X+...)*
--- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
-white :: RE -> RE
-white Lam = Emp
-white a@(Alt i xs)  |  ew i
-                    =  alt $ map white xs
-                    |  otherwise
-                    =  a
-white c@(Cat i xs)  |  ew i
-                    =  alt $ map white xs
-                    |  otherwise
-                    =  c
-white (Rep x)       =  x
-white (Opt x)       =  x
-white x             =  x
-
--- The whiteAltList function is similar to the Gruber-Gulan white function,
--- but instead of a single RE it returns a list of subREs of its argument.
-whiteAltList :: RE -> [RE]
-whiteAltList Emp            =  []
-whiteAltList Lam            =  []
-whiteAltList (Alt i xs)     |  ew i
-                            =  concatMap whiteAltList xs
-                            |  otherwise
-                            =  xs
-whiteAltList (Cat i xs)     |  ew i
-                            =  concatMap whiteAltList xs
-whiteAltList (Rep re)       =  [re]
-whiteAltList (Opt re)       =  [re]
-whiteAltList x              =  [x]
-
+rep Lam      =  Lam
+rep (Rep x)  =  Rep x
+rep (Opt x)  =  Rep x
+rep x        =  Rep x
 
 opt :: RE -> RE
-opt Emp  =  Lam
-opt x    |  ewp x
-         =  x
-         |  otherwise
-         =  Opt x
+opt Emp      =  Lam
+opt x        |  ewp x
+             =  x
+             |  otherwise
+             =  Opt x
 
 -- The actual construction of Alts and Cats is deferred to 'mkAlt' and 'mkCat'
 -- which also compute values for memoised attributes in their Info fields.

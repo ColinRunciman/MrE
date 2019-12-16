@@ -1,6 +1,6 @@
 module Fuse (
   fuse, fuseH, fuseP, fuseKP, fuseAlt, fuseCat, fuseOpt, fuseRep,
-  isFused, fuseListProcess, isNorm ) where
+  isFused, fuseListProcess, isNorm, whiteAltList ) where
 
 import List
 import Expression
@@ -234,8 +234,10 @@ suffixCrush cs xs     |  hasChanged rxs
 -- (1) remove optional suffixes/prefixes with alphabet <= sw of whole Cat.
 -- (2) replace bodies that have sw as alphabet with sw
 
-catFuseList :: Cxt -> Info -> [RE] -> OK [KataRE]
-catFuseList RepCxt i xs  |  sw i==al i
+catFuseList :: Cxt -> Info -> [RE] -> OK [RE]
+catFuseList RepCxt i xs  |  ew i
+                         =  changed [ alt (concatMap whiteAltList xs) ]
+                         |  sw i==al i
                          =  changed [ alt (map Sym (alpha2String $ sw i)) ]
                          |  not (isEmptyAlpha (sw i)) 
                          =  fuseListProcess `app` fixCrush (sw i) xs
@@ -257,6 +259,22 @@ fuseCatElem (Rep x)(Opt y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem (Opt x)(Rep y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem x y            =  Right True
 
+-- The whiteAltList function is similar to the Gruber-Gulan white function,
+-- but instead of a single RE it returns a list of subREs of its argument.
+-- The following laws are included here:
+-- X** --> X*
+-- (...+X*+...)* --> (...+X+...)*
+-- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
 
-
-
+whiteAltList :: RE -> [RE]
+whiteAltList Emp            =  []
+whiteAltList Lam            =  []
+whiteAltList (Alt i xs)     |  ew i
+                            =  concatMap whiteAltList xs
+                            |  otherwise
+                            =  xs
+whiteAltList (Cat i xs)     |  ew i
+                            =  concatMap whiteAltList xs
+whiteAltList (Rep re)       =  [re]
+whiteAltList (Opt re)       =  [re]
+whiteAltList x              =  [x]

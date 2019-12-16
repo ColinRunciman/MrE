@@ -1,3 +1,4 @@
+
 module Pressing (
   press, pressAltListOne, pressCatListOne, pressP,
   rollList, prefixCom, suffixCom, pressKP ) where
@@ -12,6 +13,7 @@ import Expression
 import OK
 import Comparison
 import Context
+import Fuse
 import Info
 import Stellation
 import Alphabet
@@ -729,7 +731,7 @@ symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
    
 -- one rewrite step, result not in pressed form in general
 pressCatListOne :: Cxt -> Info -> [PressRE] -> OK [RE]
-pressCatListOne c i xs = 
+pressCatListOne c i xs  =  
            pressCatListOK xs `orOK`
            ( guardOK (c>=EwpCxt) (plus2star c xs)
            $ guardOK (c==RepCxt) (presspreviousCatRepCxt xs)
@@ -784,7 +786,7 @@ _ *<** _          = Nothing
 -- Note: size condition necessary, because *//* can succeed with merely knocking a Lam off
 -- SMK 23072019, addition of pressCatListRepOK
 presspreviousCatRepCxt :: [PressRE] -> OK [RE]
-presspreviousCatRepCxt xs = list2OK xs can `orOK` pressCatListRepOK xs
+presspreviousCatRepCxt xs  =  list2OK xs can `orOK` pressCatListRepOK xs
            where
            x    =  previousCat xs
            xr   =  rep x
