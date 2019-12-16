@@ -18,7 +18,7 @@ do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
 done
 done
 }
-
+if test -d "effects" ; then rm effects/* ; else mkdir effects ; fi
 allsizes -l promoted
 allsizes -g Gruber-Gulan
 allsizes -n normal

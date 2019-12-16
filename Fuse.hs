@@ -1,6 +1,6 @@
 module Fuse (
-  FuseRE, fuse, fuseH, fuseP, fuseKP, fuseAlt, fuseCat, fuseOpt, fuseRep,
-  isFused, whiteAltList, fuseListProcess ) where
+  fuse, fuseH, fuseP, fuseKP, fuseAlt, fuseCat, fuseOpt, fuseRep,
+  isFused, fuseListProcess, isNorm ) where
 
 import List
 import Expression
@@ -11,8 +11,8 @@ import Function ((===>))
 import Alphabet
 import Data.List
 
--- Transformations in this module include the Gruber-Gulan rules and additional
--- rules of no worse than log-linear complexity.  For example:
+-- Transformations in this module include rules of no worse than log-linear complexity.
+-- For example:
 -- (1) factorisation of common prefixes or suffixes in Alts, and some more
 --     specialised transformations for Alts that are Rep bodies
 --     (see altFuseList)
@@ -21,37 +21,25 @@ import Data.List
 --     some more specialised transformations for Cats that are Rep bodies
 --     (see catFuseList)
 
--- KATA STUFF TO BE INCORPORATED APPROPRIATELY
+-- predicate for RE-invariant, see Expression module, grade Normal
+-- besides checking structural constraints also the info is tested for correctness,
+-- except for grading
 
-{-
-kataGradeH :: HomTrans
-kataGradeH = mkHomTrans kataGradeKatahom
-HomTrans { falt = kataAlt, fcat = kataCat, frep = kataRep, fopt = kataOpt } = kataGradeH
+isNorm :: RE -> Bool
+isNorm = checkWith normP
 
-kataGrade :: RE -> RE
---kataGrade = valOf . katahom kataGradeKatahom NoCxt
-kataGrade = mkTransform kataGradeKatahom
-
-kataGradeKP = KataPred { khom = kataGradeKatahom, kpred = kataP, thisfun = kataGrade }
--}
-
-isKata :: RE -> Bool
-isKata = checkWith kataP
-
--- predicate for bottom-line system, grade Kata
--- besides checking structural constraints also the info is tested for correctness, except for grading
-kataP :: RecPred
-kataP = RecPred { empP = empKataP, lamP = lamKataP, symP = symKataP,
-                  altP = altKataP, catP = catKataP, repP = repKataP, optP = optKataP }
+normP :: RecPred
+normP = RecPred { empP = empnormP, lamP = lamnormP, symP = symnormP,
+                  altP = altnormP, catP = catnormP, repP = repnormP, optP = optnormP }
 
 -- 0 and 1 are only allowed at the root
-empKataP, lamKataP :: Cxt -> Bool
-empKataP c = c==RootCxt
-lamKataP c = c==RootCxt
+empnormP, lamnormP :: Cxt -> Bool
+empnormP c = c==RootCxt
+lamnormP c = c==RootCxt
 
 -- Symbols are allowed everywhere
-symKataP :: Cxt -> Char -> Bool
-symKataP _ _ = True
+symnormP :: Cxt -> Char -> Bool
+symnormP _ _ = True
 
 altElem :: Cxt -> RE -> Bool
 altElem _ (Sym _)   = True
@@ -59,7 +47,7 @@ altElem _ (Cat _ _) = True
 altElem c (Rep _)   = c/=RepCxt
 altElem _ _         = False
 
-altKataP c i xs = plural xs && all (altElem c) xs && strictlyOrdered xs &&
+altnormP c i xs = plural xs && all (altElem c) xs && strictlyOrdered xs &&
                   ew i == any ewp xs && si i == listSize xs &&
                   la i == lasAlt xs&& fi i == firAlt xs 
 
@@ -70,27 +58,24 @@ catElem (Rep _)   = True
 catElem (Opt _)   = True
 catElem _         = False
 
-catKataP c i xs =  plural xs && all catElem xs &&
+catnormP c i xs =  plural xs && all catElem xs &&
                    ew i == all ewp xs && si i == listSize xs &&
                    la i == lasCat xs && fi i == firCat xs 
                    
-repKataP :: Cxt -> RE -> Bool
-repKataP RepCxt _     =  False
-repKataP _ (Sym _)    =  True
-repKataP _ (Cat _ _)  =  True
-repKataP c (Alt _ xs) =  all (repKataP c) xs
-repKataP _ _          =  False
+repnormP :: Cxt -> RE -> Bool
+repnormP RepCxt _     =  False
+repnormP _ (Sym _)    =  True
+repnormP _ (Cat _ _)  =  True
+repnormP c (Alt _ xs) =  all (repnormP c) xs
+repnormP _ _          =  False
 
-optKataP :: Cxt -> RE -> Bool
-optKataP RepCxt _    =  False
-optKataP _ (Sym _)   =  True
-optKataP _ (Alt i _) =  not (ew i)
-optKataP _ (Cat i _) =  not (ew i)
-optKataP _  _        =  False
+optnormP :: Cxt -> RE -> Bool
+optnormP RepCxt _    =  False
+optnormP _ (Sym _)   =  True
+optnormP _ (Alt i _) =  not (ew i)
+optnormP _ (Cat i _) =  not (ew i)
+optnormP _  _        =  False
 
--- END OF KATA STUFF
-
-type FuseRE = RE
 
 fuseK :: Katahom
 fuseK  =  Katahom { kalt = altFuseList, kcat = catFuseList, grade = Fused }
@@ -98,17 +83,17 @@ fuseK  =  Katahom { kalt = altFuseList, kcat = catFuseList, grade = Fused }
 fuseKP :: KataPred
 fuseKP  =  KataPred { khom = fuseK, kpred = fuseP, thisfun = fuse }
 
-fuse :: RE -> FuseRE
+fuse :: RE -> RE
 fuse = mkTransform fuseK
 
-fuseCxt :: Cxt -> RE -> OK FuseRE
+fuseCxt :: Cxt -> RE -> OK RE
 fuseCxt = katahom fuseK
 
 HomTrans { falt=fuseAlt,  fcat=fuseCat, frep=fuseRep, fopt=fuseOpt} = fuseH
 fuseH = mkHomTrans fuseK
 
 fuseP :: RecPred
-fuseP = mkPredExtension altFuseList catFuseList kataP
+fuseP = mkPredExtension altFuseList catFuseList normP
 
 isFused :: RE -> Bool
 isFused = checkWith fuseP
@@ -199,9 +184,8 @@ rightfuse xs = mkOK rf (length xs > length rf)
               where
               rf = fuseSort rightOrderedFusion xs
 
-altFuseList :: Cxt -> Info -> [FuseRE] -> OK [RE]
-altFuseList c i xs = guardApply (ew i && c==RepCxt) whiteList xs `orOK`
-                     altSigmaStar c i xs `orOK`
+altFuseList :: Cxt -> Info -> [RE] -> OK [RE]
+altFuseList c i xs = altSigmaStar c i xs `orOK`
                      leftfuse xs `orOK` rightfuse xs
 
 -- assumption: in RepCxt this is not ewp,
@@ -250,10 +234,8 @@ suffixCrush cs xs     |  hasChanged rxs
 -- (1) remove optional suffixes/prefixes with alphabet <= sw of whole Cat.
 -- (2) replace bodies that have sw as alphabet with sw
 
-catFuseList :: Cxt -> Info -> [FuseRE] -> OK [KataRE]
-catFuseList RepCxt i xs  |  ew i
-                         =  changed [ alt (whiteList xs) ]
-                         |  sw i==al i
+catFuseList :: Cxt -> Info -> [RE] -> OK [KataRE]
+catFuseList RepCxt i xs  |  sw i==al i
                          =  changed [ alt (map Sym (alpha2String $ sw i)) ]
                          |  not (isEmptyAlpha (sw i)) 
                          =  fuseListProcess `app` fixCrush (sw i) xs
@@ -275,47 +257,6 @@ fuseCatElem (Rep x)(Opt y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem (Opt x)(Rep y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem x y            =  Right True
 
--- The first argument occurs as an item in either a Cats or an Alts in a RepCxt.
--- The second argument accumulates a list of already whited items.
 
-whiteListS :: KataRE -> [KataRE] -> [KataRE]
-whiteListS Emp xs         =  error "whiteListS Emp"  -- was xs
-whiteListS Lam xs         =  error "whiteListS Lam"  -- was xs
-whiteListS (Alt i xs) ys  |  ew i
-                          =  whiteListL xs ys
-                          |  otherwise
-                          =  xs++ys
-whiteListS (Cat i xs) ys  |  ew i
-                          =  whiteListL xs ys
-whiteListS (Rep re) ys    =  re:ys
-whiteListS (Opt re) ys    =  re:ys
-whiteListS x        ys    =  x:ys
 
-whiteListL :: [KataRE] -> [KataRE] -> [KataRE]
-whiteListL [] xs      =  xs
-whiteListL (x:xs) ys  =  whiteListS x $ whiteListL xs ys
-
-whiteList :: [KataRE] -> [KataRE]
-whiteList xs = whiteListL xs []
-
--- The following laws are included here:
--- X** --> X*
--- (...+X*+...)* --> (...+X+...)*
--- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
-
--- The whiteAltList function is similar to the Gruber-Gulan white function,
--- but instead of a single RE it returns a list of subREs of its argument.
-
-whiteAltList :: RE -> [RE]
-whiteAltList Emp            =  []
-whiteAltList Lam            =  []
-whiteAltList (Alt i xs)     |  ew i
-                            =  concatMap whiteAltList xs
-                            |  otherwise
-                            =  xs
-whiteAltList (Cat i xs)     |  ew i
-                            =  concatMap whiteAltList xs
-whiteAltList (Rep re)       =  [re]
-whiteAltList (Opt re)       =  [re]
-whiteAltList x              =  [x]
 

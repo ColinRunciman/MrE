@@ -16,47 +16,47 @@ Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.h
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semcatalogue syncatalogue populations
+SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O Effect
 ifndef OS
 	chmod +x allEffect
 endif
 
-effects: Effect allEffect populations
+effproxy.txt: Effect allEffect popproxy.txt
 ifndef OS
-	if test -d "effects" ; then rm effects/* ; else mkdir effects ; fi
 	./allEffect
-	touch effects
 else
 	allEffect.cmd
 endif
+	echo effects > effproxy.txt
 
 MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 Shrinking.hs StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semcatalogue syncatalogue
+SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O MrE
 
 laboratory: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs Info.hs Laboratory.hs List.hs \
 Metrics.hs OK.hs PreOrderTrees.hs Pressing.hs Properties.hs Queue.hs \
 Shrinking.hs StarPromotion.hs Stellation.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semcatalogue syncatalogue
+SyntaxCatalogue.hs semproxy.txt synproxy.txt
 	ghc -O Laboratory.hs
 ifndef OS
 	touch laboratory
 	chmod +x laboratory
 endif
 
-populations: Reg allReg
+      
 ifndef OS
-	if test -d "populations" ; then rm populations/* ; else mkdir populations ; fi
+popproxy.txt: Reg allReg 
 	./allReg
-	touch populations
 else
+popproxy.txt: Reg allReg.cmd
 	allReg.cmd
 endif
+	echo population > popproxy.txt
 
 Reg: BigNum.hs RegexpCount.hs Reg.hs
 	ghc -O Reg
@@ -64,48 +64,48 @@ ifndef OS
 	chmod +x allReg
 endif
 
-semcatalogue: CreateSemCatalogue syncatalogue
+semproxy.txt: CreateSemCatalogue synproxy.txt
 ifndef OS
 	if test -d "semcatalogue" ; then rm semcatalogue/* ; else mkdir semcatalogue ; fi
 	./CreateSemCatalogue
-	touch semcatalogue
 else
 	semcatalogue.cmd
 endif
+	echo semcat > semproxy.txt
 
-syncatalogue: CreateSynCatalogue
+synproxy.txt: CreateSynCatalogue
 ifndef OS
 	if test -d "syncatalogue" ; then rm syncatalogue/* ; else mkdir syncatalogue ; fi
 	./CreateSynCatalogue
-	touch syncatalogue
 else
 	syncatalogue.cmd
 endif
+	echo syncat > synproxy.txt
 
 Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
 SyntaxCatalogue.hs Tim.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
-semcatalogue syncatalogue
+popproxy.txt semproxy.txt synproxy.txt
 	ghc -O Tim
 
 Tom: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs Shrinking.hs StarPromotion.hs \
 SyntaxCatalogue.hs Tom.hs TopShrink.hs Parameters.hs OneLetterFactorization.hs \
-semcatalogue syncatalogue
+semproxy.txt synproxy.txt
 	ghc -O Tom
 
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
 
-runTimesTables.tex: runTimes MrE populations
+runTimesTables.tex: runTimes MrE popproxy.txt
 	./runTimes > runTimesTables.tex
 
 sizeRatios.pdf: sizeRatios.tex sizeRatiosTables.tex
 	pdflatex sizeRatios.tex
 
-sizeRatiosTables.tex: sizeRatios MrE populations
+sizeRatiosTables.tex: sizeRatios MrE popproxy.txt
 	./sizeRatios > sizeRatiosTables.tex
 
 Test: List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \

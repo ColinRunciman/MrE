@@ -9,7 +9,7 @@ module Expression (
   size, listSize, listAlpha,
   mirror, rename,
   homTrans, foldHomInfo, katahomGeneral,
-  validate ) where
+  validate, whiteAltList ) where
 
 import List
 import Data.List
@@ -41,10 +41,11 @@ data RE = Emp
 -- (2) every Alt argument is plural, and has no Alt or Opt items;
 -- (3) every Alt argument is strictly ordered (by the derived RE ordering);
 -- (4) no Opt argument satisfies ewp;
--- (5) no Rep argument is a Rep or an Opt
+-- (5) no Rep argument satisfies ewp;
 -- (6) no Emp or Lam occurs anywhere as a strict subexpression.
 -- The following smart constructors establish this invariant.
 -- TO DO: and that the Info is correct!
+-- The invariant is formalised in Fuse: see Fuse.isNorm predicate
 
 alt :: [RE] -> RE
 alt xs  |  any ewp xs && not (any ewp xs')
@@ -72,10 +73,41 @@ cat xs   |  any isEmp xs'
 
 rep :: RE -> RE
 rep Emp      =  Lam
-rep Lam      =  Lam
-rep (Opt x)  =  Rep x
-rep (Rep x)  =  Rep x
-rep x        =  Rep x
+rep x        =  Rep (white x)
+
+-- The following laws are included here:
+-- X** --> X*
+-- (...+X*+...)* --> (...+X+...)*
+-- (X1*X2*...Xn*)* --> (X1+X2+...+Xn)*
+white :: RE -> RE
+white Lam = Emp
+white a@(Alt i xs)  |  ew i
+                    =  alt $ map white xs
+                    |  otherwise
+                    =  a
+white c@(Cat i xs)  |  ew i
+                    =  alt $ map white xs
+                    |  otherwise
+                    =  c
+white (Rep x)       =  x
+white (Opt x)       =  x
+white x             =  x
+
+-- The whiteAltList function is similar to the Gruber-Gulan white function,
+-- but instead of a single RE it returns a list of subREs of its argument.
+whiteAltList :: RE -> [RE]
+whiteAltList Emp            =  []
+whiteAltList Lam            =  []
+whiteAltList (Alt i xs)     |  ew i
+                            =  concatMap whiteAltList xs
+                            |  otherwise
+                            =  xs
+whiteAltList (Cat i xs)     |  ew i
+                            =  concatMap whiteAltList xs
+whiteAltList (Rep re)       =  [re]
+whiteAltList (Opt re)       =  [re]
+whiteAltList x              =  [x]
+
 
 opt :: RE -> RE
 opt Emp  =  Lam

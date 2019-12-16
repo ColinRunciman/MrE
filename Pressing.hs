@@ -11,7 +11,6 @@ import List (snoc, unsnoc, splits, allSplits, itemRest, subsetRest, lift2SeqAll,
 import Expression
 import OK
 import Comparison
-import Fuse (whiteAltList)
 import Context
 import Info
 import Stellation
