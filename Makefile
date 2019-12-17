@@ -5,7 +5,7 @@ mrE=MrE
 effect=Effect
 reg=Reg
 test=Test
-tim
+tim=Tim
 else
 semCreate=CreateSemCatalogue.exe
 synCreate=CreateSynCatalogue.exe
