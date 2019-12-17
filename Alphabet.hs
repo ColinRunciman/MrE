@@ -2,7 +2,7 @@ module Alphabet (
   Alphabet, emptyAlpha, isEmptyAlpha, singularAlpha, pluralAlpha,
   elemAlpha, subAlpha, strictSubAlpha,
   char2Alpha, string2Alpha, alpha2String, alphaLength,
-  unionA, (.||.), (.&&.),
+  unionA, (.||.), (.&&.), (.\\.)
   -- charSet,
   -- emptySet, isEmptySet, embed, embedSet, elemSet, sizeSet, pluralCS,
   -- unionS, subsetS, strictSubset, setOrder, showSet, enumerateSet, fromList
@@ -54,6 +54,9 @@ string2Alpha (x:xs) = char2Alpha x .|. string2Alpha xs
 
 (.||.) :: Alphabet -> Alphabet -> Alphabet
 (.||.) = (.|.)
+
+(.\\.) :: Alphabet -> Alphabet -> Alphabet
+a1 .\\. a2 = a1 .&&. complement a2
 
 unionA :: [Alphabet] -> Alphabet
 unionA = foldr (.||.) emptyAlpha

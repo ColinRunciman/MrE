@@ -41,10 +41,20 @@ minimalEquiv c re  |  -- trace (show re)
                    where
                       n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
-                      alphabet = alpha re 
-                      alphalist = alpha2String alphabet
+                      alphabet = alpha re
+                      alphalist = charList re 
                       fwd = rename $ zip alphalist ['a'..]
                       bwd = rename $ zip ['a'..] alphalist
+
+-- produces the alphabet of the re in a form that is easily renamed to
+-- a semCatNormal expression
+charList :: RE -> [Char]
+charList x =  foldr1 (++) $ map alpha2String [single,start,finish,remain]
+              where
+              single = swa x
+              start  = fir x .\\. single
+              finish = las x .\\. fir x -- note: this will include single
+              remain = (alpha x .\\. fir x) .\\. las x
 
 -- theForest!!n is the size-bound and catalogue tree used for an alphabet of size n
 theForest :: [(Int,RB RE)]
@@ -56,7 +66,7 @@ theForest = [(sizeFor n,tree n) | n <- [0..maxSigmaSize]]
 
 -- max size of REs in tree-files for alphabet of size n
 treeSizes :: [Int]
-treeSizes  =  [0,15,11,9,8] 
+treeSizes  =  [0,15,11,9,8]
 
 sizeFor :: Int -> Int
 sizeFor n  =  treeSizes!!n
@@ -77,18 +87,28 @@ createTreeFile sigma n = writeTree sigma n $
                          poTree sigma n
 
 writeTree :: String -> Int -> RB RE -> IO()
-writeTree sigma n t = writeFile (treeFileName sigma n) $ show t                        
+writeTree sigma n t = writeFile (treeFileName sigma n) $ show t
 
 poTree :: String -> Int -> RB RE
-poTree sigma n = buildTree compRE $ concat $ take (n+1) $
+poTree sigma n = buildTree compRE $ filter semcatNormal $ concat $ take (n+1) $
                  createGradedCarrier sigma promoteKP
+
+-- we can force a renaming that produces an RE satisfying semcatNormal
+-- purpose: reduce the size of the catalogue when possible
+semcatNormal :: RE -> Bool
+semcatNormal x  =  tight (swa x) && tight (fir x) && tight (fir x .||. las x)
+
+tight :: Alphabet -> Bool
+tight a = 2^(alphaLength a)-1==a
 
 createForest :: IO ()
 createForest  =  mapM_ (uncurry createTreeFile)
                        [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
-mbcA = altClosure minByCatalogueAltList
-mbcC = catClosure minByCatalogueCatList
+-- mbcA = altClosure minByCatalogueAltList
+mbcA = minByCatalogueAltList
+-- mbcC = catClosure minByCatalogueCatList
+mbcC = minByCatalogueCatList
 minByCatalogueAltList, minByCatalogueCatList :: RewRule
 minByCatalogueAltList c i xs = minByList smartAlt c i xs
                                where smartAlt _ ys = beforeTrans c (alt ys)
@@ -103,7 +123,7 @@ minByList :: (Info -> [RE] -> RE) -> Cxt -> Info -> [RE] -> OK [RE]
 minByList constr c i xs =
     case minimalEquiv c rec of
     Nothing  -> list2OK xs [ [upgradeRE c Minimal rex]
-                           | c>=OptCxt, Just rex<- [minimalEquiv NoCxt re], size rex<si i]         
+                           | c>=OptCxt, Just rex<- [minimalEquiv NoCxt re], size rex<si i]
     Just re' -> changed [upgradeRE c SemCatMinimal $ unwrap c re']  -- termination?!
     where re  = constr i xs
           rec = contextFunction c re

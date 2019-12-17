@@ -107,8 +107,10 @@ createSynForest :: IO ()
 createSynForest  =  mapM_ (uncurry createMapFile)
                           [(sigmaFor n,sizeFor n) | n <- [1..maxSigmaSize]]
 
-mbcA c i xs = altClosurePred (not . untreatable) minByCatalogueAltList c i xs
-mbcC c i xs = catClosurePred (not . untreatable) minByCatalogueCatList c i xs
+-- mbcA c i xs = altClosurePred (not . untreatable) minByCatalogueAltList c i xs
+mbcA = minByCatalogueAltList
+mbcC = minByCatalogueCatList
+--mbcC c i xs = catClosurePred (not . untreatable) minByCatalogueCatList c i xs
 
 minByCatalogueAltList, minByCatalogueCatList :: RewRule
 minByCatalogueAltList c i xs = minByList smartAlt c i xs

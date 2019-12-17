@@ -1,18 +1,36 @@
-progs: CreateSemCatalogue CreateSynCatalogue Effect MrE Reg Test Tim
+ifndef OS
+semCreate=CreateSemCatalogue
+synCreate=CreateSynCatalogue
+mrE=MrE
+effect=Effect
+reg=Reg
+test=Test
+tim
+else
+semCreate=CreateSemCatalogue.exe
+synCreate=CreateSynCatalogue.exe
+mrE=MrE.exe
+effect=Effect.exe
+reg=Reg.exe
+test=Test.exe
+tim=Tim.exe
+endif
 
-CreateSemCatalogue: Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
+progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim)
+
+$(semCreate): Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs OneLetterFactorization.hs
 	ghc -O CreateSemCatalogue
 
-CreateSynCatalogue: Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
+$(synCreate): Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
 OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs
 	ghc -O CreateSynCatalogue
 
-Effect: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
+$(effect): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
@@ -22,7 +40,7 @@ ifndef OS
 	chmod +x allEffect
 endif
 
-effproxy.txt: Effect allEffect popproxy.txt
+effproxy.txt: $(effect) allEffect popproxy.txt
 ifndef OS
 	./allEffect
 else
@@ -30,7 +48,7 @@ else
 endif
 	echo effects > effproxy.txt
 
-MrE: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
+$(mrE): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
@@ -38,21 +56,21 @@ SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O MrE
 
 ifndef OS
-popproxy.txt: Reg allReg 
+popproxy.txt: $(reg) allReg 
 	./allReg
 else
-popproxy.txt: Reg allReg.cmd
+popproxy.txt: $(reg) allReg.cmd
 	allReg.cmd
 endif
 	echo population > popproxy.txt
 
-Reg: BigNum.hs RegexpCount.hs Reg.hs
+$(reg): BigNum.hs RegexpCount.hs Reg.hs
 	ghc -O Reg
 ifndef OS
 	chmod +x allReg
 endif
 
-semproxy.txt: CreateSemCatalogue synproxy.txt
+semproxy.txt: $(semCreate) synproxy.txt
 ifndef OS
 	if test -d "semcatalogue" ; then rm semcatalogue/* ; else mkdir semcatalogue ; fi
 	./CreateSemCatalogue
@@ -61,7 +79,7 @@ else
 endif
 	echo semcat > semproxy.txt
 
-synproxy.txt: CreateSynCatalogue
+synproxy.txt: $(synCreate)
 ifndef OS
 	if test -d "syncatalogue" ; then rm syncatalogue/* ; else mkdir syncatalogue ; fi
 	./CreateSynCatalogue
@@ -70,7 +88,7 @@ else
 endif
 	echo syncat > synproxy.txt
 
-Tim: Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
+$(tim): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
 Pressing.hs Queue.hs StarPromotion.hs \
 SyntaxCatalogue.hs Tim.hs Parameters.hs OneLetterFactorization.hs \
@@ -80,15 +98,15 @@ popproxy.txt semproxy.txt synproxy.txt
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
 
-runTimesTables.tex: runTimes MrE popproxy.txt
+runTimesTables.tex: runTimes $(mrE) popproxy.txt
 	./runTimes > runTimesTables.tex
 
 sizeRatios.pdf: sizeRatios.tex sizeRatiosTables.tex
 	pdflatex sizeRatios.tex
 
-sizeRatiosTables.tex: sizeRatios MrE popproxy.txt
+sizeRatiosTables.tex: sizeRatios $(mrE) popproxy.txt
 	./sizeRatios > sizeRatiosTables.tex
 
-Test: List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
+$(test): List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
 Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs Test.hs
 	ghc -O Test
