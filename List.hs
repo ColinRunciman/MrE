@@ -1,9 +1,9 @@
 module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
    nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
-   segments, segPreSuf, segElemSuf, segmentsPred, segmentsLPred,
+   segments, segPreSuf, segElemSuf,
    segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
-   splits, allSplits, powerSplits, allPowerSplits, powerSplitsPred, powerSplitsLPred,
+   splits, allSplits, powerSplits, allPowerSplits,
    compareLength, itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
    lift2SeqAll ) where
@@ -158,30 +158,6 @@ allPowerSplits (x:xs) = [(x:ys1,ys2)|(ys1,ys2)<-nxs] ++ [(ys1,x:ys2)|(ys1,ys2)<-
     where
     nxs = allPowerSplits xs
 
--- splits a list-set into two parts in all possible ways such that the first part
--- is non-empty and contains only elements satisfying the predicate
-powerSplitsPred :: (a->Bool) -> [a] -> [([a],[a])]
-powerSplitsPred p [] = []
-powerSplitsPred p (x:xs) | p x
-                         = ([x],xs) : [(x:ys1,ys2)|(ys1,ys2)<-nxs] ++
-                                      [(ys1,x:ys2)|(ys1,ys2)<-nxs]
-                         | otherwise
-                         = [(ys1,x:ys2)|(ys1,ys2)<-nxs]
-                           where
-                           nxs = powerSplitsPred p xs
-
--- like powerSplitsPred, but with a predicate working for lists
--- p is meant to be sublist-closed
--- the selected segments satisfy p and are non-empty
-powerSplitsLPred :: ([a]->Bool) -> [a] -> [([a],[a])]
-powerSplitsLPred p [] = []
-powerSplitsLPred p (x:xs) | p [x]
-                         = ([x],xs) : [ (x:ys1,ys2)|(ys1,ys2)<-nxs, p(x:ys1)] ++ [(ys1,x:ys2)|(ys1,ys2)<-nxs]
-                         | otherwise
-                         = [(ys1,x:ys2)|(ys1,ys2)<-nxs]
-                           where
-                           nxs = powerSplitsLPred p xs
-
 -- The result of prefixRest n xs is list which is empty if n exceeds the length
 -- of xs, or else a singleton list containing (take n xs, drop n xs).
 prefixRest :: Int -> [a] -> [([a],[a])]
@@ -200,29 +176,6 @@ segPreSuf n xs = [ (pre,seg,suf)
 segElemSuf :: [a] -> [([a],a,[a])]
 segElemSuf [] = []
 segElemSuf (x:xs) = ([],x,xs) : [ (x:ys,y,zs) | (ys,y,zs)<-segElemSuf xs ]
-
--- partitions a list into all segments, so that all elements of the middle segment satisfy predicate
--- and that middle part is non-empty
-segmentsPred :: (a->Bool) -> [a] -> [([a],[a],[a])]
-segmentsPred p []     = []
-segmentsPred p (x:xs) |  p x
-                      =  ([],[x],xs) :
-                         [ (l,r,c) | (a,b,c)<-rec, (l,r) <- (x:a,b) : [ ([],x:b) | null a]]
-                      |  otherwise
-                      =  [ (x:a,b,c) | (a,b,c)<-rec ]
-                        where
-                        rec = segmentsPred p xs
-
--- like segmentsPred, but the predicate applies to segments, and is meant to be subsegment-closed
-segmentsLPred :: ([a]->Bool) -> [a] -> [([a],[a],[a])]
-segmentsLPred p []     = []
-segmentsLPred p (x:xs) |  p [x]
-                      =  ([],[x],xs) :
-                         [ (l,r,c) | (a,b,c)<-rec, (l,r) <- (x:a,b) : [ ([],x:b) | null a, p(x:b)]]
-                      |  otherwise
-                      =  [ (x:a,b,c) | (a,b,c)<-rec ]
-                        where
-                        rec = segmentsLPred p xs
 
 -- Non-empty segments and sublists, limited by weight, in context.
 -- *** NB *** Weights increased by one as if for "listsize". ***

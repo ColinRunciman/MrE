@@ -9,20 +9,10 @@ ws="1 2 3 4 8 16"
 
 allsizes() {
 echo $3
-status="ok"
 for s in $ss
 do echo -n ' & '
-   if [ $status == "ok" ]; then
-   ( cat populations/S${s}W$1 | time -p ./timeOut -t 100 ./MrE $2) > /dev/null 2> time.out
-     if [ $(grep -c "1..\." time.out) -gt 0 ]; then
-       status="timeout"
-       echo "--"
-     else
-       grep real time.out | sed "s/[^0-9]*\(.*\)/\1/"
-     fi
-   else
-     echo "--"
-   fi
+   (time -p ./MrE $2 -S${s} -W$1) > /dev/null 2> time.out
+   grep real time.out | sed "s/[^0-9]*\(.*\)/\1/"
 done
 echo ' \\'
 }
@@ -37,8 +27,8 @@ allsizes $w -g "Gruber-Gulan+"
 allsizes $w -n "normalise"
 allsizes $w -f "+ fuse"
 allsizes $w -l "+ promote"
-allsizes $w -p "+ press"
 allsizes $w -s "+ stellate"
+allsizes $w -p "+ press"
 allsizes $w -y "+ syn. search"
 allsizes $w -c "+ sem. search"
 # allsizes $w -m museum
