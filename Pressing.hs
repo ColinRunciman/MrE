@@ -8,7 +8,7 @@ import Data.Maybe (fromJust, fromMaybe, isNothing, isJust, listToMaybe, catMaybe
 import Data.Ord (comparing)
 import Function (claim, justIf, kernel, (===>))
 import List (snoc, unsnoc, splits, allSplits, itemRest, subsetRest, lift2SeqAll, plural,
-       unions, segPreSuf)
+       unions)
 import Expression
 import OK
 import Comparison

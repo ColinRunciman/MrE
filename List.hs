@@ -1,8 +1,7 @@
 module List (
-   snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered, maximaBy,
+   snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered,
    nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
-   segments, segPreSuf, segElemSuf,
-   segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
+   segments, segElemSuf, segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
    splits, allSplits, powerSplits, allPowerSplits,
    compareLength, itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
@@ -158,21 +157,9 @@ allPowerSplits (x:xs) = [(x:ys1,ys2)|(ys1,ys2)<-nxs] ++ [(ys1,x:ys2)|(ys1,ys2)<-
     where
     nxs = allPowerSplits xs
 
--- The result of prefixRest n xs is list which is empty if n exceeds the length
--- of xs, or else a singleton list containing (take n xs, drop n xs).
-prefixRest :: Int -> [a] -> [([a],[a])]
-prefixRest n xs = [splitAt n xs | n <= length xs]
-
--- The result of segPreSuf n xs is a list of all triples (pre,seg,suf)
--- such that seg is a segment of xs of length n, pre is the prefix of
--- xs before seg and suf is the suffix of xs after seg.
-segPreSuf :: Int -> [a] -> [([a],[a],[a])]
-segPreSuf n xs = [ (pre,seg,suf)
-                 | m <- [0..(length xs - n)],
-                   (pre,xs') <- prefixRest m xs,
-                   (seg,suf) <- prefixRest n xs' ]
-
--- spec: segElemSuf xs == [(ys,x,zs)|(ys,[x],zs)<-segPreSuf 1 xs]
+-- The result of segElemSuf xs is a list of all triples (pre,x,suf)
+-- such that x is an element of xs, pre is the prefix before x
+-- and suf the suffix after it.
 segElemSuf :: [a] -> [([a],a,[a])]
 segElemSuf [] = []
 segElemSuf (x:xs) = ([],x,xs) : [ (x:ys,y,zs) | (ys,y,zs)<-segElemSuf xs ]
@@ -280,24 +267,6 @@ subsetRest 0 xs      =  [([], xs)]
 subsetRest _ []      =  []
 subsetRest n (x:xs)  =  [(x:as, bs) | (as,bs) <- subsetRest (n-1) xs] ++
                         [(as, x:bs) | (as,bs) <- subsetRest n     xs]
-
--- Given a list xs :: [a] of distinct items, and a predicate
--- p :: a -> a -> Bool, obtain a minimal sublist ys of xs such that
--- for every x in xs \\ ys there is a y in ys for which p x y holds.
--- The predicate p may be assumed transitive.
--- NB. The method here is "greedy": it considers successive elements
--- of xs for addition to an accumulating sublist.  The result is the
--- only one possible if p is also anti-symmetric.  If it is not, and
--- the choice of solution may matter, the function could be generalised
--- to give all possible results.
-maximaBy :: (a->a->Bool) -> [a] -> [a]
-maximaBy p  =  mb []
-  where
-  mb ms []      =  reverse ms
-  mb ms (x:xs)  |  any (p x) ms || any (p x) xs
-                =  mb ms xs
-                |  otherwise
-                =  mb (x:ms) xs
 
 -- concat for set-like lists, given as sorted lists without duplicates
 unions :: Ord a => [[a]] -> [a]
