@@ -48,6 +48,9 @@ minimalEquiv c re  |  -- trace (show re)
 
 -- produces the alphabet of the re in a form that is easily renamed to
 -- a semCatNormal expression
+-- property:
+-- semcatNormalProperty :: RE -> Bool
+-- semcatNormalProperty x = semcatNormal (rename (zip (charList x) ['a'..]) x)
 charList :: RE -> [Char]
 charList x =  foldr1 (++) $ map alpha2String [single,start,finish,remain]
               where
