@@ -6,6 +6,7 @@ effect=Effect
 reg=Reg
 test=Test
 tim=Tim
+minratios=MinRatios
 else
 semCreate=CreateSemCatalogue.exe
 synCreate=CreateSynCatalogue.exe
@@ -14,9 +15,10 @@ effect=Effect.exe
 reg=Reg.exe
 test=Test.exe
 tim=Tim.exe
+minratios=MinRatios.exe
 endif
 
-progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim)
+progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minratios)
 
 $(semCreate): Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
@@ -108,5 +110,12 @@ sizeRatiosTables.tex: sizeRatios $(mrE) popproxy.txt
 	./sizeRatios > sizeRatiosTables.tex
 
 $(test): List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
-Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs Test.hs
+Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs \
+Test.hs
 	ghc -O Test
+
+$(minratios): Alphabet.hs AutIntersect.hs Catalogue.hs Comparison.hs Context.hs \
+Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs \
+MinRatios.hs Museum.hs OK.hs OneLetterFactorization.hs Parameters.hs Parser.hs \
+PreOrderTrees.hs Pressing.hs Queue.hs StarPromotion.hs Stellation.hs SyntaxCatalogue.hs
+	ghc -O MinRatios
