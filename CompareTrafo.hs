@@ -6,9 +6,10 @@ import Expression
 import StarPromotion
 import System.Environment
 import Parameters
+import Info
 
 -- Input, list of outputs Output
-data IPO = IPO {inp :: RE, outs :: [(Trafo,RE)] }
+data IPO = IPO {inp :: RE, outs :: [(Grade,RE)] }
 
 instance Show IPO where
   show (IPO e1 e2) =
@@ -20,11 +21,11 @@ main = do
   args <- getArgs
   let p = argsToParams args
   input <- contents (inputsource p)
-  let trafos = allTrafos p
+  let trafos = allGrades p
   let ipos = catMaybes $ map (process trafos) (lines input)
   mapM_ print ipos
 
-process :: [Trafo] -> String -> Maybe IPO
+process :: [Grade] -> String -> Maybe IPO
 process ts s  |  sameSizes (map snd rs)
               =  Nothing
               |  otherwise
