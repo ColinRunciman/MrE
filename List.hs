@@ -1,9 +1,9 @@
 module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered,
-   nubMergeMap, nubMerge, foldMerge, nubSort, chainSort,
+   nubMergeMap, nubMerge, foldMerge, nubSort,
    segments, segElemSuf, segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
    splits, allSplits, powerSplits, allPowerSplits,
-   compareLength, itemRest, sublists, isSublistOf,
+   itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
    lift2SeqAll ) where
 
@@ -56,12 +56,6 @@ nubMerge (x:xs) (y:ys)  =  case compare x y of
                            EQ -> x : nubMerge xs ys
                            GT -> y : nubMerge (x:xs) ys
 
-compareLength :: [a] -> [b] -> Ordering
-compareLength [] [] = EQ
-compareLength [] _  = LT
-compareLength _  [] = GT
-compareLength (_ :xs) (_ : ys) = compareLength xs ys
-
 foldMerge :: (a->a->a) -> a -> [a] -> a
 foldMerge b e [] = e
 foldMerge b e [x] = x
@@ -76,18 +70,7 @@ foldMerge1 b (x:y:xs) = b x y : foldMerge1 b xs
 nubSort :: Ord a => [a] -> [a]
 nubSort = foldMerge nubMerge [] . nubChains
 
--- splits a list into its segments of increasing chains
-chains :: Ord a => [a] -> [[a]]
-chains = foldr addOne []
-            where
-            addOne x [] = [[x]]
-            addOne x chains@((y:ys):yss) = if x<=y then (x:y:ys):yss else [x]:chains
-
--- bottom-up mergeSort
-chainSort :: Ord a => [a] -> [a]
-chainSort = foldMerge merge [] . chains 
-
--- like chains, but the produced chains are dup-free
+-- splits a list into segments of increasing duplicate-free chains
 nubChains :: Ord a => [a] -> [[a]]
 nubChains = foldr addOne []
             where
