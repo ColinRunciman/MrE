@@ -1,4 +1,3 @@
-
 module Pressing (
   press, pressAltListOne, pressCatListOne, pressP,
   rollList, prefixCom, suffixCom, pressKP ) where
@@ -167,24 +166,6 @@ y *=?=* Opt x        |  isCat x && not (null cand1)
                         cand2 = [ (y'',xs) | (xs,Opt y') <- rMostCom' x, Just y''<-[eqr y' y]]
                         (ym,yin) = head cand2
 _ *=?=* _            =  Nothing
-
--- The (*=*=*) function implements combination rules in Rep bodies.
--- (X(Y+Z))* = (X+Y'+Z)* if (XY)?=XY' and mirror
--- N.B. the resulting lists are Alt items, not Cat items.
-(*=*=*) :: RE -> RE -> Maybe [RE]
-x *=*=* Alt _ zs  |  ewp x && not (null cands)
-                  =  listToMaybe cands
-                     where
-                     cands = [ concatMap whiteAltList (x' : (tail xy' ++ ys))
-                              | (y,ys)<- itemRest zs, Just xy'<-[ x *=?=* y ], all ewp xy',
-                                Just x' <- [eqr x (head xy')] ]
-Alt _ zs *=*=* x  |  ewp x && (not $ null cands)
-                  =  listToMaybe cands
-                     where
-                     cands = [ concatMap whiteAltList (x': (tail yx' ++ ys))
-                             | (y,ys)<- itemRest zs, Just yx'<-[ y *=?=* x ], all ewp yx',
-                               Just x' <- [ eqr x (last yx') ] ]
-_ *=*=* _         =  Nothing
 
 -- These comments probably attach to the (*==*) function.
 -- X* (A+C) = X*(A'+C), if X*A = X*A' (includes: A=X*Y => A'=Y, A=X?Y => A'=Y), and mirror
@@ -640,8 +621,7 @@ pressCxt = katahom pressK
 
 -- non-generic
 pressAltListOne :: Cxt -> Info -> [RE] -> OK [RE]
-pressAltListOne c i xs = symbolFactorTrafo i xs `orOK`
-                         thinAltList c xs `orOK`
+pressAltListOne c i xs = thinAltList c xs `orOK`
                          factAltElem c xs `orOK`
                          factList xs
 
@@ -700,31 +680,6 @@ catSplit xs = list2OK xs
               where
               x     = cat xs
 
--- accelerated factorization for symbols
--- we can only factorize symbols from cats that are non-nullable
--- and whose first/last symbol can only be that symbol
-symbolFactorTrafo :: Info -> [RE] -> OK [RE]
-symbolFactorTrafo i xs  |  plural nonewxs && (plural sglcL || plural sglcR)
-                        =  list2OK xs (leftCands ++ rightCands)
-                        |  otherwise
-                        =  unchanged xs
-                       where
-                       (ewxs,nonewxs) = partition ewp xs
-                       (plnonL,sglcL) = partition (pluralAlpha . fir) nonewxs
-                       (plnonR,sglcR) = partition (pluralAlpha . las) nonewxs
-                       leftCands = [ pressCat[Sym cx,nt] : (ys++plnonL++ewxs) |
-                                     ([x,y],ys) <- subsetRest 2 sglcL,
-                                     let lmx=lMostCom' x, let lmy=lMostCom' y, --because of backtracking
-                                     (Sym cx,tlx)<- lmx,
-                                     (Sym cy,tly)<- lmy, cx==cy,
-                                     let nt=alt[cat tlx,cat tly] ]
-                       rightCands = [ pressCat[ni,Sym cx] : (ys++plnonR++ewxs) |
-                                     ([x,y],ys) <- subsetRest 2 sglcR,
-                                     let rmx=rMostCom' x, let rmy=rMostCom' y,
-                                     (inx,Sym cx)<- rmx,
-                                     (iny,Sym cy)<- rmy, cx==cy,
-                                     let ni=alt[cat inx,cat iny] ]
-
 ----------- Cat section for the Katahom ----------------------
    
 -- one rewrite step, result not in pressed form in general
@@ -733,7 +688,7 @@ pressCatListOne c i xs  =
            pressCatListOK xs `orOK`
            ( guardOK (c>=EwpCxt) (plus2star c xs)
            $ guardOK (c==RepCxt) (presspreviousCatRepCxt xs)
-           $ guardOK (c==OptCxt && not(ew i)) (presspreviousCatOptCxt xs)
+           -- $ guardOK (c==OptCxt && not(ew i)) (presspreviousCatOptCxt xs)
            $ guardOK (ew i) (catSplit xs)
            $ rollPress xs )
 
@@ -800,32 +755,6 @@ presspreviousCatRepCxt xs  =  list2OK xs can `orOK` pressCatListRepOK xs
            cands4 = [ (pre++[srep]) | (pre,s)<-suffixCom x, ewp s, not(isRep s),
                       let srep=rep s, cat [s,xr]===srep]
 
-plus2starOpt :: [RE] -> Maybe [RE]
-plus2starOpt xs | hasChanged call
-                = Just (valOf call)
-                | otherwise
-                = Nothing
-                  where call = plus2star OptCxt xs
-
--- this used to be pressOpt' within pressOpt
--- uses (H*T)?==(H*T?) whenever sound, provided it gives rise to fusion
--- ditto (H?T)? == H?T?, and mirrors
--- size condition is needed to stop circular rotations
-presspreviousCatOptCxt :: [RE] -> OK [RE]
-presspreviousCatOptCxt xs = unchanged xs -- now these go in the wrong direction
-       where
-       x        =  previousCat xs
-       xo       =  opt x
-       can      =  lca ++ rca 
-       lca      =  [ res | (he,tl) <- prefixCom x, not(null tl), ewp he, he `sublang` xo,
-                           let tln =  pressCatListOne OptCxt (catInfo tl) tl,
-                           Just res <- [ Just (he : valOf tln) | plural tl, hasChanged tln, listSize (valOf tln)<listSize tl ] ++
-                                       [ he *===* mkCat tl] ]
-       rca      =  [ res | (lt,la) <- suffixCom x, not(null lt), ewp la, la `sublang` xo,
-                           let ltn =  pressCatListOne OptCxt (catInfo lt) lt,
-                           Just res <- [ Just (valOf ltn ++ [la]) | plural lt, hasChanged ltn, listSize (valOf ltn)<listSize lt ] ++
-                                       [ mkCat lt *===* la] ]
-
 rollPress :: [RE] -> OK [RE]
 rollPress xs = updateEQ xs (rollList xs)
 
@@ -839,15 +768,11 @@ plus2star c ys   =  repfix $ list2OK ys cands
                  |  otherwise
                  =  zs
     r            =  c==RepCxt
-    cands        =  leftCands ++ rightCands ++ leftReps ++ rightReps
+    cands        =  leftCands ++ rightCands
     leftCands    =  [ p
                     | (hd,tl)<- lMostComList ys, let tl'=previousCat tl, Just p <-[hd *=?=* tl']]
-    leftReps     =  [ [previousAlt p]
-                    | r, (hd,tl)<- lMostComList ys, let tl'=previousCat tl, Just p <-[hd *=*=* tl']]
     rightCands   =  [ p
                     | (lt,dh)<- rMostComList ys, let lt'=previousCat lt, Just p <-[lt' *=?=* dh]]
-    rightReps    =  [ [previousAlt p]
-                    | r, (lt,dh)<- rMostComList ys, let lt'=previousCat lt, Just p <-[lt' *=*=* dh]]
 
 -- X+Y --> X if Y `sublang` X 
 -- ...+XX*+... -> ...+X*+... if ewp(alt), and mirrored law

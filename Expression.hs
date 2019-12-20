@@ -4,7 +4,7 @@ module Expression (
   alt, cat, opt, rep, mkAlt, mkCat,
   nubMergeAltItems, concatCatItems,
   altSubseq, catSegment,
-  ewp, alpha, alphaL, alphaEquiv, canonicalRE, isCanonical,
+  ewp, alpha, alphaL, canonicalRE, isCanonical,
   swa, fir, las, firAlt, firCat, lasAlt, lasCat, altInfo, catInfo,
   size, listSize, listAlpha,
   mirror, rename,
@@ -289,7 +289,7 @@ katahomGeneral :: KatahomGeneral a -> Cxt -> RE -> a
 katahomGeneral kh _ Emp        = kgemp kh
 katahomGeneral kh c Lam        = kglam kh c
 katahomGeneral kh c (Sym d)    = kgsym kh d
-katahomGeneral kh c (Alt i xs) = kgalt kh c i (map (katahomGeneral kh c) xs)
+katahomGeneral kh c (Alt i xs) = kgalt kh c i (map (katahomGeneral kh nc) xs)
                                  where nc = if ew i then max c OptCxt else c
 katahomGeneral kh c (Cat i xs) = kgcat kh c i (map (katahomGeneral kh NoCxt) xs)
 katahomGeneral kh c (Rep x)    = kgrep kh c $ katahomGeneral kh RepCxt x
@@ -428,93 +428,10 @@ isCanonical xs  =  isPrefixOf xs ['a'..]
 canonicalRE :: RE -> Bool
 canonicalRE = isCanonical . alphaL
 
-alphaEquiv :: RE -> RE -> Bool
-alphaEquiv x y = not $ null $ alphaRename [] x y
-
 -- Renaming invariant:
 -- In any Renaming xs, both map fst xs and map snd xs have no duplicates
 
 type Renaming = [(Char,Char)]
-
--- Are two REs alpha-equivalent w.r.t. some extension of a given renaming?
--- N.B. There may be more than one such extension, hence the list result.
-
-alphaRename :: Renaming -> RE -> RE -> [Renaming]
-alphaRename r Emp         Emp          =  [r]
-alphaRename r Lam         Lam          =  [r]
-alphaRename r (Sym c)     (Sym d)      =  charMatch r c d
-alphaRename r (Alt i1 xs) (Alt i2 ys)  =  [ r2
-                                          | r1 <- infoMatch r i1 i2, compareLength xs ys==EQ,
-                                            r2 <- multisetMatch r1 xs ys]
-alphaRename r (Cat i1 xs) (Cat i2 ys)  =  [ r2
-                                          | r1 <- infoMatch r i1 i2, compareLength xs ys==EQ,
-                                            r2 <- sequenceMatch r1 xs ys]
-alphaRename r (Rep x)     (Rep y)      =  alphaRename r x y
-alphaRename r (Opt x)     (Opt y)      =  alphaRename r x y
-alphaRename _ _ _                      =  []
-
--- Matching Info fields is a cheap pre-requisite for matching expressions.
--- Here the result is at most a singleton, but it could extend r, by including
--- new must-match bindings.
-
-infoMatch :: Renaming -> Info -> Info -> [Renaming]
-infoMatch r i1 i2  =
-  [ r3
-  | ew i1==ew i2 && si i1==si i2,
-    r0 <- charListMatch r (alpha2String (fi i1 .&. la i1)) (alpha2String (fi i2 .&. la i2)),
-    r1 <- charListMatch r0 (fif i1) (fif i2),
-    r2 <- charListMatch r1 (laf i1) (laf i2),
-    r3 <- charListMatch r2 (swf i1) (swf i2) ]
-  where
-  fif i = alpha2String $ fi i
-
-  laf i = alpha2String $ la i
-  swf i = alpha2String $ sw i
-        
--- charListMatch is used to match lists of first/last/etc characters
--- To avoid combinatorial explosion it produces a list of at most one renaming.
-
-charListMatch :: Renaming -> [Char] -> [Char] -> [Renaming]
-charListMatch r cs ds = clm r cs ds
-    where
-    -- remove already matched chars from both sets, if singletons remain then extend match
-    clm _          []  []   =  [r]
-    clm _          []  _    =  []
-    clm _          _   []   =  []
-    clm _          [c] [d]  =  charMatch r c d
-    clm []         cs  ds   =  [ r | compareLength cs ds==EQ]
-    clm ((x,y):r') cs  ds   = 
-      case (removeFromSet x cs, removeFromSet y ds) of
-      (Nothing,Nothing)   -> clm r' cs ds
-                             -- neither char in its respective set, ignore binding
-      (Just cs',Just ds') -> clm r' cs' ds'
-                             -- both char in their sets, continue with reduced sets
-      _                   -> []
-                             -- one char is in its set, the other is not: fail
-
--- currently no assumption is made about ordering in the renaming itself
-charMatch :: Renaming -> Char -> Char -> [Renaming]
-charMatch r c d = cm r
-    where
-    cm []          =  [ (c,d): r ] -- both chars free, so we can extend renaming
-    cm ((x,y):r')  =
-       case (x==c,y==d) of
-       (True,True)   -> [r]   -- both chars are already matched, keep r
-       (False,False) -> cm r' -- (x,y) binding irrelevant for (c,d), continue without it
-       _             -> []    -- conflicting binding, fail!
-
-multisetMatch :: Renaming -> [RE] -> [RE] -> [Renaming]
-multisetMatch r (x:xs) ys  =  [ r2 | (y,ys')<-itemRest ys,
-                                r1 <- alphaRename r x y,
-                                r2 <- multisetMatch r1 xs ys' ]
-multisetMatch r []     []  =  [r]
-multisetMatch r _      _   =  []
-
-sequenceMatch :: Renaming -> [RE] -> [RE] -> [Renaming]
-sequenceMatch r (x:xs) (y:ys)  =  [ r2 | r1<-alphaRename r x y,
-                                         r2<-sequenceMatch r1 xs ys ]
-sequenceMatch r []     []      =  [r]
-sequenceMatch r _      _       =  [] 
 
 renameInfo :: Renaming -> Info -> Info
 renameInfo ren i = i { fi= rename (fi i), la=rename (la i), al=rename (al i),
