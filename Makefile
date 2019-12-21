@@ -7,6 +7,9 @@ reg=Reg
 test=Test
 tim=Tim
 minratios=MinRatios
+timscript=allTimes
+effscript=allEffect
+runtimes=RunTimes
 else
 semCreate=CreateSemCatalogue.exe
 synCreate=CreateSynCatalogue.exe
@@ -16,6 +19,9 @@ reg=Reg.exe
 test=Test.exe
 tim=Tim.exe
 minratios=MinRatios.exe
+timscript=allTimes.cmd
+effscript=allEffects.cmd
+runtimes=RunTimes.exe
 endif
 
 progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minratios)
@@ -42,13 +48,21 @@ ifndef OS
 	chmod +x allEffect
 endif
 
-effproxy.txt: $(effect) allEffect popproxy.txt
+effproxy.txt: $(effect) $(effscript) popproxy.txt
 ifndef OS
 	./allEffect
 else
-	allEffect.cmd
+	allEffects.cmd
 endif
 	echo effects > effproxy.txt
+
+timproxy.txt : $(tim) $(mre) $(timscript)
+ifndef OS
+	./allTimes
+else
+	allTimes.cmd
+endif
+	echo times > timproxy.txt
 
 $(mrE): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
@@ -100,8 +114,15 @@ popproxy.txt semproxy.txt synproxy.txt
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
 
-runTimesTables.tex: runTimes $(mrE) popproxy.txt
-	./runTimes > runTimesTables.tex
+runTimesTables.tex: $(runtimes) $(timscript) $(mrE) popproxy.txt
+ifndef OS
+	./RunTimes > runTimesTables.tex
+else
+	RunTimes.exe > runTimesTables.tex
+endif
+
+$(runtimes): RunTimes.hs ReadTable.hs
+	ghc -O RunTimes.hs
 
 sizeRatios.pdf: sizeRatios.tex sizeRatiosTables.tex
 	pdflatex sizeRatios.tex

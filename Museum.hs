@@ -59,12 +59,13 @@ splitCxt re   c   _         = (id,re,c)
 
 splitContext :: RE -> (RE->RE,RE,Cxt)
 splitContext e = splitCxt e RootCxt False
+{- now coming from Expression
 
 singleChar :: RE -> Bool
 singleChar (Sym _)    = True
 singleChar (Alt _ xs) = all isSym xs
 singleChar _          = False
-
+-}
 singleCharC :: RE -> Bool
 singleCharC (Sym _)    = True
 singleCharC (Cat _ xs) = all isSym xs

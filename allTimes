@@ -1,0 +1,20 @@
+
+sizes="10 20 40 80 160 320 640 1280 2560"
+asizes="1 2 3 4 8 16"
+
+allsizes() {
+for i in $sizes
+do for j in $asizes
+do ./Tim $1 -S${i} -W${j} >> times/$2
+done
+done
+}
+if test -d "times" ; then rm times/* ; else mkdir times ; fi
+allsizes -l promoted
+allsizes -g Gruber-Gulan
+allsizes -n normal
+allsizes -f fused
+allsizes -p pressed
+allsizes -s stellar
+allsizes -c semsearch
+allsizes -y synsearch

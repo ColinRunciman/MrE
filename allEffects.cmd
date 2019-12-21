@@ -1,10 +1,11 @@
 IF EXIST effects (del /Q effects\*) ELSE (mkdir effects)
 
-call allSizes.cmd -v prom
-call allSizes.cmd -l linear-l
-call allSizes.cmd -k kata-k
-call allSizes.cmd -q fuse-q
-call allSizes.cmd -p press-p
-call allSizes.cmd "-s" stellate-s
-call allSizes.cmd -c semcat-c
-call allSizes.cmd -y syncat-y
+call allSizes.cmd -g Gruber-Gulan
+call allSizes.cmd -n normal
+call allSizes.cmd -f fused
+call allSizes.cmd -l promoted
+call allSizes.cmd -s stellar
+call allSizes.cmd -p pressed
+call allSizes.cmd -y synsearch
+call allSizes.cmd -c semsearch
+

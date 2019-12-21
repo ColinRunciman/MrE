@@ -1,7 +1,7 @@
 module Expression (
   RE(..), HomTrans(..), HomInfo(..), KatahomGeneral(..), Renaming,
   isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt, unAlt, unCat, unOpt, unRep,
-  alt, cat, opt, rep, mkAlt, mkCat,
+  alt, cat, opt, rep, mkAlt, mkCat, singleChar,
   nubMergeAltItems, concatCatItems,
   altSubseq, catSegment,
   ewp, alpha, alphaL, canonicalRE, isCanonical,
@@ -122,10 +122,15 @@ mkCat [x] =  x
 mkCat xs  =  Cat (catInfo xs) xs
 
 catInfo :: [RE] -> Info
-catInfo xs =  Info { gr = [(RepCxt,Minimal) | all isSym xs],
+catInfo xs =  Info { gr = [(RepCxt,Minimal) | all singleChar xs],
                      ew = all ewp xs, al = listAlpha xs,
                      fi = firCat xs, la = lasCat xs, sw = swCat xs,
                      si = listSize xs } 
+
+singleChar :: RE -> Bool
+singleChar (Sym _)    = True
+singleChar (Alt _ xs) = all isSym xs
+singleChar _          = False
 
 -- First characters, last characters and single-word alphabets for concatenations.
 firCat, lasCat, swCat :: [RE] -> Alphabet      

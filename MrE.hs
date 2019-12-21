@@ -11,7 +11,14 @@ main = do
   args <- getArgs
   let p = argsToParams args
   input <- contents (inputsource p)
-  mapM_ (putStrLn . stringTransFun (trafo p)) (lines input)
+  process p (lines input)
 
-
+process :: Parameters -> [String] -> IO()
+process p ss | verbose p
+             = sequence_ [ putStrLn (show n++". "++ f s)
+                         | (n,s)<-zip [1..] ss ]
+             | otherwise
+             = mapM_ (putStrLn . f) ss
+               where
+               f = stringTransFun (trafo p)
 

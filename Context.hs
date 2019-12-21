@@ -13,6 +13,7 @@ import Function
 import OK
 import Data.Maybe
 import Data.List
+import Data.List.Extra (spanEnd)
 
 -- Assumes *any* transformation can improve a Rep-body that
 -- is a Rep or an Opt, or an Opt-body that is an Opt
@@ -21,25 +22,35 @@ import Data.List
 -- Rep vanishes?!
 -- only used in Generator at the moment
 okGradeCxt :: Grade -> Cxt -> RE -> Bool
-okGradeCxt g c Emp        =  c==NoCxt   -- || g==Standard
-okGradeCxt g c Lam        =  c==NoCxt   -- || g==Standard
+okGradeCxt g c Emp        =  c==NoCxt  
+okGradeCxt g c Lam        =  c==NoCxt 
 okGradeCxt _ _ (Sym _)    =  True
 okGradeCxt g c (Alt i _)  =  ok c g (gr i)
 okGradeCxt g c (Cat i _)  =  ok c g (gr i) && (not (ew i) || c/= RepCxt)
 okGradeCxt g c (Rep e)    =  c < RepCxt && okGradeCxt g RepCxt e && not (ewp e)
 okGradeCxt g c (Opt e)    =  c < OptCxt && okGradeCxt g OptCxt e && not (ewp e)
 
+gradeOf :: Cxt -> RE -> Grade
+gradeOf c (Alt i _) = lookupCGMap c (gr i)
+gradeOf c (Cat i _) = lookupCGMap c (gr i)
+gradeOf _ (Rep x)   = gradeOf RepCxt x
+gradeOf _ (Opt x)   = gradeOf OptCxt x
+gradeOf _ _         = Minimal
+            
+
 type RewRule = Cxt -> Info -> [RE] -> OK [RE]
 data Katahom = Katahom { kalt, kcat  :: RewRule, grade :: Grade }
 
 -- modifies the alt-rule of a Katahom by evaluating the elements in the list first
--- then flattening the results, then applying the rule, then flatten the result
+-- then flattening the results, then applying the rule, then flatten the result;
+-- moreover, uses a partitioning reduction for complex trafos
 altRule :: Katahom -> RewRule
 altRule kh c i xs  |  not (plural xs')
                    =  xso
                    |  otherwise
-                   =  okmap nubMergeAltItems $ kalt kh c ni `app` xso
+                   =  okmap nubMergeAltItems $ ar c ni `app` xso
                       where
+                      ar  = (if grade kh>Promoted then altPartitionReduction else id) $ kalt kh
                       xso = kataliftAltSafe (katahom kh c) xs
                       xs' = valOf xso
                       ni  = if hasChanged xso then altInfo xs' else i
@@ -50,13 +61,14 @@ kataliftAltSafe f xs = potentialChange (/=xs) $ (okmap nubMergeAltItems $ katali
 altRuleOK :: RewRule -> RewRule
 altRuleOK r c i xs = okmapIf nubMergeAltItems (r c i xs)
 
--- dual to altRule
+-- dual to altRule, except that the factorisation trick is used for all trafos
 catRule :: Katahom -> RewRule
 catRule kh c i xs  |  not (plural xs')
                    =  xso 
                    |  otherwise
-                   =  okmap concatCatItems $ kcat kh c ni `app` xso
+                   =  okmap concatCatItems $ cr c ni `app` xso
                       where
+                      cr  = charSetFactReduction $ kcat kh
                       xso = kataliftCatSafe (katahom kh NoCxt) xs
                       xs' = valOf xso
                       ni  = if hasChanged xso then catInfo xs' else i
@@ -130,8 +142,8 @@ mkCatCG _ [x]  = x
 mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
 
 -- input is set-like 
-total :: [Char] -> RE
-total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
+-- total :: [Char] -> RE
+-- total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
 
 -- specific katalifts for Cats and Alts
 kataliftAlt, kataliftCat, katalift1Alt :: (RE -> OK RE) -> [RE] -> OK [RE]
@@ -284,8 +296,7 @@ altClosureLtd :: Int -> RewRule -> RewRule
 altClosureLtd n r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLtd n xs,
                                                     let Alt j _ = altSubseq (Alt i xs) ys,
                                                     yso <- [r c j ys],
-                                                    hasChanged yso, let ys'=valOf yso,
-                                                    listSize ys' < si j ]
+                                                    hasChanged yso, let ys'=valOf yso ]
 
 altClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
 altClosureCatalogue g r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsCatalogue g xs,
@@ -322,8 +333,7 @@ catClosureLtd :: Int -> RewRule -> RewRule
 catClosureLtd n r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsLtd n xs,
                                                     let Cat j _ = catSegment (Cat i xs) ys,
                                                     yso <- [r NoCxt j ys],
-                                                    hasChanged yso, let ys'=valOf yso,
-                                                    listSize ys' < si j]
+                                                    hasChanged yso, let ys'=valOf yso ]
 
 catClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
 catClosureCatalogue g r _ i xs = list2OK xs [ f ys' | (ys,f)<-subcatsCatalogue g xs,
@@ -402,7 +412,7 @@ upgradeRE _ _ x          =  x
 
 -- makes the assertion that the top of the term is Minimal
 -- assuming the subterms are labelled anyway
--- has to go below Rep/Opt as this is an asserion with a stronger context
+-- has to go below Rep/Opt as this is an assertion with a stronger context
 minimalAssert :: RE -> RE
 minimalAssert (Rep x) = Rep (upgradeRE RepCxt Minimal x)
 minimalAssert (Opt x) = Opt (upgradeRE OptCxt Minimal x)
@@ -415,3 +425,61 @@ degradeTop (Cat i xs) = Cat i{gr=[]} xs
 degradeTop (Rep x)    = Rep $ degradeTop x
 degradeTop (Opt x)    = Opt $ degradeTop x
 degradeTop x          = x -- symbols, Lam, Emp
+
+-- Note that the minimal form of (a1+..+ak)x, where each ai is a symbol,
+-- is (a1+..+ak)x', where x' is the minimal form of x.
+-- Thus, when transforming a Cat in a NoCxt we can remove
+-- initial+final segments of charsets, transform the remaining core, and then re-attach those segments.
+-- Should the core be a singleton, no trafo is necessary, but instead the whole Cat inherits the grade of the core.
+charSetFactReduction :: RewRule -> RewRule
+charSetFactReduction r c i xs  |  c>NoCxt || ew i || (null cs && null ds)
+                               =  r c i xs
+                               |  null ms
+                               =  changed [upgradeRE c Minimal (Cat i xs)]
+                               |  plural ms
+                               =  okmap (\zs ->cs++zs++ds) $ r NoCxt j ms
+                               |  otherwise
+                               =  changed [upgradeRE c (gradeOf c (head ms)) (Cat i xs)]
+                                   where
+                                   (ms,ds)   = spanEnd singleChar rs
+                                   (cs,rs)   = span singleChar xs
+                                   (Cat j _) = catSegment (Cat i xs) ms -- catInfo+inherited grade
+
+-- principle: if disjointAltArg x y then minimal(x+y)=minimal x+minimal y
+-- in all contexts we recognize
+disjointAltArg :: RE -> RE -> Bool
+disjointAltArg x y = isEmptyAlpha $ (fir x .&&. fir y) .||. (las x .&&. las y)
+
+-- partition an alt-set into mutually disjoint subsets
+-- the fiA/laA alphabets are the total intitial/final alphabet for the combined list,
+-- allowing for a shortCut should we encounter a maximally-connecting subRE
+partitionAltElems :: Alphabet -> Alphabet-> [RE] -> [RE]
+partitionAltElems _ _ [] = []
+partitionAltElems fiA laA (x:xs)
+    |  fir x==fiA || las x==laA -- x cannot be disjoint to any re in the list
+    = [ alt (x:xs) ]
+    |  null similar
+    =  x : partitionAltElems (fiA .\\. fir x) (laA .\\. las x) xs
+    |  fir x==fir nx && las x==las nx -- although the connected component changed we know it cannot change again
+    =  nx : partitionAltElems (fiA .\\. fir x) (laA .\\. las x) disjoint
+    |  otherwise -- increase connected component, and repeat
+    =  partitionAltElems fiA laA (nx:disjoint)
+    where
+    (disjoint,similar) = partition (disjointAltArg x) xs
+    nx                 = alt (x:similar)
+
+-- the partition reduction is potentially quadratic, thus should not be applied at initial stages
+altPartitionReduction :: RewRule -> RewRule
+altPartitionReduction r c i xs | singularAlpha (fi i) || singularAlpha (la i) || not (plural salts)
+                               = r c i xs
+                               | null alts -- all singletons, no altTrafo needed
+                               = changed [upgradeRE c (minimum (map (gradeOf c) xs)) (Alt i xs)]
+                               | all (not . plural) newalts -- after trafo all are singletons, so we can grade
+                               = changed [upgradeRE c (minimum (map (gradeOf c) nxs)) (alt nxs)]
+                               | otherwise
+                               = updateEQ xs nxs
+                                 where
+                                 salts        = partitionAltElems (fi i)(la i) xs
+                                 (alts,nalts) = partition isAlt salts
+                                 newalts      = [ valOf $ r c j ys | Alt j ys <- alts] -- apply trafo to subalts
+                                 nxs          = nubSort (nalts ++ concat newalts)
