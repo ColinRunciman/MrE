@@ -24,7 +24,7 @@ import Alphabet
 -- (1) smart constructors enforcing an invariant;
 -- (2) construction predicates and selectors;
 -- (3) various attributes for which memoised values are held;
--- (4) homomorphisms over expressions, and instances such as size; 
+-- (4) homomorphisms over expressions, and instances such as size;
 -- (5) a parser and a printer.
 
 data RE = Emp
@@ -125,7 +125,7 @@ catInfo :: [RE] -> Info
 catInfo xs =  Info { gr = [(RepCxt,Minimal) | all singleChar xs],
                      ew = all ewp xs, al = listAlpha xs,
                      fi = firCat xs, la = lasCat xs, sw = swCat xs,
-                     si = listSize xs } 
+                     si = listSize xs }
 
 singleChar :: RE -> Bool
 singleChar (Sym _)    = True
@@ -133,7 +133,7 @@ singleChar (Alt _ xs) = all isSym xs
 singleChar _          = False
 
 -- First characters, last characters and single-word alphabets for concatenations.
-firCat, lasCat, swCat :: [RE] -> Alphabet      
+firCat, lasCat, swCat :: [RE] -> Alphabet
 firCat xs  =  foldr ficons emptyAlpha xs
               where
               ficons x a = if ewp x then fir x .|. a else fir x
@@ -354,8 +354,12 @@ altSubseq (Alt i xs) xs'  =  altSubseq' $
 altSubseq _          _    =  error "altSegment of a noi?"
 
 altGradedInfo :: CGMap -> [RE] -> Info
-altGradedInfo cgm xs  =  (altInfo xs) { gr = cgm }
-
+altGradedInfo cgm xs  |  null (gr info)
+                      =  info { gr = cgm }
+                      |  otherwise
+                      =  info -- minimal attribute of a subalt is preserved
+                         where
+                         info = altInfo xs
 -- Precondition: xs' is a segment of xs.
 catSegment :: RE -> [RE] -> RE
 catSegment (Cat i xs) xs'  =  catSegment' $
@@ -367,7 +371,12 @@ catSegment (Cat i xs) xs'  =  catSegment' $
 catSegment _          _    =  error "catSegment of a dog?"
 
 catGradedInfo :: CGMap -> [RE] -> Info
-catGradedInfo cgm xs  =  (catInfo xs) { gr = cgm }
+catGradedInfo cgm xs  |  null (gr info)
+                      =  info { gr = cgm }
+                      |  otherwise
+                      =  info
+                         where
+                         info = catInfo xs
 
 -- REs are read and shown in a form as close to usual conventions
 -- as ASCII permits.
@@ -397,7 +406,7 @@ rest (' ':s) as         = rest s as
 rest (v  :s) ((c:a):as) = if isAlpha v then rest s (((Sym v:c):a):as)
                           else if null as then (a2re (c:a),v:s)
                          else wrong
-                              
+
 a2re :: [[RE]] -> RE
 a2re = alt . reverse . map (cat . reverse)
 

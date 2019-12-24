@@ -1,4 +1,5 @@
-module Stellation (stellate, altTrans, catTrans, stelKP) where
+module Stellation (stellate, altTrans, catTrans, stelKP)
+where
 
 import List
 import Info
@@ -22,7 +23,7 @@ previousCxt :: Cxt -> RE -> OK RE
 previousCxt = katahom $ khom previousKP
 
 previousRep :: RE -> RE
-previousRep = frep $ mkHomTrans $ khom previousKP
+previousRep = thisfun previousKP . rep
 
 stelEX :: Extension
 stelEX = extensionLtd 15 20 $
@@ -50,37 +51,38 @@ stelCxt = katahom stelK
 -- end of boilerplate section
 
 altTrans :: Cxt -> Info -> [RE] -> OK [RE]
-altTrans c i xs =  list2OK xs [ Rep body' : zs
-                              | c>=OptCxt, (ys,zs)<-allPowerSplits xs, not(null ys),
-                                let body=altSubseq (Alt i xs) ys, istransitive body,
-                                let body'=valOf $ previousCxt RepCxt body,
-                                size body'+1 < size body ||
-                                     size body' < size body && (not $ ew i) ]
+altTrans OptCxt i xs = list2OK xs $ [ rep body' : zs
+                                    | (ys,zs)<-allPowerSplits xs, plural ys,
+                                      let body=altSubseq (Alt i xs) ys, istransitive body,
+                                      let body'=valOf $ previousCxt RepCxt body,
+                                      size body'+1 < size body ||
+                                         size body' < size body && (not $ ew i) ] ++
+                                    [ opt body : zs
+                                    | (Rep body,zs) <- itemRest xs,
+                                      istransitive body ]
+altTrans _ i xs  =  unchanged xs -- cannot fire in a NoCxt/RepCxt
 
 catTrans :: Cxt -> Info -> [RE] -> OK [RE]
 catTrans c i xs =  list2OK xs (normalcands ++ repcxtcands ++ optcxtcands)
                    where
                    me = Cat i xs
-                   normalcands = [ pre++[Rep newmidBody]++suf
-                                 | (le,suf)<-prefixCom me, (pre,mid)<-suffixCom le,
-                                   not(isRep mid) && ewp mid && istransitive mid,
-                                   let newmidBody=valOf $ previousCxt RepCxt mid,
-                                   size newmidBody+1 < size mid ]
-                   repcxtcands = [ [unRep brep] | c==RepCxt, brep <- bodyreps ]
+                   normalcands = [ lcontext++[previousRep mid]++rcontext --note: pre/suf may both be empty
+                                 | (lcontext,mids,rcontext) <- threesplit xs,
+                                   let mid = catSegment me mids,
+                                   ewp mid && istransitive mid ]
+                   repcxtcands = [ [deRep brep]   | c==RepCxt, brep <- bodyreps ]
                    optcxtcands = [ [brep]
-                                 | c==OptCxt, not(ew i), istransitive me, brep <- bodyreps ]
-                   bodyreps    = [ brep
-                                 | not (ew i), (pre,suf)<-prefixCom me, not(null suf),
-                                   let suft=mkCat suf, ewp pre || ewp suft,
-                                   let body=alt[pre,suft],
-                                   let brep=previousRep body, brep===Rep me ]
+                                 | c==OptCxt, not(ew i), istransitive me, brep <- bodyreps, size brep<=size me]
+                   bodyreps    = [ brep | (pres,sufs) <- splits xs,
+                                   let suft = catSegment me sufs, let pret = catSegment me pres,
+                                   ewp pret || ewp suft,
+                                   let brep = previousRep (alt [pret,suft]), brep===rep me ]
+                   deRep (Rep x) = x
+                   deRep (Opt x) = x -- possible: a rep can simplify to an optP
+                   deRep _       = error "illegal rep simplification"
 
--- cheap version of pressing's prefixCom
-prefixCom :: RE -> [(RE,[RE])]
-prefixCom e@(Cat _ xs) = (e,[]) : [ (cat as,bs) | (as,bs)<- splits xs ]
-prefixCom e            = [(e,[])]
 
-suffixCom :: RE -> [([RE],RE)]
-suffixCom e@(Cat _ xs) = ([],e) : [ (as,cat bs) | (as,bs) <- splits xs]
-suffixCom e            = [([],e)]
-
+-- splits a list into 3 segments, the middle one of which is plural, the others are allowed to be empty
+threesplit :: [a] -> [([a],[a],[a])]
+threesplit xs = [(lcontext,mid,rcontext) | (le,rcontext) <- allSplits xs, plural le,
+                                           (lcontext,mid) <- allSplits le, plural mid]

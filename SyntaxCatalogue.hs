@@ -49,7 +49,7 @@ minimalEquiv re  |  n >= length theForest || size re>maxREsizeINtree
                     where
                       n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
-                      alphabet = alpha re 
+                      alphabet = alpha re
                       (re',ren) = deBruijnify re
                       bwd = rename [(x,y)|(y,x)<-ren]
 
@@ -84,7 +84,7 @@ createMapFile :: String -> Int -> IO()
 createMapFile sigma n = writeMap sigma n $ poMap sigma n
 
 writeMap :: String -> Int -> Catalogue -> IO()
-writeMap sigma n t = writeFile (mapFileName sigma n) $ show t                        
+writeMap sigma n t = writeFile (mapFileName sigma n) $ show t
 
 poMap :: String -> Int -> Catalogue
 poMap sigma n = buildMap $ filter ((== string2Alpha sigma) . alpha) $ concat $
@@ -100,8 +100,8 @@ qmap []         =  []
 qmap ([_] : xs) =  qmap xs
 qmap ([] :xs)   =  error "found empty quotient list"
 qmap (xs: xss)  =  [ (x, beforeTrans RootCxt y)
-                   | let y = pickMinList xs, x<-xs, size x>size y, canonicalRE x ]
-                   ++ qmap xss 
+                   | let y = catalogueMinList xs, x<-xs, size x>size y, canonicalRE x ]
+                   ++ qmap xss
 
 createSynForest :: IO ()
 createSynForest  =  mapM_ (uncurry createMapFile)
@@ -132,15 +132,16 @@ minByList constr c i xs =
     Nothing  | c==NoCxt  -> unchanged xs
              | otherwise -> list2OK xs [ [re'''] | Just re'' <- [minimalEquiv re],
                                          size re'' < si i, let red=contextFunction c re'',
-                                         Just re''' <- [minimalEquiv red] ]                                                 
+                                         Just re''' <- [minimalEquiv red] ]
     Just re' -> changed [unwrap c re']
     where re  = constr i xs
           rec = contextFunction c re
           unwrap RepCxt x |  isRep x
                           =  unRep x
-                          |  otherwise
-                          =  error $ show x ++ " is a non-* minimal equivalent of " ++
-                                     show rec
+                          |  size x> si i
+                          =  unOpt x -- x must be a transitive Opt, but no size again
+                          |  otherwise -- if there is a size gain
+                          =  x -- situations like (aaa*)*=(aaa*)?
           unwrap OptCxt x |  isOpt x
                           =  unOpt x
                           |  size x> si i
@@ -156,6 +157,7 @@ minByCatalogueExtension = extensionCatalogue f $ mkExtension mbcA mbcC beforeKP 
                               = 0
                               | otherwise
                               = sizeFor n
+
 
 synCatalogueKP = target minByCatalogueExtension
 

@@ -22,8 +22,8 @@ import Data.List.Extra (spanEnd)
 -- Rep vanishes?!
 -- only used in Generator at the moment
 okGradeCxt :: Grade -> Cxt -> RE -> Bool
-okGradeCxt g c Emp        =  c==NoCxt  
-okGradeCxt g c Lam        =  c==NoCxt 
+okGradeCxt g c Emp        =  c==NoCxt
+okGradeCxt g c Lam        =  c==NoCxt
 okGradeCxt _ _ (Sym _)    =  True
 okGradeCxt g c (Alt i _)  =  ok c g (gr i)
 okGradeCxt g c (Cat i _)  =  ok c g (gr i) && (not (ew i) || c/= RepCxt)
@@ -36,7 +36,7 @@ gradeOf c (Cat i _) = lookupCGMap c (gr i)
 gradeOf _ (Rep x)   = gradeOf RepCxt x
 gradeOf _ (Opt x)   = gradeOf OptCxt x
 gradeOf _ _         = Minimal
-            
+
 
 type RewRule = Cxt -> Info -> [RE] -> OK [RE]
 data Katahom = Katahom { kalt, kcat  :: RewRule, grade :: Grade }
@@ -64,11 +64,11 @@ altRuleOK r c i xs = okmapIf nubMergeAltItems (r c i xs)
 -- dual to altRule, except that the factorisation trick is used for all trafos
 catRule :: Katahom -> RewRule
 catRule kh c i xs  |  not (plural xs')
-                   =  xso 
+                   =  xso
                    |  otherwise
                    =  okmap concatCatItems $ cr c ni `app` xso
                       where
-                      cr  = charSetFactReduction $ kcat kh
+                      cr  = symbolFactReduction $ kcat kh
                       xso = kataliftCatSafe (katahom kh NoCxt) xs
                       xs' = valOf xso
                       ni  = if hasChanged xso then catInfo xs' else i
@@ -77,11 +77,14 @@ kataliftCatSafe :: (RE->OK RE) -> [RE] -> OK [RE]
 kataliftCatSafe f xs = potentialChange (/=xs) $ (okmap concatCatItems $ katalift f xs)
 
 catRuleOK :: RewRule -> RewRule
-catRuleOK r c i xs = okmapIf concatCatItems $ r c i xs
+catRuleOK r c i xs | plural xs
+                   = okmapIf concatCatItems $ r c i xs
+                   | otherwise
+                   = unchanged xs
 
--- untrusting katahom, i.e. it does not assume that the rules preserve standardness
--- or that the original RE was standard
--- it does trust existing grading though
+-- untrusting katahom, i.e. it does not assume that the rules preserve validness
+-- but it does assume that the original RE was valid
+-- it does trust existing grading
 
 katahom :: Katahom -> Cxt -> RE -> OK RE
 katahom kh RootCxt x       =  katahom kh NoCxt x -- to avoid confusing trafos with unfamiliar context
@@ -108,8 +111,6 @@ eitherAltCat cstr c g m xold xso  |  ok c g m
                                   =  unchanged xold  -- without ever evaluating xso
                                   |  not (plural xs)
                                   =  okmap (cstr m) xso
-                                  |  all isSym xs    -- all subs are symbols, so minimal
-                                  =  okmap (cstr [(RepCxt,Minimal)]) xso
                                   |  hasChanged xso  -- we build a new expression
                                   =  okmap (cstr [(c,g)]) xso
                                   |  otherwise
@@ -141,7 +142,7 @@ mkCatCG _ []   = Lam
 mkCatCG _ [x]  = x
 mkCatCG cgm xs = Cat (catInfo xs){gr=cgm} xs
 
--- input is set-like 
+-- input is set-like
 -- total :: [Char] -> RE
 -- total xs = upgradeRE RepCxt Minimal (mkAlt (map Sym xs))
 
@@ -169,7 +170,7 @@ data KataPred = KataPred { khom :: Katahom, kpred :: RecPred, thisfun :: RE->RE 
 
 data Extension = Extension { source, target   :: KataPred,
                              altStep, catStep :: RewRule }
-    
+
 grd :: KataPred -> Grade
 grd = grade . khom
 
@@ -223,8 +224,10 @@ genericRepeatAlt rs c xso  |  hasChanged xso || hasChanged yso
 
 -- Alt part of generic boilerplate
 genericAltK :: Extension -> Cxt -> Info -> [RE] -> OK [ToRE]
-genericAltK rs c i xs =
-  listComp altInfo (genericFromAltK rs c) (altRuleOK(kalt(src rs)) c) i xs
+genericAltK rs c i xs |  plural xs
+                      =  listComp altInfo (genericFromAltK rs c) (altRuleOK(kalt(src rs)) c) i xs
+                      |  otherwise
+                      =  unchanged xs
 
 -- generic! only applied on lists that are not only pointwise FromRE, but also as a whole
 genericFromAltK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
@@ -243,23 +246,27 @@ supplyCatInfo f xs = f (catInfo xs) xs
 
 genericRepeatCat :: Extension -> Cxt -> OK [RE] -> OK [RE]
 genericRepeatCat rs c xso  |  hasChanged xso || hasChanged yso
-                           =  genericCatK rs c (catInfo (valOf yso)) `app` yso
+                           =  genericCatK rs c (catInfo ys) `app` yso
                            |  otherwise
                            =  yso
                               where
-                              yso = kataliftCat (katahom (trg rs) NoCxt) `app` xso
+                              yso =  kataliftCat (katahom (trg rs) NoCxt) `app` xso
+                              ys  =  valOf yso
 
 -- inputs have been evaluated
 genericCatK :: Extension -> Cxt -> Info -> [ToRE] -> OK [ToRE]
-genericCatK rs c i xs =
-  listComp catInfo (genericFromCatK rs c) (catRuleOK(kcat(src rs)) c) i xs
+genericCatK rs c i xs |  plural xs
+                      =  listComp catInfo (genericFromCatK rs c) (catRuleOK(kcat(src rs)) c) i xs
+                      |  otherwise
+                      =  unchanged xs
 
 genericFromCatK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
 genericFromCatK _  c _ []       =  unchanged []
+genericFromCatK rs c _ [Opt x]  =  single $ katahom (trg rs) OptCxt x
 genericFromCatK rs c _ [x]      =  single $ katahom (trg rs) c x
 genericFromCatK rs OptCxt i xs  |  all ewp xs && not (ew i)
                                 =  genericFromCatK rs OptCxt i{ew=True} xs
-genericFromCatK rs c i xs       =  genericRepeatCat rs c $ catRuleOK(catStep rs) c i xs           
+genericFromCatK rs c i xs       =  genericRepeatCat rs c $ catRuleOK(catStep rs) c i xs
 
 noChangeRule :: RewRule
 noChangeRule c i xs = unchanged xs
@@ -270,40 +277,78 @@ mkTransform kh = valOf . katahom kh RootCxt
 extension2trafo :: Extension -> RE -> RE
 extension2trafo ext = thisfun (target ext)
 
-subaltsLtd, subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
+subcatsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
 subcatsLtd m os  =  [ (ys,\ys'->xs++ys'++zs)
                     | (xs,ys,zs)<- maxSegsLtd size m os,
                       plural ys, not (null xs && null zs), not (all isSym ys) ]
 
+-- the extra boolean is True iff the omitted REs satisfy ewp
+-- in that case it is not necessary that the subsequence is plural
+subaltsLtd :: Int -> [RE]->[([RE],[RE]->[RE])]
 subaltsLtd m os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                     | (xs,ys)<- maxSubsLtd size m os,
                       plural xs, not (null ys), not (all isSym xs) ]
 
-subaltsCatalogue, subcatsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
+subcatsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
 subcatsCatalogue f os  =  [ (ys,\ys'->xs++ys'++zs)
                           | (xs,ys,zs)<- segsLtd size (f 1) os,
                              plural ys, not (null xs && null zs),
                              not (all isSym ys),
                              f (alphaLength $ listAlpha ys) >= listSize ys ]
 
+subaltsCatalogue :: (Int->Int) -> [RE]->[([RE],[RE]->[RE])]
 subaltsCatalogue f os  =  [ (xs,\xs'->nubMerge (claim "ordered alts" strictlyOrdered xs') ys)
                           | (xs,ys)<- subsLtd size (f 1) os,
-                             plural xs, not (null ys),
-                             not (all isSym xs),
-                             f (alphaLength $ listAlpha xs) >= listSize xs ]
+                            plural xs, not (null ys),
+                            not (all isSym xs),
+                            f (alphaLength $ listAlpha xs) >= listSize xs ]
 
 altClosureLtd :: Int -> RewRule -> RewRule
-altClosureLtd n r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsLtd n xs,
-                                                    let Alt j _ = altSubseq (Alt i xs) ys,
-                                                    yso <- [r c j ys],
-                                                    hasChanged yso, let ys'=valOf yso ]
+altClosureLtd n r c i xs =
+      list2OK xs [ ys'' | let d = freshChar (al i),
+                          let (b,xs') = addFreshLam (ew i) d xs,
+                          (ys,f) <- subaltsLtd n xs',
+                          let Alt j _ = if b then alt ys else altSubseq (Alt i xs) ys,
+                          yso <- [r c j ys],
+                          hasChanged yso, let ys' = valOf yso,
+                          let ys'' = removeFreshLam b d $ f ys' ]
+
+-- fresh z* is added to a subalt as a placeholder for an omitted optional alternative
+-- this is not needed if either there cannot be such an alternative (boolean parameter)
+-- or if the subalt is not ewp
+addFreshLam :: Bool -> Char -> [RE] -> (Bool,[RE])
+addFreshLam False _ xs = (False,xs)
+addFreshLam True  c xs | any ewp xs
+                       = (True, sort $ Rep(Sym c) : xs)
+                       | otherwise
+                       = (False,xs)
+
+-- after transforming xs+c* into ys, remove c* from ys;
+-- because c is fresh it can only be at the surface of ys;
+-- because trafos report success via singletons, they need to be treated separately
+-- if boolean parameter is False then no c* had been added in the first place
+removeFreshLam :: Bool -> Char -> [RE] -> [RE]
+removeFreshLam    False _ xs = xs
+removeFreshLam    True  c [e] | elemAlpha c (alpha e)
+                              = removeChar c e
+                              | otherwise
+                              = [e]
+removeFreshLam    True  c xs = filter (/= Rep(Sym c)) xs
+
+-- remove char from an expression it contains, can only be at alt-surface though
+removeChar :: Char -> RE -> [RE]
+removeChar d (Alt _ xs) = filter (/= Rep(Sym d)) xs
+removeChar d _          = error "fresh Char went deep"
 
 altClosureCatalogue :: (Int->Int) -> RewRule -> RewRule
-altClosureCatalogue g r c i xs = list2OK xs [ f ys' | (ys,f)<-subaltsCatalogue g xs,
-                                                    let Alt j _ = altSubseq (Alt i xs) ys,
-                                                    yso <- [r c j ys],
-                                                    hasChanged yso, let ys'=valOf yso,
-                                                    listSize ys' < si j ]
+altClosureCatalogue g r c i xs =
+      list2OK xs [ nxs | let d       = freshChar (al i),
+                         let (b,xs') = addFreshLam (ew i) d xs,
+                         (ys,f) <- subaltsCatalogue g xs',
+                         let Alt j _ = if b then alt ys else altSubseq (Alt i xs) ys,
+                         yso <- [r c j ys],
+                         hasChanged yso, let ys'=valOf yso,
+                         let nxs=removeFreshLam b d $ f ys', listSize nxs < si i ]
 
 altSizeBound :: Int -> RewRule -> RewRule
 altSizeBound n r c i xs | si i <= n
@@ -398,7 +443,7 @@ checkWith p = checkWith' RootCxt
     checkWith' c Lam             =  lamP p c
     checkWith' c (Sym d)         =  symP p c d
     checkWith' c (Cat i xs)      =  all (checkWith' NoCxt) xs && catP p oc i xs
-                                    where oc = outerCxt (ew i) c 
+                                    where oc = outerCxt (ew i) c
     checkWith' c (Alt i xs)      =  all (checkWith' oc) xs && altP p oc i xs
                                     where oc = outerCxt (ew i) c
     checkWith' c (Rep re)        =  checkWith' RepCxt re && repP p c re
@@ -426,13 +471,13 @@ degradeTop (Rep x)    = Rep $ degradeTop x
 degradeTop (Opt x)    = Opt $ degradeTop x
 degradeTop x          = x -- symbols, Lam, Emp
 
--- Note that the minimal form of (a1+..+ak)x, where each ai is a symbol,
--- is (a1+..+ak)x', where x' is the minimal form of x.
+-- Note that the minimal form of ax, where a is a symbol,
+-- is ax', where x' is the minimal form of x.
 -- Thus, when transforming a Cat in a NoCxt we can remove
 -- initial+final segments of charsets, transform the remaining core, and then re-attach those segments.
 -- Should the core be a singleton, no trafo is necessary, but instead the whole Cat inherits the grade of the core.
-charSetFactReduction :: RewRule -> RewRule
-charSetFactReduction r c i xs  |  c>NoCxt || ew i || (null cs && null ds)
+symbolFactReduction :: RewRule -> RewRule
+symbolFactReduction r c i xs   |  c>NoCxt || ew i || (null cs && null ds)
                                =  r c i xs
                                |  null ms
                                =  changed [upgradeRE c Minimal (Cat i xs)]
@@ -441,45 +486,89 @@ charSetFactReduction r c i xs  |  c>NoCxt || ew i || (null cs && null ds)
                                |  otherwise
                                =  changed [upgradeRE c (gradeOf c (head ms)) (Cat i xs)]
                                    where
-                                   (ms,ds)   = spanEnd singleChar rs
-                                   (cs,rs)   = span singleChar xs
+                                   (ms,ds)   = spanEnd isSym rs
+                                   (cs,rs)   = span isSym xs
                                    (Cat j _) = catSegment (Cat i xs) ms -- catInfo+inherited grade
 
 -- principle: if disjointAltArg x y then minimal(x+y)=minimal x+minimal y
--- in all contexts we recognize
-disjointAltArg :: RE -> RE -> Bool
+-- in NoCxt/OptCxt, modulo keeping ewp representatives in context
+-- note for RepCxt: (a + b(a(b+c))*)* === (a + b(ac)*)*
+-- hence RepCxt need the stronger disjointAlpha separation
+disjointAltArg, disjointAlpha :: RE -> RE -> Bool
 disjointAltArg x y = isEmptyAlpha $ (fir x .&&. fir y) .||. (las x .&&. las y)
 
+disjointAlpha x y = isEmptyAlpha (alpha x .&&. alpha y)
+
 -- partition an alt-set into mutually disjoint subsets
--- the fiA/laA alphabets are the total intitial/final alphabet for the combined list,
+-- the alA alphabet is the total alphabet for the combined list,
 -- allowing for a shortCut should we encounter a maximally-connecting subRE
-partitionAltElems :: Alphabet -> Alphabet-> [RE] -> [RE]
-partitionAltElems _ _ [] = []
-partitionAltElems fiA laA (x:xs)
-    |  fir x==fiA || las x==laA -- x cannot be disjoint to any re in the list
+partitionAltElems :: Alphabet -> [RE] -> [RE]
+partitionAltElems _ [] = []
+partitionAltElems alA (x:xs)
+    |  alpha x==alA -- x cannot be disjoint to any re in the list
     = [ alt (x:xs) ]
     |  null similar
-    =  x : partitionAltElems (fiA .\\. fir x) (laA .\\. las x) xs
-    |  fir x==fir nx && las x==las nx -- although the connected component changed we know it cannot change again
-    =  nx : partitionAltElems (fiA .\\. fir x) (laA .\\. las x) disjoint
+    =  x : partitionAltElems (alA .\\. alpha x) xs
+    |  alpha x==alpha nx -- although the connected component changed we know it cannot change again
+    =  nx : partitionAltElems (alA .\\. alpha x) disjoint
     |  otherwise -- increase connected component, and repeat
-    =  partitionAltElems fiA laA (nx:disjoint)
+    =  partitionAltElems alA (nx:disjoint)
     where
-    (disjoint,similar) = partition (disjointAltArg x) xs
+    (disjoint,similar) = partition (disjointAlpha x) xs
     nx                 = alt (x:similar)
+
+-- more effective partitioning, sound for NoCxt/OptCxt
+-- this splits alternatives into clusters with connected fir/las alphabets
+partitionAltElems2 :: Alphabet -> Alphabet -> [RE] -> [RE]
+partitionAltElems2 _ _ [] = []
+partitionAltElems2 fiA laA (x:xs)
+        |  fir x==fiA || las x==laA -- x cannot be disjoint to any re in the list
+        = [ alt (x:xs) ]
+        |  null similar
+        =  x : partitionAltElems2 (fiA .\\. fir x) (laA .\\. las x) xs
+        |  fir x==fir nx && las x==las nx -- although the connected component changed we know it cannot change again
+        =  nx : partitionAltElems2 (fiA .\\. fir x) (laA .\\. las x) disjoint
+        |  otherwise -- increase connected component, and repeat
+        =  partitionAltElems2 fiA laA (nx:disjoint)
+        where
+        (disjoint,similar) = partition (disjointAltArg x) xs
+        nx                 = alt (x:similar)
+
+
 
 -- the partition reduction is potentially quadratic, thus should not be applied at initial stages
 altPartitionReduction :: RewRule -> RewRule
 altPartitionReduction r c i xs | singularAlpha (fi i) || singularAlpha (la i) || not (plural salts)
-                               = r c i xs
-                               | null alts -- all singletons, no altTrafo needed
+                               = r c i xs  -- decompositon failed, use rule directly
+                               | null alts -- all singletons/minimal, no altTrafo needed
                                = changed [upgradeRE c (minimum (map (gradeOf c) xs)) (Alt i xs)]
-                               | all (not . plural) newalts -- after trafo all are singletons, so we can grade
-                               = changed [upgradeRE c (minimum (map (gradeOf c) nxs)) (alt nxs)]
                                | otherwise
                                = updateEQ xs nxs
                                  where
-                                 salts        = partitionAltElems (fi i)(la i) xs
-                                 (alts,nalts) = partition isAlt salts
-                                 newalts      = [ valOf $ r c j ys | Alt j ys <- alts] -- apply trafo to subalts
+                                 d            = freshChar (al i)
+                                 salts        | c==RepCxt
+                                              = partitionAltElems (al i) xs
+                                              | otherwise
+                                              = partitionAltElems2 (fi i)(la i) xs
+                                 salts2       | not (ew i)
+                                              = salts
+                                              | otherwise
+                                              = map freshify salts
+                                 (alts,nalts) = partition composite salts2
+                                 newalts      = [ removeFreshLam (ew i) d $ valOf $ r c j ys | Alt j ys <- alts]
                                  nxs          = nubSort (nalts ++ concat newalts)
+                                 composite x  = isAlt x && gradeOf c x /= Minimal
+                                 freshify x   | simpleAltComponent x
+                                              = x
+                                              | otherwise
+                                              = alt [Rep(Sym d),x]
+
+-- x satisfies simpleAltElem if minimal(x+z*)=(minimal x)+z*, where z is fresh
+-- the implementation gives a sufficient condition
+simpleAltComponent (Alt i xs) = not (ew i) || all simpleAltComponent xs
+simpleAltComponent (Rep x)    = simpleRepBody x
+simpleAltComponent x          = not (ewp x)
+simpleRepBody (Sym _)    = True
+simpleRepBody (Alt i xs) = not(ew i) && all simpleRepBody xs
+simpleRepBody (Cat _ xs) = all simpleRepBody xs
+simpleRepBody _          = False

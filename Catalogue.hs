@@ -42,7 +42,7 @@ minimalEquiv c re  |  -- trace (show re)
                       n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
                       alphabet = alpha re
-                      alphalist = charList re 
+                      alphalist = charList re
                       fwd = rename $ zip alphalist ['a'..]
                       bwd = rename $ zip ['a'..] alphalist
 
@@ -86,7 +86,7 @@ treeFileName sigma n = "semcatalogue/TREE-"++sigma++"-"++show n++".txt"
 
 createTreeFile :: String -> Int -> IO()
 createTreeFile sigma n = writeTree sigma n $
-                         pruneTree ((:[]) . beforeTrans RootCxt . pickMinList) $
+                         pruneTree ((:[]) . beforeTrans RootCxt . catalogueMinList) $
                          poTree sigma n
 
 writeTree :: String -> Int -> RB RE -> IO()
@@ -132,9 +132,10 @@ minByList constr c i xs =
           rec = contextFunction c re
           unwrap RepCxt x |  isRep x
                           =  unRep x
-                          |  otherwise
-                          =  error $ show x ++ " is a non-* minimal equivalent of " ++
-                                     show rec
+                          |  size x>si i
+                          =  unOpt x
+                          |  otherwise -- shrinks in size, so...
+                          =  x -- no longer an error, but signalling x*===x?
           unwrap OptCxt x |  isOpt x
                           =  unOpt x
                           |  size x> si i

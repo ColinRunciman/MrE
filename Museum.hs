@@ -49,9 +49,9 @@ splitCxt (Alt _ xs) c False | not (null csplit)
                               where
                               csplit = [ (\e'-> alt[f e',s],e,d)
                                       | (s,ys)<-itemRest xs, singleCharC s, all (disjoint s) ys, let (f,e,d)=splitCxt (alt ys) (max c NoCxt) True ]
-splitCxt (Cat _ (x:xs)) c b | singleChar x
+splitCxt (Cat _ (x:xs)) c b | isSym x
                             = let (f,e,d)=splitCxt (cat xs) NoCxt b in (\e'->cat[x,f e'],e,d)
-                            | singleChar l
+                            | isSym l
                             = let (f,e,d)=splitCxt (cat ini) NoCxt b in (\e'->cat[f e',l],e,d)
                               where Just(ini,l) = unsnoc (x:xs)
 splitCxt (Rep x)  _ False   = let (f,e,d)=splitCxt x RepCxt True in (Rep . f,e,d)
@@ -73,5 +73,3 @@ singleCharC _          = False
 
 museum :: RE -> RE
 museum x = silentMuseumMethod x
-
-

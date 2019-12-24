@@ -10,6 +10,7 @@ minratios=MinRatios
 timscript=allTimes
 effscript=allEffect
 runtimes=RunTimes
+effdata=EffectData
 else
 semCreate=CreateSemCatalogue.exe
 synCreate=CreateSynCatalogue.exe
@@ -22,6 +23,7 @@ minratios=MinRatios.exe
 timscript=allTimes.cmd
 effscript=allEffects.cmd
 runtimes=RunTimes.exe
+effdata=EffectData.exe
 endif
 
 progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minratios)
@@ -29,13 +31,13 @@ progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minrat
 $(semCreate): Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs OneLetterFactorization.hs
+StarPromotion.hs OneLetterFactorization.hs Stellation.hs
 	ghc -O CreateSemCatalogue
 
 $(synCreate): Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
 OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs
+StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs Stellation.hs
 	ghc -O CreateSynCatalogue
 
 $(effect): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
@@ -72,7 +74,7 @@ SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O MrE
 
 ifndef OS
-popproxy.txt: $(reg) allReg 
+popproxy.txt: $(reg) allReg
 	./allReg
 else
 popproxy.txt: $(reg) allReg.cmd
@@ -106,7 +108,7 @@ endif
 
 $(tim): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs StarPromotion.hs \
+Pressing.hs Queue.hs StarPromotion.hs Stellation.hs \
 SyntaxCatalogue.hs Tim.hs Parameters.hs OneLetterFactorization.hs \
 popproxy.txt semproxy.txt synproxy.txt
 	ghc -O Tim
@@ -114,12 +116,22 @@ popproxy.txt semproxy.txt synproxy.txt
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
 
-runTimesTables.tex: $(runtimes) $(timscript) $(mrE) popproxy.txt
+runTimesTables.tex: $(runtimes) $(timscript) $(mrE) popproxy.txt timproxy.txt
 ifndef OS
 	./RunTimes > runTimesTables.tex
 else
 	RunTimes.exe > runTimesTables.tex
 endif
+
+effectDataTables.tex: effproxy.txt $(effect) $(effscript) $(effdata) popproxy.txt
+ifndef OS
+	./EffectData > effectDataTables.tex
+else
+	EffectData.exe > effectDataTables.tex
+endif
+
+$(effdata): EffectData.hs ReadTable.hs
+	ghc -O EffectData.hs
 
 $(runtimes): RunTimes.hs ReadTable.hs
 	ghc -O RunTimes.hs

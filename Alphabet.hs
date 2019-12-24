@@ -1,6 +1,6 @@
 module Alphabet (
   Alphabet, emptyAlpha, isEmptyAlpha, singularAlpha, pluralAlpha,
-  elemAlpha, subAlpha, strictSubAlpha,
+  elemAlpha, subAlpha, strictSubAlpha, freshChar,
   char2Alpha, string2Alpha, alpha2String, alphaLength,
   unionA, (.||.), (.&&.), (.\\.)
   -- charSet,
@@ -81,6 +81,9 @@ firstChar cs  |  isEmptyAlpha cs
               |  otherwise
               =  Just $ toEnum $ lastIndex cs + firstCharInt
 
+freshChar :: Alphabet -> Char
+freshChar a = maybe 'a' succ $ lastChar a
+
 subAlpha :: Alphabet -> Alphabet -> Bool
 subAlpha cs ds = (cs .&. ds) == cs
 
@@ -100,7 +103,7 @@ lastIndex n = 1+lastIndex(div n 2)
 
 firstIndex :: Alphabet -> Int
 firstIndex 0 = 32
-firstIndex n | odd n 
+firstIndex n | odd n
              = 0
              | otherwise
              = 1+firstIndex(div n 2)

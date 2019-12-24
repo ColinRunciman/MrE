@@ -1,6 +1,6 @@
 module Comparison (
   (===), (<<==), (====), istransitive, eqr, subExpr, strictSubExpr,
-  sublang, compRE, (&&&), sizeOrder, pickMin, pickMinList ) where
+  sublang, compRE, (&&&), sizeOrder, pickMin, pickMinList, catalogueMinList ) where
 
 import Data.Maybe
 import Data.Bits
@@ -18,7 +18,7 @@ import Queue
 import Derivative
 
 -- This module defines various comparison functions over regular expressions
--- or their languages.  
+-- or their languages.
 
 (&&&) :: Ordering -> Ordering -> Ordering
 (&&&) = mappend
@@ -41,6 +41,20 @@ pickMin x y = minimumBy sizeOrder [x,y]
 pickMinList :: [RE] -> RE
 pickMinList xs = minimumBy sizeOrder xs
 
+-- for a catalogue, an Opt is favoured over an equally-sized Rep
+-- because Opt's can be dropped in an ewp context, e.g.
+-- (bbb*)* === (bbb*)? and bigewpexp+(bbb*)*===bigewpexp+bbb*
+catalogueMinList :: [RE] -> RE
+catalogueMinList xs = minimumBy sizeCatOrder xs
+
+catalogueCompare :: RE -> RE -> Ordering
+catalogueCompare (Opt x) (Rep y) = LT
+catalogueCompare (Rep x) (Opt y) = GT
+catalogueCompare x y             = compare x y
+
+sizeCatOrder :: RE-> RE -> Ordering
+sizeCatOrder x y = compare (size x)(size y) &&& catalogueCompare x y
+
 -- Tests for syntactic subexpressions (reflexive and irreflexive).
 
 subExpr :: RE -> RE -> Bool
@@ -51,7 +65,7 @@ strictSubExpr x (Alt _ ys)  =  any (subExpr x) ys ||
                                or [ x == mkAlt ys'
                                   | ys' <- sublists ys, ys' /= ys, length ys' > 1 ]
 strictSubExpr x (Cat _ ys)  =  any (subExpr x) ys ||
-                               or [ x == mkCat ys' 
+                               or [ x == mkCat ys'
                                   | ys' <- segments ys, ys' /= ys, length ys' > 1 ]
 strictSubExpr x (Rep y)     =  subExpr x y
 strictSubExpr x (Opt y)     =  subExpr x y
@@ -76,7 +90,7 @@ sublang Emp x           =  True
 sublang Lam x           =  ewp x
 sublang x   y           =  isJust $ sublaHyp1 S.empty x y
 
--- first RE will never be Emp, second could be 
+-- first RE will never be Emp, second could be
 sublaHyp1 :: Hypothesis -> RE -> RE -> Maybe Hypothesis
 sublaHyp1 _ x          Emp         =  Nothing
 sublaHyp1 _ x          y           |  ewp x && not(ewp y)
@@ -114,7 +128,7 @@ sublaHyp2 h (Cat _ (Sym c:rs))     y  =  sublaHyp1 h (mkCat rs) (derive c y)
 sublaHyp2 h (Cat _ (Alt _ xs:rs))  y  =  let tl=mkCat rs in
                                                sublaHypAlts [cat [x, tl] | x<-xs ] y h
 sublaHyp2 h (Cat _ (Opt x:rs))     y  =  let tl=mkCat rs in
-                                              sublaHyp1 h tl y >>= 
+                                              sublaHyp1 h tl y >>=
                                               \h' -> sublaHyp1 h' (cat [x, tl]) y
 sublaHyp2 h inp@(Cat _ (Rep x:rs)) y  =  sublaHyp1 h (mkCat rs) y >>=
                                            \h' -> sublaHyp1 h' (cat [x, inp]) y
@@ -193,7 +207,7 @@ compREHyp1 o (Emp,_)       =  result o LT
 compREHyp1 o (_  ,Emp)     =  result o GT
 compREHyp1 o (Lam,Lam)     =  solveGoals o
 compREHyp1 o (Lam,x)       =  result o $ if ewp x then LT else GT
-compREHyp1 o (x,Lam)       =  result o $ if ewp x then GT else LT                  
+compREHyp1 o (x,Lam)       =  result o $ if ewp x then GT else LT
 compREHyp1 o (Sym c,Sym d) =  orderSelect o (compare c d) (solveGoals o)
 compREHyp1 o (Opt x,Opt y) =  compREHyp1 o (x,y)
 compREHyp1 o (x,y)         =  orderSelect o (basicOrd x y) (compREHyp2n o (alpha2String $ fir x) x y)
@@ -283,4 +297,3 @@ mergeUF m1 m2  |  Map.size m1 <= Map.size m2
 
 addToUF :: UFRE -> UFRE -> UFRE
 addToUF m1 m2  = Map.foldrWithKey unionUF m2 m1
-
