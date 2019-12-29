@@ -9,22 +9,27 @@ sizes="10 20 40 80 160 320 640 1280 2560"
 asizes="1 2 3 4 8 16"
 
 timelimit=$1
+effectsdir=effects$2
+timingsdir=timings$2
 
 allsizes() {
 for i in $sizes
 do for j in $asizes
-do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
+# do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
 #  ./Tim $1 -S${i} -W${j} >> timings/$2
+./Effect $1 -S${i} -W${j} -T$timelimit $3 >> $effectsdir/$2
+./Tim    $1 -S${i} -W${j} -T$timelimit $3 >> $timingsdir/$2
 done
 done
 }
-if test -d "effects" ; then rm effects/* ; else mkdir effects ; fi
-allsizes -l promoted
-allsizes -g Gruber-Gulan
-allsizes -n normal
-allsizes -f fused
-allsizes -p pressed
-allsizes -s stellar
-allsizes -c semsearch
-allsizes -y synsearch
-allsizes -m museum
+if test -d "$effectsdir" ; then rm $effectsdir/* ; else mkdir $effectsdir ; fi
+if test -d "$timingsdir" ; then rm $timingsdir/* ; else mkdir $timingsdir ; fi
+allsizes -l promoted $2
+allsizes -g Gruber-Gulan $2
+allsizes -n normal $2
+allsizes -f fused $2
+allsizes -p pressed $2
+allsizes -s stellar $2
+allsizes -c semsearch $2
+allsizes -y synsearch $2
+# allsizes -m museum $2

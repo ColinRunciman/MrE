@@ -7,7 +7,6 @@ reg=Reg
 test=Test
 tim=Tim
 minratios=MinRatios
-timscript=allTimes
 effscript=allEffect
 runtimes=RunTimes
 effdata=EffectData
@@ -20,7 +19,6 @@ reg=Reg.exe
 test=Test.exe
 tim=Tim.exe
 minratios=MinRatios.exe
-timscript=allTimes.cmd
 effscript=allEffects.cmd
 runtimes=RunTimes.exe
 effdata=EffectData.exe
@@ -52,19 +50,19 @@ endif
 
 effproxy.txt: $(effect) $(effscript) popproxy.txt
 ifndef OS
-	./allEffect
+	./allEffect 100
 else
-	allEffects.cmd
+	allEffects.cmd 100
 endif
 	echo effects > effproxy.txt
 
-timproxy.txt : $(tim) $(mre) $(timscript)
+effproxy-u.txt: $(effect) $(effscript) popproxy.txt
 ifndef OS
-	./allTimes
+	./allEffect 100 -u
 else
-	allTimes.cmd
+	allEffects.cmd 100 -u
 endif
-	echo times > timproxy.txt
+	echo effects > effproxy-u.txt
 
 $(mrE): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
@@ -116,11 +114,17 @@ popproxy.txt semproxy.txt synproxy.txt
 runTimes.pdf: runTimes.tex runTimesTables.tex
 	pdflatex runTimes.tex
 
-runTimesTables.tex: $(runtimes) $(timscript) $(mrE) popproxy.txt timproxy.txt
+runTimesTables.tex: $(runtimes) $(effscript) $(mrE) popproxy.txt effproxy.txt
 ifndef OS
 	./RunTimes > runTimesTables.tex
 else
 	RunTimes.exe > runTimesTables.tex
+endif
+runTimesTablesU.tex: $(runtimes) $(effscript) $(mrE) popproxy.txt effproxy-u.txt
+ifndef OS
+	./RunTimes -u > runTimesTablesU.tex
+else
+	RunTimes.exe -u > runTimesTablesU.tex
 endif
 
 effectDataTables.tex: effproxy.txt $(effect) $(effscript) $(effdata) popproxy.txt
@@ -128,6 +132,12 @@ ifndef OS
 	./EffectData > effectDataTables.tex
 else
 	EffectData.exe > effectDataTables.tex
+endif
+effectDataTablesU.tex: effproxy-u.txt $(effect) $(effscript) $(effdata) popproxy.txt
+ifndef OS
+	./EffectData -u > effectDataTablesU.tex
+else
+	EffectData.exe -u > effectDataTablesU.tex
 endif
 
 $(effdata): EffectData.hs ReadTable.hs

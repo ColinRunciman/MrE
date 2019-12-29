@@ -4,7 +4,7 @@ module Expression (
   alt, cat, opt, rep, mkAlt, mkCat, singleChar,
   nubMergeAltItems, concatCatItems,
   altSubseq, catSegment,
-  ewp, alpha, alphaL, canonicalRE, isCanonical,
+  ewp, alpha, alphaL, canonicalRE, isCanonical, eraseSigma,
   swa, fir, las, firAlt, firCat, lasAlt, lasCat, altInfo, catInfo,
   size, listSize, listAlpha,
   mirror, rename,
@@ -281,6 +281,14 @@ alphaL = foldHomInfo $ HomInfo { hiemp = [], hilam = [], hisym = (:[]),
                                  hialt = const (nub . concat),
                                  hicat = const (nub . concat),
                                  hirep = id, hiopt = id }
+
+-- erase all characters of a subalphabet
+-- useful for sublang comparisons
+eraseSigma :: Alphabet -> RE -> RE
+eraseSigma sigma = foldHomInfo $
+                   HomInfo { hiemp = Emp, hilam=Lam,
+                             hisym = \c -> if elemAlpha c sigma then Emp else Sym c,
+                             hialt = const alt, hicat = const cat, hirep = rep, hiopt=opt }
 
 -- A more general class of homomorphisms is applied with information about
 -- context (type Cxt).

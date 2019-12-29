@@ -11,7 +11,7 @@ main = do
   args <- getArgs
   let p = argsToParams args
   input <- contents (inputsource p)
-  process p (lines input)
+  timedCommand p$ process p (lines input)
 
 process :: Parameters -> [String] -> IO()
 process p ss | verbose p
@@ -20,5 +20,4 @@ process p ss | verbose p
              | otherwise
              = mapM_ (putStrLn . f) ss
                where
-               f = stringTransFun (trafo p)
-
+               f = stringTransFun p

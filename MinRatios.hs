@@ -21,7 +21,7 @@ reportRatioFor :: [RE] -> Grade -> IO ()
 reportRatioFor xs t  =  do putStr (show t ++ ": ")
                            putStrLn $ printf "%.3f" $
                              geomean $ map geomean $ chunksOf chunkSize $
-                             map (sizeRatio . transFun t) xs
+                             map (sizeRatio . transFun (defaults{trafo=t})) xs
 
 sizeRatio :: RE -> Double
 sizeRatio x  =  fromIntegral (size x) / fromIntegral minSize

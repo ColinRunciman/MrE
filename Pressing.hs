@@ -1,5 +1,5 @@
 module Pressing (
-  press, pressAltListOne, pressCatListOne, pressP,
+  press, pressU, pressAltListOne, pressCatListOne, pressP,
   rollList, prefixCom, suffixCom, pressKP ) where
 
 import Data.List (minimumBy, nubBy, partition)
@@ -35,7 +35,7 @@ x *///* xs = fmap (filter (not . isEmp)) $ lift2SeqAll (x *//*) xs
 -- If the result is Just w then x+w === x+y and size w < size y.
 
 (*//*) :: RE -> RE -> Maybe RE
-x        *//* x'         |  x' `sublang` x 
+x        *//* x'         |  x' `sublang` x
                          =  Just Emp
 Opt x    *//* y          |  not $ ewp y
                          =  x *//* y
@@ -68,12 +68,12 @@ Rep x    *//* y          |  isJust y'
                             [ pressCat[re,b] | (bs,b)<-suffixCom y, not(null bs),
                                 b `sublang` Rep x, Just re<-[Rep x *//* pressCat bs]]
                             where
-                            y' = x *//* y 
+                            y' = x *//* y
 Sym d    *//* y          |  not (ewp y) && (d `elemAlpha` swa y) && isCat y
                          =  listToMaybe $ [ pressCat[Sym d, ntl] | (Sym d,tl) <- lMostCom' y,
                                             Just ntl <- [ Lam *//* mkCat tl] ]   ++
                                           [ pressCat[nlt, Sym d] | (lt,Sym d) <- rMostCom' y,
-                                            Just nlt <- [ Lam *//* mkCat lt] ]                    
+                                            Just nlt <- [ Lam *//* mkCat lt] ]
 x        *//* y          |  isCat x && isCat y
                          =  listToMaybe $
                             [ pressCat[b,re] | (a,as)<-prefixCom x, (b,bs)<-prefixCom y,
@@ -151,7 +151,7 @@ Opt x *=?=* y        |  isCat x && not (null cand1)
                      =  Just  $ pressOptCatList(cat (yin ++ [yn])) ++ [Opt yn]
                      |  isCat x && not (null cand2)
                      =  Just $ pressOptCatList ym ++ pressOptCatList(cat(ytl ++[ym]))
-                     where   
+                     where
                      cand1 = [(y'',ys) | (ys,Opt y') <- rMostCom' x, Just y''<-[eqr y' y]]
                      (yn,yin) = head cand1
                      cand2 = [(y'',xs) | (Opt y',xs) <- lMostCom' x, Just y''<-[eqr y' y]]
@@ -160,7 +160,7 @@ y *=?=* Opt x        |  isCat x && not (null cand1)
                      =  Just $ pressOptCatList yn ++pressOptCatList(cat ([yn] ++ ytl))
                      |  isCat x && not (null cand2)
                      =  Just $ pressOptCatList(cat([ym] ++ yin)) ++ [ Opt ym]
-                        where   
+                        where
                         cand1 = [ (y'',ys) | (Opt y',ys) <- lMostCom' x, Just y''<-[eqr y' y]]
                         (yn,ytl) = head cand1
                         cand2 = [ (y'',xs) | (xs,Opt y') <- rMostCom' x, Just y''<-[eqr y' y]]
@@ -188,7 +188,7 @@ x *===* y      |  isJust absleft
                |  isJust absright
                =  fmap (\z->toList z ++[y]) absright
                |  otherwise
-               =  fmap (:[]) $ x *==* y 
+               =  fmap (:[]) $ x *==* y
                   where
                   absleft = x *>* y
                   absright = x *<* y
@@ -331,12 +331,12 @@ Opt y *==* x          |  not $ null cands
                       cands2 = [ pressAlt [x,tyx]
                                | ewp x, Just yx<- [ y*===*x],
                                  let tyx=pressCat yx, size tyx <= size y ]
-x *==* a@(Alt i xs)   | not(null cands) 
+x *==* a@(Alt i xs)   | not(null cands)
                       = Just $ head cands
-                        where                       
+                        where
                         cands = [ pressAlt [xy, cat [x, altSubseq a ys]]
                                 | (y,ys) <- itemRest xs, Just xy <- [x *<=* y], size xy < size y ]
-a@(Alt i xs) *==* x   | not(null cands) 
+a@(Alt i xs) *==* x   | not(null cands)
                       = Just $ head cands
                         where
                         cands = [ pressAlt [yx, cat [altSubseq a ys, x]]
@@ -390,7 +390,7 @@ commute (x, y) |  x == y
 -- commuteStrict does not commute identical elements
 
 commuteStrict :: (RE,RE) -> Maybe (RE,RE)
-commuteStrict (x,y) =  if x/=y then commute (x,y) else Nothing  
+commuteStrict (x,y) =  if x/=y then commute (x,y) else Nothing
 
 -- For commuting over Alt items, to the right.
 commuteAlternativeR :: (RE,RE) -> Maybe(RE,RE)
@@ -410,7 +410,7 @@ commuteAlternativeL p            | isJust p'
 commuteAlternativeL (Cat _ xs,x) = Just(head xs,previousCat(tail xs++[x]))
 commuteAlternativeL _            = Nothing
 
-commuteR :: (RE,RE) -> Maybe (RE,RE)                 
+commuteR :: (RE,RE) -> Maybe (RE,RE)
 commuteR (x, Alt _ ys)       |  all isJust coms && isJust eqrs
                              =  Just $ (pressAlt ys', x')
                                 where coms       =  [commuteAlternativeR (x,y) | y <- ys]
@@ -427,7 +427,7 @@ commuteR (x, Rep (Cat i ys)) |  not $ null candidates
                                                            Just x' <- [eqrCommute x'' x]]
                                 nl=head candidates
 commuteR (x, Rep y)          |  isJust com && x == x' && y == y'
-                             =  Just (previousRep y, x) 
+                             =  Just (previousRep y, x)
                                 where com = commute (x,y); Just (y',x') = com
 commuteR (x, Opt (Cat i ys)) |  not $ null candidates
                              =  Just (pressOpt $ cat nl, head nl)
@@ -436,12 +436,12 @@ commuteR (x, Opt (Cat i ys)) |  not $ null candidates
                                                         Just x' <- [eqrCommute x'' x]]
                                 nl=head candidates
 commuteR (x, Opt y)          |  isJust com && x == x'
-                             =  Just (Opt y', x) 
+                             =  Just (Opt y', x)
                                 where com = commute (x,y); Just (y',x') = com
-commuteR _                   =  Nothing 
+commuteR _                   =  Nothing
 
 
-commuteL :: (RE,RE) -> Maybe (RE,RE)                 
+commuteL :: (RE,RE) -> Maybe (RE,RE)
 commuteL (Alt _ xs, y)       |  all isJust coms && isJust eqrs
                              =  Just $ (y', pressAlt xs')
                                 where coms       =  [commuteAlternativeL (x,y) | x <- xs]
@@ -458,7 +458,7 @@ commuteL (Rep (Cat i xs), y) |  not $ null candidates
                                                            Just y' <- [eqrCommute y'' y]]
                                 nl=head candidates
 commuteL (Rep x, y)          |  isJust com && x == x' && y == y'
-                             =  Just (y, previousRep x) 
+                             =  Just (y, previousRep x)
                                 where com = commute (x,y); Just (y',x') = com
 commuteL (Opt (Cat i xs), y) |  not $ null candidates
                              =  Just (last c, pressOpt $ cat c)
@@ -467,10 +467,10 @@ commuteL (Opt (Cat i xs), y) |  not $ null candidates
                                                         Just y' <- [eqrCommute y'' y]]
                                 c = head candidates
 commuteL (Opt x, y)          |  isJust com && y == y'
-                             =  Just (y, Opt x') 
+                             =  Just (y, Opt x')
                                 where com = commute (x,y); Just (y',x') = com
 commuteL _                   =  Nothing
-    
+
 -- lCom xs y = Just y' if y can commute through xs backwards
 -- (ie. leftwards) arriving as y'; rCom is similar but forwards
 
@@ -492,13 +492,13 @@ suffixCom :: RE -> [([RE],RE)]
 suffixCom x    =  nubBy (kernel snd) $
                   [ (xs',rollIfCat $ previousCat [suf,x])
                   | (xs,x) <- rMostCom' x,
-                    (xs',suf) <- (xs,Lam) : suffixCom (mkCat xs) ] 
+                    (xs',suf) <- (xs,Lam) : suffixCom (mkCat xs) ]
 
 prefixCom :: RE -> [(RE,[RE])]
 prefixCom x    =  nubBy (kernel fst) $
                   [ (rollIfCat $ previousCat [x,pre],xs')
                   | (x,xs) <- lMostCom' x,
-                    (pre,xs') <- (Lam,xs) : prefixCom (mkCat xs) ] 
+                    (pre,xs') <- (Lam,xs) : prefixCom (mkCat xs) ]
 
 -- fi/la/ew/sw cannot change under rolling, but so we rebuild attributes
 rollIfCat (Cat i xs) = mkCat $ rollList xs
@@ -544,11 +544,11 @@ rMostCom :: Bool -> RE -> [([RE],RE)]
 rMostCom b x  =  [([],pressOpt x) | b] ++ rMostCom' x
 
 rMostCom' Lam           =  []
-rMostCom' (Cat _ xs)    =  nubBy (kernel snd) $ 
+rMostCom' (Cat _ xs)    =  nubBy (kernel snd) $
                            [ (pre++suf'++xin,x'') | (pre, x:suf) <- allSplits xs,
                                                     Just (suf',x') <- [rCom x suf],
                                                     (xin,x'') <- rMostCom'  x' ]
-rMostCom' a@(Alt i xs)  =  ([],a) : nubBy (kernel snd) 
+rMostCom' a@(Alt i xs)  =  ([],a) : nubBy (kernel snd)
                            [ (nlt,dh) | (y,ys) <- itemRest xs, isCat y||any ewp ys,
                                         (lt,dh)<- rMostCom' y, ew i ===> ewp dh,
                                         let tlt=pressAlt(mkCat lt:ys),
@@ -560,7 +560,7 @@ rMostCom' x             =  [([],x)]
 rMostComList :: [RE] -> [([RE],RE)]
 rMostComList []   =  []
 rMostComList [x]  =  [([],x)]
-rMostComList xs   =  nubBy (kernel snd) $ 
+rMostComList xs   =  nubBy (kernel snd) $
                            [ (pre++suf'++xin,x'') | (pre, x:suf) <- allSplits xs,
                                                     Just (suf',x') <- [rCom x suf],
                                                     (xin,x'') <- rMostCom'  x' ]
@@ -595,12 +595,13 @@ previousKP  =  stelKP
 previousH :: HomTrans
 previousH  =  mkHomTrans $ khom previousKP
 
-HomTrans {falt = previousAlt, fcat = previousCat, 
+HomTrans {falt = previousAlt, fcat = previousCat,
           fopt = previousOpt, frep = previousRep }  =  previousH
 
-pressEX :: Extension
-pressEX = extensionLtd 15 20 $
-          mkExtension pressAltListOne pressCatListOne previousKP Pressed
+pressEX, pressEXunlimited :: Extension
+pressEX = extensionLtd 15 20 $ mkExtension pressAltListOne pressCatListOne previousKP Pressed
+pressEXunlimited = mkExtension pressAltListOne pressCatListOne previousKP Pressed
+
 
 pressK :: Katahom
 pressK = khom pressKP
@@ -614,7 +615,8 @@ pressP = kpred pressKP
 Katahom { kalt = pressAltK, kcat = pressCatK } = pressK
 
 pressH = mkHomTrans pressK
-press = extension2trafo pressEX
+press  = extension2trafo pressEX
+pressU = extension2trafo pressEXunlimited
 
 pressCxt :: Cxt -> RE -> OK RE
 pressCxt = katahom pressK
@@ -628,9 +630,9 @@ pressAltListOne c i xs = thinAltList c xs `orOK`
 thinAltList :: Cxt -> [RE] -> OK [RE]
 thinAltList c xs = list2OK xs $ [ (z:ys) | (y,ys)<- itemRest xs,
                                            let others=contextFunction c (mkAlt ys),
-                                           z <- catMaybes [others *//* y] ]   
+                                           z <- catMaybes [others *//* y] ]
 
--- factorization modulo rolling; because of symbol-optimizations 
+-- factorization modulo rolling; because of symbol-optimizations
 -- this will not bite for small regexp
 -- because common symbol factors are eliminated before we look at this, we can eliminate the case
 factList :: [RE] -> OK [RE]
@@ -657,7 +659,7 @@ factAltElem c xs = list2OK xs
                    [ res | (y,ys)<-itemRest xs,
                            res <- [ result
                                   | (pre,suf)<- prefixCom y, let suft=mkCat suf,
-                                    not $ ewp suft, pre `sublang` lang, 
+                                    not $ ewp suft, pre `sublang` lang,
                                     Just nys<- [cf pre *///* ys],
                                     let result=pressCat[pre,Opt suft]: nys,
                                     listSize result<listSize xs ] ++
@@ -667,9 +669,9 @@ factAltElem c xs = list2OK xs
                                     not $ ewp pret, suf `sublang` lang,
                                     Just nys<- [cf suf *///* ys],
                                     let result=pressCat[Opt pret,suf]: nys,
-                                    listSize result<listSize xs ] ]                               
+                                    listSize result<listSize xs ] ]
                     where
-                    cf    =  contextFunction c        
+                    cf    =  contextFunction c
                     lang  =  cf (alt xs)
 
 -- is a Cat really an Alt? only try for nullable cats!
@@ -681,10 +683,10 @@ catSplit xs = list2OK xs
               x     = cat xs
 
 ----------- Cat section for the Katahom ----------------------
-   
+
 -- one rewrite step, result not in pressed form in general
 pressCatListOne :: Cxt -> Info -> [RE] -> OK [RE]
-pressCatListOne c i xs  =  
+pressCatListOne c i xs  =
            pressCatListOK xs `orOK`
            ( guardOK (c>=EwpCxt) (plus2star c xs)
            $ guardOK (c==RepCxt) (presspreviousCatRepCxt xs)
@@ -704,12 +706,12 @@ pressCatListOK xs = list2OK xs $ candidatesFrom [] xs
                                       | (y,suf') <- lMostComList suf ]
 
 pressCatListRepOK :: [RE] -> OK [RE]
-pressCatListRepOK xs = list2OK xs $ 
+pressCatListRepOK xs = list2OK xs $
     [ pre ++ (t:suf)| (p,suf) <- prefixCom(mkCat xs), all ewp suf,
                       (pre,m) <- suffixCom p, all ewp pre,
                       (l,r)   <- prefixCom m, not (null r),
                       Just t <- [ l *=+=* (mkCat r) ]]
-        
+
 -- fusion in a transitive, non-star context
 (*=+=*) :: RE -> RE -> Maybe RE
 x *=+=* y = listToMaybe $ [pressCat [x,z] | ewp y, Just z <- [ x **>* y ]] ++
@@ -774,7 +776,7 @@ plus2star c ys   =  repfix $ list2OK ys cands
     rightCands   =  [ p
                     | (lt,dh)<- rMostComList ys, let lt'=previousCat lt, Just p <-[lt' *=?=* dh]]
 
--- X+Y --> X if Y `sublang` X 
+-- X+Y --> X if Y `sublang` X
 -- ...+XX*+... -> ...+X*+... if ewp(alt), and mirrored law
 
 -- X*Y*     --> Y* if X `sublang` Y*, or X* if Y `sublang` X*
@@ -785,11 +787,10 @@ plus2star c ys   =  repfix $ list2OK ys cands
 -- X*X      --> XX*
 -- X?X      --> XX?
 
--- (X+Y)* --> X* if Y subset X* (generalizes Salomaa star rule: (X+1)* --> X*) 
+-- (X+Y)* --> X* if Y subset X* (generalizes Salomaa star rule: (X+1)* --> X*)
 -- (XY*)* --> X* if Y `sublang` X* and mirror
 -- (XY?)* --> X* if Y `sublang` X* and mirror
 
 -- (XY*)? --> X?Y* if Y `sublang` X? and mirror
 -- (XY?)? --> X?Y? if Y `sublang` X? and mirror
 -- (XX*)? --> X* and mirror
-

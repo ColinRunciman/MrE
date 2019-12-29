@@ -26,16 +26,33 @@ import Alphabet
 
 type Catalogue = M.Map RE RE
 
-deBruijnify :: RE -> (RE, Renaming)
-deBruijnify e | isCanonical cs
-              = (e,re)
+-- maps a regexp to a an isomorphic canonical copy, and also return the inverse iso
+-- properties:
+-- let canonicalIso re = (re',f) then
+-- (i) canonicalRE re'
+-- (ii) forall re''. re'===re'' ===> re=== f re''
+-- (iii) size re == size re'
+-- (iv) forall re''. size re'' == size(f re'')
+-- (v) if re==re' then f is the identity
+canonicalIso :: RE -> (RE, RE->RE)
+canonicalIso x  |  isId
+                =  (x,id)
+                |  otherwise
+                =  (x',rename [(w,v)|(v,w)<-ren])
+                 where
+                 (x',ren,isId) = deBruijnify x
+
+deBruijnify :: RE -> (RE,Renaming,Bool)
+deBruijnify e | isId
+              = (e,re,True)
               | otherwise
-              = (e'',[(x,z)|(x,y)<-re,(y',z)<-re', y==y'])
+              = (e'',[(x,z)|(x,y)<-re,(y',z)<-re', y==y'],False)
     where
+    isId = isCanonical cs
     cs = alphaL e
     re = zip cs ['a'..]
     e' = rename re e
-    (e'',re') = deBruijnify e'
+    (e'',re',_) = deBruijnify e'
 
 -- Whereas the semantic catalogue represents all languages expressible by REs of size
 -- <= n, the syntactic catalogue is a finite map for which any retrieved value is
@@ -50,8 +67,7 @@ minimalEquiv re  |  n >= length theForest || size re>maxREsizeINtree
                       n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
                       alphabet = alpha re
-                      (re',ren) = deBruijnify re
-                      bwd = rename [(x,y)|(y,x)<-ren]
+                      (re',bwd) = canonicalIso re
 
 -- theForest!!n is the size-bound and catalogue tree used for an alphabet of size n
 -- small differences
@@ -163,8 +179,8 @@ synCatalogueKP = target minByCatalogueExtension
 
 synCatalogueK  = khom synCatalogueKP
 
-syncat :: RE -> RE
-syncat = extension2trafo minByCatalogueExtension
+syncat  :: RE -> RE
+syncat  = extension2trafo minByCatalogueExtension
 
 -- new names to make changes easier
 beforeKP :: KataPred

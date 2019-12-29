@@ -22,19 +22,18 @@ main = do
   let p = argsToParams args
   input <- contents (inputsource p)
   let trafos = allGrades p
-  let ipos = catMaybes $ map (process trafos) (lines input)
+  let ipos = catMaybes $ map (process p trafos) (lines input)
   mapM_ print ipos
 
-process :: [Grade] -> String -> Maybe IPO
-process ts s  |  sameSizes (map snd rs)
-              =  Nothing
-              |  otherwise
-              =  Just (IPO { inp=e, outs=xs })
+process :: Parameters -> [Grade] -> String -> Maybe IPO
+process par ts s  |  sameSizes (map snd rs)
+                  =  Nothing
+                  |  otherwise
+                  =  Just (IPO { inp=e, outs=xs })
   where
   e  =  readBeforeT (head ts) s
-  rs =  [ (t,transFun t e) | t <- ts]
-  xs = sortBy (\p q -> compare(size(snd p))(size(snd q))) rs
+  rs =  [ (t,transFun par{trafo=t} e) | t <- ts]
+  xs =  sortBy (\p q -> compare(size(snd p))(size(snd q))) rs
 
 sameSizes :: [RE] -> Bool
 sameSizes (x:xs) = all (\e->size e==size x) xs
-

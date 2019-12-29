@@ -30,6 +30,21 @@ basicOrd x y = compare (ewp x) (ewp y) &&& compare (fir x)(fir y)
 basicLEQ :: RE -> RE -> Bool
 basicLEQ x y = basicOrd x y /= GT
 
+-- are the language attributes compatible with a sublanguage property?
+leqAttributes :: RE -> RE -> Bool
+leqAttributes x y = (ewp x ===> ewp y)
+                    && alpha x `subAlpha` alpha y
+                    && fir x `subAlpha` fir y
+                    && las x `subAlpha` las y
+                    && swa x `subAlpha` swa y
+
+eqAttributes :: RE -> RE -> Bool
+eqAttributes x y =  ewp x == ewp y
+                    && alpha x == alpha y
+                    && fir x == fir y
+                    && las x == las y
+                    && swa x == swa y
+
 -- size-based ordering and selection
 
 sizeOrder :: RE -> RE  -> Ordering
@@ -88,19 +103,31 @@ addAssumption hyp re re2 = S.insert (re,re2) hyp
 sublang :: RE -> RE -> Bool
 sublang Emp x           =  True
 sublang Lam x           =  ewp x
-sublang x   y           =  isJust $ sublaHyp1 S.empty x y
+sublang x Emp           =  False
+sublang x   y           |  not (leqAttributes x y) -- check this first to avoid a needless eraseSigma
+                        =  False
+                        |  isEmptyAlpha yexcess
+                        =  isJust $ sublaHyp1 S.empty x y -- Hyp1, since we have checked the attributes
+                        |  otherwise                      -- first simplify y by erasing superfluous chars
+                        =  sublang x $ eraseSigma yexcess y
+                           where
+                           yexcess = alpha y .\\. alpha x
 
--- first RE will never be Emp, second could be
+-- in sublaHyp0 we check or re-check language attributes,
+-- i.e. this arises when comparing derivatives
+sublaHyp0 :: Hypothesis -> RE -> RE -> Maybe Hypothesis
+sublaHyp0    _             x     y  |  not (leqAttributes x y)
+                                    =  Nothing
+sublaHyp0    h             x     y  =  sublaHyp1 h x y
+
+-- the REs will never be Emp, as we only compute non-Emp derivatives, due to the attribute checks
 sublaHyp1 :: Hypothesis -> RE -> RE -> Maybe Hypothesis
-sublaHyp1 _ x          Emp         =  Nothing
-sublaHyp1 _ x          y           |  ewp x && not(ewp y)
-                                   =  Nothing
--- In all the following cases we know ewp (1st arg) ==> ewp (2nd arg).
+-- In all the following cases we know ewp (1st arg) ==> ewp (2nd arg); similarly other attributes.
 sublaHyp1 h Lam        x           =  Just h
 sublaHyp1 _ _          Lam         =  Nothing
-sublaHyp1 h (Sym x)    y           =  justIf (x `elemAlpha` swa y) h
+sublaHyp1 h (Sym x)    _           =  Just h -- since the swa attribute had been checked
 sublaHyp1 _ _          (Sym z)     =  Nothing
-sublaHyp1 h (Opt x)    y           =  sublaHyp1 h x y
+sublaHyp1 h (Opt x)    y           =  sublaHyp1 h x y -- no need to re-check attributes, as language of lhs is weakened
 sublaHyp1 h (Alt _ xs) y           =  sublaHypAlts xs y h
 sublaHyp1 h x          (Rep  y)    |  ewp x
                                    =  sublaHypAlts (nubSort $ whiteAltList x) (Rep y) h
@@ -113,6 +140,7 @@ assumedM h x y | assumed h x y = Just h
                | otherwise     = Nothing
 
 -- This is a foldM but has an application-specific name.
+-- the language attributes do not need to be re-checked, since x `sublang` alt (x:xs)
 sublaHypAlts []     _ h = Just h
 sublaHypAlts (x:xs) y h = sublaHyp1 h x y >>= sublaHypAlts xs y
 
@@ -122,16 +150,15 @@ sublaHypAlts (x:xs) y h = sublaHyp1 h x y >>= sublaHypAlts xs y
 -- By this stage the possible forms of the second argment are limited.
 
 sublaHyp2 :: Hypothesis -> RE -> RE -> Maybe Hypothesis
-sublaHyp2 h x@(Rep (Cat b xs))     y  =  sublaHyp1 h (mkCat (xs ++ [x])) y
+sublaHyp2 h x@(Rep (Cat _ xs))     y  =  sublaHyp1 h (mkCat (xs ++ [x])) y
 sublaHyp2 h (Rep x)                y  =  sublaHyp1 h (mkCat [x,Rep x]) y
-sublaHyp2 h (Cat _ (Sym c:rs))     y  =  sublaHyp1 h (mkCat rs) (derive c y)
-sublaHyp2 h (Cat _ (Alt _ xs:rs))  y  =  let tl=mkCat rs in
-                                               sublaHypAlts [cat [x, tl] | x<-xs ] y h
+sublaHyp2 h (Cat _ (Sym c:rs))     y  =  sublaHyp0 h (mkCat rs) (derive c y) -- comparing derivatives, thus re-check attributes
+sublaHyp2 h (Cat _ (Alt _ xs:rs))  y  =  sublaHypAlts [cat (x:rs) | x<-xs ] y h
 sublaHyp2 h (Cat _ (Opt x:rs))     y  =  let tl=mkCat rs in
                                               sublaHyp1 h tl y >>=
-                                              \h' -> sublaHyp1 h' (cat [x, tl]) y
-sublaHyp2 h inp@(Cat _ (Rep x:rs)) y  =  sublaHyp1 h (mkCat rs) y >>=
-                                           \h' -> sublaHyp1 h' (cat [x, inp]) y
+                                              \h' -> sublaHyp1 h' (cat [x,tl]) y
+sublaHyp2 h (Cat _ ls@(Rep x:rs))  y  =  sublaHyp1 h (mkCat rs) y >>=
+                                           \h' -> sublaHyp1 h' (cat (x:rs)) y
 sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 
 -- The compRE function is a language-based linear ordering of REs.
@@ -140,8 +167,9 @@ sublaHyp2 h x                      y  =  error (show x ++ " in sublaHyp2 ")
 -- (i) a quicker equality test than double application of sublang;
 -- (ii) a better Poset Ordering for catalogue trees.
 
+-- the attribute check only helps early rejection
 (===) :: RE -> RE -> Bool
-x === y  =  compRE x y == EQ
+x === y  =  eqAttributes x y && compRE x y == EQ
 
 istransitive :: RE -> Bool
 istransitive x = opt x === rep x

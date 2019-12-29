@@ -60,9 +60,9 @@ main = do
   args <- getArgs
   let par = argsToParams args
   input <- contents (inputsource par)
-  let itos = map (process (trafo par)) $ lines input
+  let itos = map (process par) $ lines input
   if verbose par then verboseContinuation itos par
-  else plainContinuation itos par
+  else timedCommand par (plainContinuation itos par)
 
 verboseContinuation :: [ITO] -> Parameters -> IO ()
 verboseContinuation itos p = do
@@ -79,13 +79,13 @@ plainContinuation :: [ITO] -> Parameters -> IO ()
 plainContinuation itos p = do
     putStrLn $ reportInput (inputsource p) ++ showTime (averageTime itos)
 
-process :: Grade -> String -> ITO
-process g s  =  ITO e t e'
+process :: Parameters -> String -> ITO
+process p s  =  ITO e t e'
   where
+  g  =  trafo p
   e  =  readBeforeT g s
-  e' =  transFun g e
+  e' =  transFun p e
   t  =  timeToCompute e e' (sizeForT g e' <= sizeForT g e)
-
 
 timeToCompute :: RE -> RE -> Bool -> Float
 timeToCompute e0 e1 x  =  unsafePerformIO $ do
@@ -96,4 +96,3 @@ timeToCompute e0 e1 x  =  unsafePerformIO $ do
   where
   compute | x  =  return ()
           | otherwise = error $ show e0 ++ " expanded to " ++ show e1 ++ "!"
-

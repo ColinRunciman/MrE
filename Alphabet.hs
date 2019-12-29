@@ -33,10 +33,10 @@ elemAlpha x c = not $ isEmptyAlpha (char2Alpha x .&. c)
 
 alpha2String:: Alphabet -> [Char]
 alpha2String cs  |  isEmptyAlpha cs
-                =  []
-                |  otherwise
-                =  nthChar n : alpha2String (clearBit cs n)
-                   where n = firstIndex cs
+                 =  []
+                 |  otherwise
+                 =  nthChar n : alpha2String (clearBit cs n)
+                    where n = firstIndex cs
 
 showAlpha :: Alphabet -> String
 showAlpha cs = foldr f "{}" (alpha2String cs)

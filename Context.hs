@@ -47,9 +47,13 @@ data Katahom = Katahom { kalt, kcat  :: RewRule, grade :: Grade }
 altRule :: Katahom -> RewRule
 altRule kh c i xs  |  not (plural xs')
                    =  xso
+                   |  plural ys
+                   =  yso
                    |  otherwise
-                   =  okmap nubMergeAltItems $ ar c ni `app` xso
+                   =  changed [ valOf $ katahom kh c (head ys)]
                       where
+                      ys  = valOf yso
+                      yso = okmap nubMergeAltItems $ ar c ni `app` xso
                       ar  = (if grade kh>Promoted then altPartitionReduction else id) $ kalt kh
                       xso = kataliftAltSafe (katahom kh c) xs
                       xs' = valOf xso
@@ -65,9 +69,13 @@ altRuleOK r c i xs = okmapIf nubMergeAltItems (r c i xs)
 catRule :: Katahom -> RewRule
 catRule kh c i xs  |  not (plural xs')
                    =  xso
+                   |  plural ys
+                   =  yso
                    |  otherwise
-                   =  okmap concatCatItems $ cr c ni `app` xso
+                   =  changed [ valOf $ katahom kh c (head ys) ]
                       where
+                      yso = okmap concatCatItems $ cr c ni `app` xso
+                      ys  = valOf yso
                       cr  = symbolFactReduction $ kcat kh
                       xso = kataliftCatSafe (katahom kh NoCxt) xs
                       xs' = valOf xso
@@ -224,10 +232,7 @@ genericRepeatAlt rs c xso  |  hasChanged xso || hasChanged yso
 
 -- Alt part of generic boilerplate
 genericAltK :: Extension -> Cxt -> Info -> [RE] -> OK [ToRE]
-genericAltK rs c i xs |  plural xs
-                      =  listComp altInfo (genericFromAltK rs c) (altRuleOK(kalt(src rs)) c) i xs
-                      |  otherwise
-                      =  unchanged xs
+genericAltK rs c i xs =  listComp altInfo (genericFromAltK rs c) (altRuleOK(kalt(src rs)) c) i xs
 
 -- generic! only applied on lists that are not only pointwise FromRE, but also as a whole
 genericFromAltK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
@@ -255,10 +260,7 @@ genericRepeatCat rs c xso  |  hasChanged xso || hasChanged yso
 
 -- inputs have been evaluated
 genericCatK :: Extension -> Cxt -> Info -> [ToRE] -> OK [ToRE]
-genericCatK rs c i xs |  plural xs
-                      =  listComp catInfo (genericFromCatK rs c) (catRuleOK(kcat(src rs)) c) i xs
-                      |  otherwise
-                      =  unchanged xs
+genericCatK rs c i xs =  listComp catInfo (genericFromCatK rs c) (catRuleOK(kcat(src rs)) c) i xs
 
 genericFromCatK :: Extension -> Cxt -> Info -> [FromRE] -> OK [ToRE]
 genericFromCatK _  c _ []       =  unchanged []
@@ -482,10 +484,14 @@ symbolFactReduction r c i xs   |  c>NoCxt || ew i || (null cs && null ds)
                                |  null ms
                                =  changed [upgradeRE c Minimal (Cat i xs)]
                                |  plural ms
-                               =  okmap (\zs ->cs++zs++ds) $ r NoCxt j ms
+                               =  okmap (\zs ->cs++ewpfix zs++ds) $ r NoCxt j ms
                                |  otherwise
                                =  changed [upgradeRE c (gradeOf c (head ms)) (Cat i xs)]
                                    where
+                                   ewpfix zs | not (ew j) || all ewp zs
+                                             = zs
+                                             | otherwise -- we lost ewp, trafos are allowed to do that, but not in the middle of a cat
+                                             = [ opt(cat zs) ]
                                    (ms,ds)   = spanEnd isSym rs
                                    (cs,rs)   = span isSym xs
                                    (Cat j _) = catSegment (Cat i xs) ms -- catInfo+inherited grade

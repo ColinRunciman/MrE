@@ -33,7 +33,7 @@ minimalEquiv c re  |  -- trace (show re)
                    |  size re > 2 * sizeFor n   -- candidate key too large
                    =  Nothing
                    |  otherwise
-                   =  case lookupPT (fwd re) compRE pickMinList tree of
+                   =  case lookupPT cre compRE pickMinList tree of
                       Nothing -> if size re == maxREsizeINtree+1
                                  then Just $ gradeMinimalCxt c re
                                  else Nothing
@@ -42,22 +42,33 @@ minimalEquiv c re  |  -- trace (show re)
                       n = alphaLength alphabet
                       (maxREsizeINtree,tree) = theForest !! n
                       alphabet = alpha re
-                      alphalist = charList re
-                      fwd = rename $ zip alphalist ['a'..]
-                      bwd = rename $ zip ['a'..] alphalist
+                      (cre,bwd) = canonicalIso re
 
--- produces the alphabet of the re in a form that is easily renamed to
--- a semCatNormal expression
--- property:
--- semcatNormalProperty :: RE -> Bool
--- semcatNormalProperty x = semcatNormal (rename (zip (charList x) ['a'..]) x)
-charList :: RE -> [Char]
-charList x =  foldr1 (++) $ map alpha2String [single,start,finish,remain]
+-- maps a regexp to a an isomorphic canonical copy, and also return the inverse iso
+-- properties:
+-- let canonicalIso re = (re',f) then
+-- (i) semcatNormal re'
+-- (ii) forall re''. re'===re'' ===> re=== f re''
+-- (iii) size re == size re'
+-- (iv) forall re''. size re'' == size(f re'')
+-- (v) if re==re' then f is the identity
+-- note: one could include mirroring in case fir x and las x have different cardinality
+-- however, that creates issues with size-preserving trafos
+canonicalIso :: RE -> (RE, RE->RE)
+canonicalIso x  |  isId
+                =  (x,id)
+                |  otherwise
+                =  (fwd x,bwd)
               where
-              single = swa x
-              start  = fir x .\\. single
-              finish = las x .\\. fir x -- note: this will include single
-              remain = (alpha x .\\. fir x) .\\. las x
+              isId     = isCanonical charList -- so that the iso is O(1)
+              single   = swa x
+              start    = fir x .\\. single
+              finish   = las x .\\. fir x -- note: this will include single
+              remain   = (alpha x .\\. fir x) .\\. las x
+              charList = foldr1 (++) $ map alpha2String [single,start,finish,remain]
+              fwd      = rename (zip charList ['a'..])
+              bwd      = rename (zip ['a'..] charList)
+
 
 -- theForest!!n is the size-bound and catalogue tree used for an alphabet of size n
 theForest :: [(Int,RB RE)]
@@ -93,8 +104,8 @@ writeTree :: String -> Int -> RB RE -> IO()
 writeTree sigma n t = writeFile (treeFileName sigma n) $ show t
 
 poTree :: String -> Int -> RB RE
-poTree sigma n = buildTree compRE $ filter semcatNormal $ concat $ take (n+1) $
-                 createGradedCarrier sigma promoteKP
+poTree sigma n = buildTree compRE $ filter semcatNormal $ filter ((== string2Alpha sigma) . alpha) $
+                 concat $ take (n+1) $ createGradedCarrier sigma promoteKP
 
 -- we can force a renaming that produces an RE satisfying semcatNormal
 -- purpose: reduce the size of the catalogue when possible
@@ -150,9 +161,9 @@ fakeIdExt = mkExtension mbcA mbcC beforeKP SemCatMinimal
 fakeId :: RE -> RE
 fakeId = mkTransform $ khom $ target fakeIdExt
 
-minByCatalogueExtension :: Extension
-minByCatalogueExtension = extensionCatalogue f $
-                          mkExtension mbcA mbcC beforeKP SemCatMinimal
+minByCatalogueExtension, mbcUnlimited :: Extension
+mbcUnlimited = mkExtension mbcA mbcC beforeKP SemCatMinimal
+minByCatalogueExtension = extensionCatalogue f $ mbcUnlimited
                           where
                           f n | n > maxSigmaSize
                               = 0
@@ -183,7 +194,8 @@ Katahom { kalt = semCatalogueAltK, kcat = semCatalogueCatK } = semCatalogueK
 
 semCatalogueH = mkHomTrans semCatalogueK
 
-semcat = extension2trafo minByCatalogueExtension
+semcat  = extension2trafo minByCatalogueExtension
+semcatU = extension2trafo mbcUnlimited
 
 semCatalogueCxt :: Cxt -> RE -> OK RE
 semCatalogueCxt = katahom semCatalogueK

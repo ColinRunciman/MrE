@@ -1,4 +1,4 @@
-module Stellation (stellate, altTrans, catTrans, stelKP)
+module Stellation (stellate, altTrans, catTrans, stelKP, stellateU)
 where
 
 import List
@@ -25,9 +25,9 @@ previousCxt = katahom $ khom previousKP
 previousRep :: RE -> RE
 previousRep = thisfun previousKP . rep
 
-stelEX :: Extension
-stelEX = extensionLtd 15 20 $
-         mkExtension altTrans catTrans previousKP Stellar
+stelEX, stelEXunlimited :: Extension
+stelEX = extensionLtd 15 20 $ stelEXunlimited
+stelEXunlimited = mkExtension altTrans catTrans previousKP Stellar
 
 stelK :: Katahom
 stelK = khom stelKP
@@ -43,7 +43,8 @@ Katahom { kalt = stelAltK, kcat = stelCatK } = stelK
 stelH = mkHomTrans stelK
 HomTrans { falt = stelAlt, fcat = stelCat, frep = stelRep, fopt = stelOpt } = stelH
 
-stellate = extension2trafo stelEX
+stellate  = extension2trafo stelEX
+stellateU = extension2trafo stelEXunlimited
 
 stelCxt :: Cxt -> RE -> OK RE
 stelCxt = katahom stelK

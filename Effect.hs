@@ -27,9 +27,9 @@ main = do
   let lns = lines input
   let n   = length lns
   let ins  = map (gSize . readFullExp) lns
-  let outs = map (sizeTransFun (trafo p)) lns
+  let outs = map (sizeTransFun p) lns
   let average = (fromIntegral (sum outs) / fromIntegral n) :: Double
   let ratios = zipWith (\i o -> (fromIntegral o / fromIntegral i) :: Double) ins outs
-  putStrLn $ reportInput (inputsource p)  ++
-             showDouble (100.0 * geomean (map geomean $ chunksOf 20 ratios))
+  timedCommand p $ putStrLn $ reportInput (inputsource p)  ++
+                     showDouble (100.0 * geomean (map geomean $ chunksOf 20 ratios))
   when (verbose p) $ putStrLn $ showDouble average

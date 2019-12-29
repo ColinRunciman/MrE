@@ -41,8 +41,8 @@ instance Listable Grade where
 valid :: RE -> Grade -> Bool
 valid x g  =  (y ==== x) && (size y <= size x)
   where
-  y  =  transFun g x
+  y  =  transFun (defaults{trafo=g}) x
 
-main  =  do [n] <- getArgs          
+main  =  do [n] <- getArgs
             mapM_ (putStrLn . unwords)
                   (counterExamples (abs (read n) * length (list :: [Grade])) valid)
