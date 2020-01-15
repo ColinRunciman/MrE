@@ -49,7 +49,7 @@ altElem _ _         = False
 
 altnormP c i xs = plural xs && all (altElem c) xs && strictlyOrdered xs &&
                   ew i == any ewp xs && si i == listSize xs &&
-                  la i == lasAlt xs&& fi i == firAlt xs 
+                  la i == lasAlt xs&& fi i == firAlt xs
 
 catElem :: RE -> Bool
 catElem (Sym _)   = True
@@ -60,8 +60,8 @@ catElem _         = False
 
 catnormP c i xs =  plural xs && all catElem xs &&
                    ew i == all ewp xs && si i == listSize xs &&
-                   la i == lasCat xs && fi i == firCat xs 
-                   
+                   la i == lasCat xs && fi i == firCat xs
+
 repnormP :: Cxt -> RE -> Bool
 repnormP RepCxt _     =  False
 repnormP _ (Sym _)    =  True
@@ -158,7 +158,7 @@ firstDiff k (x:xs) (y:ys) =
     case compare x y of
         EQ -> firstDiff(k+1) xs ys
         bb -> (k,bb==LT)
-        
+
 fuseSort :: Fusion a -> [a] -> [a]
 fuseSort fuseop xs = foldMerge (mergeFuse fuseop) [] $ fuseChains fuseop xs
 
@@ -185,51 +185,7 @@ rightfuse xs = mkOK rf (length xs > length rf)
               rf = fuseSort rightOrderedFusion xs
 
 altFuseList :: Cxt -> Info -> [RE] -> OK [RE]
-altFuseList c i xs = altSigmaStar c i xs `orOK`
-                     leftfuse xs `orOK` rightfuse xs
-
--- assumption: in RepCxt this is not ewp,
--- because altFuseList would get to break it up first
-altSigmaStar :: Cxt -> Info -> [RE] -> OK [RE]
-altSigmaStar c i xs |  c/=RepCxt || isEmptyAlpha (sw i)
-                    =  unchanged xs
-                    |  al i == sw i
-                    =  updateEQ xs (map Sym (alpha2String $ sw i))
-                    |  otherwise
-                    =  kataliftAlt (alphaCrush (sw i)) xs
-
--- if re is sublang of cs* replace it with cs', where cs' is its alphabet
--- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
-alphaCrush :: Alphabet -> RE -> OK RE
-alphaCrush cs (Sym c) =  unchanged (Sym c)
-alphaCrush cs re      |  subAlpha alset cs
-                      =  changed (mkAlt (map Sym allst))
-                      |  otherwise
-                      =  fixCrushRE cs re -- removes prefixes/suffixes
-                         where
-                         alset = alpha re
-                         allst = alpha2String (swa re) 
-
-fixCrushRE :: Alphabet -> RE -> OK RE
-fixCrushRE cs re@(Cat i xs) = list2OK re [ catSegment re (valOf yso)
-                                         | let yso=fixCrush cs xs, hasChanged yso ]
-fixCrushRE cs re            = unchanged re
-
-fixCrush :: Alphabet -> [RE] -> OK [RE]
-fixCrush cs = suffixCrush cs `aft` prefixCrush cs
-
-prefixCrush, suffixCrush :: Alphabet -> [RE] -> OK [RE]
-prefixCrush cs (x:xs) |  ewp x && subAlpha (alpha x) cs
-                      =  unsafeChanged $ prefixCrush cs xs
-                      |  otherwise
-                      =  unchanged (x:xs)
-prefixCrush cs []     =  unchanged [] -- should not occur
-
-suffixCrush cs xs     |  hasChanged rxs
-                      =  okmap reverse rxs
-                      |  otherwise 
-                      =  unchanged xs 
-                         where rxs = prefixCrush cs (reverse xs)
+altFuseList c i xs = leftfuse xs `orOK` rightfuse xs
 
 -- (1) remove optional suffixes/prefixes with alphabet <= sw of whole Cat.
 -- (2) replace bodies that have sw as alphabet with sw
@@ -237,24 +193,13 @@ suffixCrush cs xs     |  hasChanged rxs
 catFuseList :: Cxt -> Info -> [RE] -> OK [RE]
 catFuseList RepCxt i xs  |  ew i
                          =  changed [ alt (concatMap whiteAltList xs) ]
-                         |  sw i==al i
-                         =  changed [ alt (map Sym (alpha2String $ sw i)) ]
-                         |  not (isEmptyAlpha (sw i)) 
-                         =  fuseListProcess `app` fixCrush (sw i) xs
 catFuseList _ i xs       =  fuseListProcess xs
 
 fuseListProcess :: [RE] -> OK [RE]
 fuseListProcess xs = updateEQ xs $ concat $ fuseChains fuseCatElem xs
 
 fuseCatElem :: Fusion RE
-fuseCatElem (Rep x)(Rep y) |  x == y
-                           =  Left (Rep x)
-                           |  a == alpha y && singularAlpha a
-                           =  Left (fuse(rep(alt[x,y])))
-                           |  otherwise
-                           =  Right True -- no swap
-                              where
-                              a = alpha x
+fuseCatElem (Rep x)(Rep y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem (Rep x)(Opt y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem (Opt x)(Rep y) =  if x==y then Left(Rep x) else Right True
 fuseCatElem x y            =  Right True

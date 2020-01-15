@@ -40,12 +40,12 @@ promoteP = tpr promoteExtension
 isPromoted = checkWith promoteP
 
 altPromotion, catPromotion :: RewRule
-altPromotion c i xs = altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
+altPromotion c i xs = altSigmaStar c i xs `orOK` altSigmaStarPromotion i xs `orOK` altStarPrune c i xs `orOK`
                       altCharSubsumption i xs `orOK` altFactor1 c i xs `orOK`
                       altFactor1 c i xs `orOK` charFactor i xs
 
-catPromotion c i xs = catSigmaStarPromotion i xs `orOK` catStarPrune c i xs `orOK`
-                      cat1Crush c i xs
+catPromotion c i xs = catSigmaStarPromotion c i xs `orOK` catStarPrune c i xs `orOK`
+                      singularPrune xs `orOK` cat1Crush c i xs
 
 catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs `orOK` wholyCrush swx xs
@@ -63,7 +63,21 @@ innerPrune b xs =
                                             let swx=swa e, not(isEmptyAlpha swx),
                                             let pp=crushLeftWrt swx pre, let ss=crushRightWrt swx suf,
                                             hasChanged pp || hasChanged ss]
-                                    
+
+-- this merges consecutive Rep's over the same singular alphabet, used to be part of Fuse
+singularPrune :: [RE] -> OK [RE]
+singularPrune xs = spl [] xs False
+   where
+   spl ts (Rep x:Rep y:zs) b | not(singularAlpha(alpha y))
+                             = spl (Rep y:Rep x:ts) zs b
+                             | alpha x==alpha y
+                             = spl ts (rep(alt[x,y]) : zs) True
+                             | otherwise
+                             = spl (Rep x :ts) (Rep y:zs) b
+   spl ts (x:xs) b           = spl (x:ts) xs b
+   spl ts [] False           = unchanged xs
+   spl ts [] True            = changed (reverse ts)
+
 altStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = list2OK xs [ catSegment x xs':ys | (x@(Cat _ xs),ys) <-itemRest xs,
                                         xs' <- [ valOf xs1 | let xs1=crushRightWrt swx xs, hasChanged xs1 ]
@@ -78,7 +92,7 @@ altSigmaStarPromotion :: Info -> [RE] -> OK [RE]
 altSigmaStarPromotion i xs |  any (==sigmastar) xs -- most common special case, singled out for efficiency
                            =  changed [ sigmastar ]
                            |  otherwise
-                           =  list2OK xs cands                    
+                           =  list2OK xs cands
     where
     alphabet  = alpha2String (al i)
     sigmastar = Rep (alt (map Sym alphabet))
@@ -136,18 +150,24 @@ droppableAltSymbols xs = dralsy xs emptyAlpha emptyAlpha
                          dralsy (y    :xs) csym osym = dralsy xs csym (swa y .|. osym)
 
 swcheck :: Char -> RE -> Bool
-swcheck c re = elemAlpha c (swa re) --elem c (fir re) && elem c (las re) && swp c re 
+swcheck c re = elemAlpha c (swa re) --elem c (fir re) && elem c (las re) && swp c re
 
 sigmaStarTest :: Alphabet -> RE -> Bool
 sigmaStarTest cs (Rep x) = swa x==cs
 sigmaStarTest cs _       = False
 
-catSigmaStarPromotion :: Info -> [RE] -> OK [RE]
-catSigmaStarPromotion i xs | ew i && sw i==cs
-                           = list2OK xs [ [x] | x<-xs, sigmaStarTest cs x]
-                           | otherwise
-                           = unchanged xs
-                             where cs = al i
+catSigmaStarPromotion :: Cxt-> Info -> [RE] -> OK [RE]
+catSigmaStarPromotion RepCxt i xs   |  sw i==al i
+                                    =  changed [ alt (map Sym (alpha2String $ sw i)) ]
+                                    |  not (isEmptyAlpha (sw i)) && hasChanged fc
+                                    =  fc
+                                       where fc = fixCrush (sw i) xs
+catSigmaStarPromotion        c i xs | ew i && sw i==cs
+                                    = list2OK xs [ [x] | x<-xs, sigmaStarTest cs x]
+                                    | otherwise
+                                    = unchanged xs
+                                      where cs = al i
+
 
 crushRightWrt :: Alphabet -> [RE] -> OK [RE]
 crushRightWrt al1 []      = unchanged []
@@ -155,7 +175,7 @@ crushRightWrt al1 (re:ps) | isLam nre
                        = unsafeChanged $ crushRightWrt al1 ps -- greedy
                        | b && not(ewp nre) && singularAlpha al3 && subAlpha al3 al1
                        = unsafeChanged $ okmap (nre:) $ crushRightWrt al3 ps --greedy
-                       | not b && not(ewp re) && singularAlpha al2 && subAlpha al2 al1 
+                       | not b && not(ewp re) && singularAlpha al2 && subAlpha al2 al1
                        = okmap (re:) $ crushRightWrt al2 ps -- changed: used to require al1==al2
                        | b
                        = changed (nre:ps)
@@ -166,7 +186,7 @@ crushRightWrt al1 (re:ps) | isLam nre
                          al3 = alpha nre
                          c   = crushRightInCxt False al1 re
                          nre = valOf c
-                         b   = hasChanged c 
+                         b   = hasChanged c
 
 crushRightInCxt :: Bool -> Alphabet -> RE -> OK RE
 crushRightInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
@@ -180,7 +200,7 @@ crushRightInCxt _ al1 (Rep c@(Cat i xs)) -- a Conway rule, alphaLength condition
                                 where
                                 Just(ys,y) = unsnoc xs
                                 Rep r      = y
-crushRightInCxt _ _    e          = unchanged e                       
+crushRightInCxt _ _    e          = unchanged e
 
 crushLeftWrt :: Alphabet -> [RE] -> OK [RE]
 crushLeftWrt al1 [] = unchanged []
@@ -188,7 +208,7 @@ crushLeftWrt al1 xs | isLam ny
                   = unsafeChanged $ crushLeftWrt al1 ys
                   | b && not(ewp ny) && singularAlpha al3 && subAlpha al3 al1
                   = unsafeChanged $ okmap (++ [ny]) $ crushLeftWrt al3 ys
-                  | not b && not(ewp y) && singularAlpha al2 && subAlpha al2 al1 
+                  | not b && not(ewp y) && singularAlpha al2 && subAlpha al2 al1
                   = okmap (++[y]) $ crushLeftWrt al2 ys
                   | b
                   = changed (ys ++ [ny])
@@ -266,7 +286,7 @@ charFactor i res =
 leftChar, rightChar :: Char -> RE -> Bool
 leftChar c re  = not (ewp re) && fir re==char2Alpha c
 rightChar c re = not (ewp re) && las re==char2Alpha c
-                                               
+
 
 -- tries to factor out a single Character from an RE, support for Museum and alt-refactoring
 refactor :: Bool -> RE -> Maybe (Char,RE)
@@ -298,7 +318,7 @@ refactorSequence _ []     = error "empty sequence not factorisable"
 
 
 
--- add the char at the end/beginning, remove it from the other end 
+-- add the char at the end/beginning, remove it from the other end
 refactorRoll :: RE -> Char -> Bool -> RE
 refactorRoll Emp  _ _       = error "invariant violation in rolling"
 refactorRoll Lam  _ _       = Lam -- not needed because of options
@@ -311,4 +331,45 @@ refactorRoll (Cat _ xs) d False =  cat (reverse ys)
 refactorRoll (Rep x) d b    = Rep (refactorRoll x d b)
 refactorRoll (Opt x) d b    = Opt (refactorRoll x d b)
 
+-- assumption: in RepCxt this is not ewp,
+-- because altFuseList would get to break it up first
+altSigmaStar :: Cxt -> Info -> [RE] -> OK [RE]
+altSigmaStar c i xs |  c/=RepCxt || isEmptyAlpha (sw i)
+                    =  unchanged xs
+                    |  al i == sw i
+                    =  updateEQ xs (map Sym (alpha2String $ sw i))
+                    |  otherwise
+                    =  kataliftAlt (alphaCrush (sw i)) xs
 
+-- if re is sublang of cs* replace it with cs', where cs' is its alphabet
+-- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
+alphaCrush :: Alphabet -> RE -> OK RE
+alphaCrush cs (Sym c) =  unchanged (Sym c)
+alphaCrush cs re      |  subAlpha alset cs
+                      =  changed (mkAlt (map Sym allst))
+                      |  otherwise
+                      =  fixCrushRE cs re -- removes prefixes/suffixes
+                         where
+                         alset = alpha re
+                         allst = alpha2String (swa re)
+
+fixCrushRE :: Alphabet -> RE -> OK RE
+fixCrushRE cs re@(Cat i xs) = list2OK re [ catSegment re (valOf yso)
+                                         | let yso=fixCrush cs xs, hasChanged yso ]
+fixCrushRE cs re            = unchanged re
+
+fixCrush :: Alphabet -> [RE] -> OK [RE]
+fixCrush cs = suffixCrush cs `aft` prefixCrush cs
+
+prefixCrush, suffixCrush :: Alphabet -> [RE] -> OK [RE]
+prefixCrush cs (x:xs) |  ewp x && subAlpha (alpha x) cs
+                      =  unsafeChanged $ prefixCrush cs xs
+                      |  otherwise
+                      =  unchanged (x:xs)
+prefixCrush cs []     =  unchanged [] -- should not occur
+
+suffixCrush cs xs     |  hasChanged rxs
+                      =  okmap reverse rxs
+                      |  otherwise
+                      =  unchanged xs
+                         where rxs = prefixCrush cs (reverse xs)
