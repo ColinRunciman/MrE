@@ -285,10 +285,14 @@ alphaL = foldHomInfo $ HomInfo { hiemp = [], hilam = [], hisym = (:[]),
 -- erase all characters of a subalphabet
 -- useful for sublang comparisons
 eraseSigma :: Alphabet -> RE -> RE
-eraseSigma sigma = foldHomInfo $
-                   HomInfo { hiemp = Emp, hilam=Lam,
-                             hisym = \c -> if elemAlpha c sigma then Emp else Sym c,
-                             hialt = const alt, hicat = const cat, hirep = rep, hiopt=opt }
+eraseSigma sigma = es1 where
+                   es1 x = if isEmptyAlpha(alpha x .&. sigma) then x
+                           else es2 x
+                   es2 (Sym _)    = Emp
+                   es2 (Alt i xs) = alt $ map es1 xs
+                   es2 (Cat i xs) = cat $ map es1 xs
+                   es2 (Rep x)    = rep $ es2 x
+                   es2 (Opt x)    = opt $ es2 x
 
 -- A more general class of homomorphisms is applied with information about
 -- context (type Cxt).

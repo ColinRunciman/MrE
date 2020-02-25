@@ -128,9 +128,11 @@ sublaHyp1 _ _          Lam         =  Nothing
 sublaHyp1 h (Sym x)    _           =  Just h -- since the swa attribute had been checked
 sublaHyp1 _ _          (Sym z)     =  Nothing
 sublaHyp1 h (Opt x)    y           =  sublaHyp1 h x y -- no need to re-check attributes, as language of lhs is weakened
-sublaHyp1 h (Alt _ xs) y           =  sublaHypAlts xs y h
-sublaHyp1 h x          (Rep  y)    |  ewp x
+sublaHyp1 h x          (Rep  y)    |  subAlpha (alpha x) (swa y)
+                                   =  Just h
+                                   |  ewp x
                                    =  sublaHypAlts (nubSort $ whiteAltList x) (Rep y) h
+sublaHyp1 h (Alt _ xs) y           =  sublaHypAlts xs y h
 sublaHyp1 h x          y           =  assumedM h x y `mplus` sublaHyp2 (addAssumption h x y) x y
 
 mplus Nothing x = x
