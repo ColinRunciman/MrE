@@ -17,6 +17,7 @@ for i in $sizes
 do for j in $asizes
 # do ./timeOut $timelimit ./Effect $1 -S${i} -W${j} >> effects/$2 || break
 #  ./Tim $1 -S${i} -W${j} >> timings/$2
+do
 ./Effect $1 -S${i} -W${j} -T$timelimit $3 >> $effectsdir/$2
 ./Tim    $1 -S${i} -W${j} -T$timelimit $3 >> $timingsdir/$2
 done

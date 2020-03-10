@@ -8,6 +8,7 @@ import OK
 import Context
 import Comparison
 import StarPromotion
+import TrafoLimits
 
 -- The motivating observation for the transformation here: if any expression x has
 -- the empty-word property, and is also transitive, so L(1) <= L(xx) <= L(x), then
@@ -26,7 +27,7 @@ previousRep :: RE -> RE
 previousRep = thisfun previousKP . rep
 
 stelEX, stelEXunlimited :: Extension
-stelEX = extensionLtd 15 20 $ stelEXunlimited
+stelEX = extensionLtd altLimit catLimit $ stelEXunlimited
 stelEXunlimited = mkExtension altTrans catTrans previousKP Stellar
 
 stelK :: Katahom

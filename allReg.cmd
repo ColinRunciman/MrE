@@ -5,4 +5,3 @@ FOR %%i in %sizes% DO (
     FOR %%j in %asizes% DO (
     Reg.exe -S%%i -W%%j -Q1000 > populations/s%%iw%%j
 ))
-

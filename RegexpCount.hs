@@ -187,6 +187,114 @@ binSplits xs = zipWith f xs (reverse xs)
 generateSplit :: [Int] -> Gen Int
 generateSplit xs = frequency (zip xs (map return [1..]))
                
+--------------------------------------------------------------------------------------------------- counting total languages ------
+
+data LangCount = LangCount { tot:: BigNum, swplist :: [(BigNum,BigNum)] } deriving Show
+nontotewp, allexp :: LangCount -> BigNum
+nontotewp x = sum (map fst (swplist x))
+allexp x    = tot x + sum [ y+z | (y,z)<-swplist x ]
+nonewp x    = sum (map snd (swplist x))
+totswp x    = tot x + uncurry (+) (last $ swplist x)
+
+ladd :: LangCount -> LangCount -> LangCount
+ladd x y = LangCount { tot = tot x+tot y,
+                       swplist = [ (x1+x2,y1+y2) | ((x1,y1),(x2,y2))<-zip (swplist x)(swplist y) ] }
+
+langSizes :: Int -> [ LangCount ] -- parameter is alphabet size
+langSizes n = x1 : next [x1]
+              where
+              x1 = langInit n
+              nb = fromIntegral n
+              next xs = let ys=follow xs (reverse (tail xs)) in
+                        ys : next (ys:xs)
+              follow (x:xs) ys = starCount x `ladd` queryCount x `ladd` binCount xs ys
+              binCount [] [] = LangCount { tot = 0, swplist = take (n+1) $ repeat (0,0) }
+              binCount (x:xs)(y:ys) = bin1Count x y `ladd` binCount xs ys
+              bin1Count x y = seqCount x y `ladd` altCount x y
+
+totalRatio, swpRatio :: LangCount -> Double
+totalRatio l = bigNumToDouble (tot l / allexp l)
+swpRatio l   = bigNumToDouble (totswp l / allexp l)
+
+totalRatios :: Int -> [Double]
+totalRatios n = map totalRatio (langSizes n)
+swpRatios   n = map swpRatio (langSizes n)
+
+langInit ::  Int -> LangCount -- for size 1
+langInit alsi = LangCount { tot=0, swplist = [(0,0),(0,fromIntegral alsi)] ++ take (alsi - 1) (repeat (0,0)) }
+
+queryCount :: LangCount -> LangCount
+queryCount x = LangCount { tot=tot x, swplist = [(y+z,0)|(y,z)<-swplist x] }
+
+starCount :: LangCount -> LangCount
+starCount x = LangCount { tot = tot x + uncurry (+) (last (swplist x)), 
+                          swplist = init [(y+z,0)|(y,z)<-swplist x] ++ [(0,0)] }
+
+seqCount :: LangCount -> LangCount -> LangCount
+seqCount p1 p2 = LangCount { tot=tot p1*tot p2 + tot p1*nontotewp p2 + nontotewp p1*tot p2,
+                             swplist = [ swpfunc (n-1) | n <- [1..length(swplist p1)]] }
+                 where
+                 nn = ( length (swplist p1) - 1)
+                 swpfunc k = (ewpfunc k,nonewpfunc k+tot p1*snd(swplist p2!!k)+tot p2*snd(swplist p1!!k))
+                 ewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
+                 nonewpfunc 0 = nonewp p1 * nonewp p2 +fst(head(swplist p1))*nontotewp p2 +fst(head(swplist p2))*nontotewp p1   
+                 nonewpfunc n = fst(swplist p1 !! n)*nontotewp p2 + fst(swplist p2!!n)*nontotewp p1
+
+altCount p1 p2 = LangCount { tot=tot p1*tp2+tp1*tot p2-tot p1*tot p2,
+                             swplist = [ swpfunc (fromIntegral n-1) | n<- [1..length(swplist p1)]] }
+                 where tp1=allexp p1
+                       tp2=allexp p2
+                       nn = length (swplist p1) - 1
+                       swpfunc k = (ewpfunc k,nonewpfunc k)
+                       ewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=uncurry (+)(swplist p2!!i2) ]
+                                   +
+                                   sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
+                       nonewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=snd(swplist p2!!i2) ]
+                                  
+ratToBigNum2 :: Ratio Int -> BigNum
+ratToBigNum2 x = ratToBigNum (fromIntegral(numerator x) % fromIntegral(denominator x))
+
+
+
+prob :: Int -> Int -> Int ->Int -> Ratio Int
+prob na nb n target | na>n || nb >n || na<0 || nb<0 || target>n || target<0
+                    = error "bad values in probability computation"
+                    | na>target || nb>target || na+nb<target
+                    = 0
+                    | na<nb
+                    = prob nb na n target
+                    | nb==0 -- since na+nb>=target and na<=target
+                    = 1
+                    | otherwise
+                    = (binom n target * binom target na * binom na (na+nb-target)) % (binom n na*binom n nb)
+
+{-
+binom :: Integral a=> a->a->a
+binom n k | 2*k>n
+          = ch n (n-k)
+          | otherwise
+          = ch n k
+             where
+             ch n 0 = 1
+             ch n k = ch2 n 2 (n-1)
+                      where
+                      ch2 cur kk nn | kk>k
+                                    = cur
+                                    | otherwise
+                                    = ch2 ((cur * nn) `div` kk) (kk+1)(nn-1)
+-}
+binomialCalc :: Int -> Int -> Int
+binomialCalc n k
+  | k == 0 || k == n = 1
+  | k == 1           = n
+  | otherwise        = binom (n-1) (k-1) + binom (n-1) k
+
+binomialTab :: [[Int]]
+binomialTab = [[ binomialCalc n k | k <- [0..n]] | n <- [0..]]
+
+binom :: Int -> Int -> Int
+binom n k = binomialTab!!n!!k
+
 
 
               

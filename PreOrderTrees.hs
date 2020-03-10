@@ -1,5 +1,5 @@
 module PreOrderTrees
-  (RB, buildTree, addUniqTree, pruneTree, lookupPT, classReps, treeClasses, groupOrder, quotientMap, quotMap) where
+  (RB, buildTree, addUniqTree, pruneTree, lookupPT, classReps, treeClasses, groupOrder, quotientMap, quotMap, sizeT) where
 
 import List (plural)
 import qualified Data.Map.Strict as M
@@ -165,6 +165,3 @@ quotAssocList selector (xs:xss) = let p = selector xs in
 quotientMap :: Ord a => ([a]->a) ->[[a]] -> a -> a
 quotientMap selector xss = (mm M.!)
     where mm = quotMap selector xss
-
-
-

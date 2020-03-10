@@ -80,7 +80,12 @@ theForest = [(sizeFor n,tree n) | n <- [0..maxSigmaSize]]
 
 -- max size of REs in tree-files for alphabet of size n
 treeSizes :: [Int]
-treeSizes  =  [0,15,11,9,8]
+treeSizes = bigtreeSizes
+-- treeSizes  =  [0,15,11,9,8]
+bigtreeSizes = [0,16,12,10,9]
+
+setSizes :: [Int]
+setSizes = [ sizeT t | (_,t)<- theForest]
 
 sizeFor :: Int -> Int
 sizeFor n  =  treeSizes!!n

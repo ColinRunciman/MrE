@@ -17,6 +17,7 @@ import Info
 import Stellation
 import Alphabet
 import Debug.Trace
+import TrafoLimits
 
 -- Transformations in this module apply rules with conditions of language
 -- equivalence or inclusion between REs.  These conditions are tested using
@@ -599,7 +600,7 @@ HomTrans {falt = previousAlt, fcat = previousCat,
           fopt = previousOpt, frep = previousRep }  =  previousH
 
 pressEX, pressEXunlimited :: Extension
-pressEX = extensionLtd 15 20 $ mkExtension pressAltListOne pressCatListOne previousKP Pressed
+pressEX = extensionLtd altLimit catLimit $ mkExtension pressAltListOne pressCatListOne previousKP Pressed
 pressEXunlimited = mkExtension pressAltListOne pressCatListOne previousKP Pressed
 
 

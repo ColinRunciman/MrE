@@ -1,4 +1,4 @@
-module SyntaxCatalogue (createSynForest, synCatalogueKP, syncat) where
+module SyntaxCatalogue (createSynForest, synCatalogueKP, syncat, mapSizes) where
 
 import Info
 import Data.List
@@ -83,7 +83,13 @@ sizeFor :: Int -> Int
 sizeFor n  =  catalogueSizes!!n
 
 catalogueSizes :: [Int]
+--- catalogueSizes = bigCatalogueSizes
 catalogueSizes = [0,15,12,11,10]
+
+bigCatalogueSizes = [0,16,13,12,11]
+
+mapSizes :: [Int]
+mapSizes = [ M.size t | (_,t) <- theForest]
 
 -- alphabet of stored REs for alphabet of size n
 sigmaFor :: Int -> [Char]

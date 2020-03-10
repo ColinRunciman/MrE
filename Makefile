@@ -29,20 +29,20 @@ progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minrat
 $(semCreate): Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
 CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
 Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs OneLetterFactorization.hs Stellation.hs
+StarPromotion.hs OneLetterFactorization.hs Stellation.hs TrafoLimits.hs
 	ghc -O CreateSemCatalogue
 
 $(synCreate): Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
 OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs Stellation.hs
+StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs Stellation.hs TrafoLimits.hs
 	ghc -O CreateSynCatalogue
 
 $(effect): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
 Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
 List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
+SyntaxCatalogue.hs TrafoLimits.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O Effect
 ifndef OS
 	chmod +x allEffect
@@ -68,7 +68,7 @@ $(mrE): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expressi
 Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
 OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
 StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs semproxy.txt synproxy.txt popproxy.txt
+SyntaxCatalogue.hs TrafoLimits.hs semproxy.txt synproxy.txt popproxy.txt
 	ghc -O MrE
 
 ifndef OS
@@ -106,7 +106,7 @@ endif
 
 $(tim): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
 Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs StarPromotion.hs Stellation.hs \
+Pressing.hs Queue.hs StarPromotion.hs Stellation.hs TrafoLimits.hs \
 SyntaxCatalogue.hs Tim.hs Parameters.hs OneLetterFactorization.hs \
 popproxy.txt semproxy.txt synproxy.txt
 	ghc -O Tim
@@ -154,11 +154,11 @@ sizeRatiosTables.tex: sizeRatios $(mrE) popproxy.txt
 
 $(test): List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
 Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs \
-Test.hs
+Test.hs TrafoLimits.hs
 	ghc -O Test
 
 $(minratios): Alphabet.hs AutIntersect.hs Catalogue.hs Comparison.hs Context.hs \
 Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs \
 MinRatios.hs Museum.hs OK.hs OneLetterFactorization.hs Parameters.hs Parser.hs \
-PreOrderTrees.hs Pressing.hs Queue.hs StarPromotion.hs Stellation.hs SyntaxCatalogue.hs
+PreOrderTrees.hs Pressing.hs Queue.hs StarPromotion.hs Stellation.hs SyntaxCatalogue.hs TrafoLimits.hs
 	ghc -O MinRatios

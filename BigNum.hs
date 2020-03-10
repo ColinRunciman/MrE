@@ -1,4 +1,4 @@
-module BigNum (BigNum, bigNumToDouble) where
+module BigNum (BigNum, bigNumToDouble, doubleToBigNum, biggeomean, ratToBigNum) where
 
 import Data.Ratio (numerator, denominator, (%))
 import Data.Monoid (mappend)
@@ -71,7 +71,7 @@ instance Num BigNum where
     (+) = addBigNums
     (*) = mulBigNums
     (-) = subBigNums
-    negate = negateBigNum 
+    negate = negateBigNum
     abs = absBigNum
     signum = sigBigNum
     fromInteger = bigNumfromInteger
@@ -101,6 +101,9 @@ bigNumToRat bn = toRational(mantissa bn) * toRational(2^expo bn)
 bigNumToDouble :: BigNum -> Double
 bigNumToDouble bn = mantissa bn * (2 ** fromIntegral (expo bn))
 
+doubleToBigNum :: Double -> BigNum
+doubleToBigNum d = normalise $ BigNum { mantissa = d, expo = 0}
+
 compareBigNum :: BigNum -> BigNum -> Ordering
 compareBigNum bn1 bn2 =
     compare (signum (mantissa bn1)) (signum (mantissa bn2)) `mappend`
@@ -117,3 +120,17 @@ instance Ord BigNum where
 
 instance Real BigNum where
     toRational = bigNumToRat
+
+geomeanBig :: [BigNum] -> BigNum
+geomeanBig xs = normalise b2
+               where
+               n = length xs
+               nd = fromIntegral n
+               exp2 = fromIntegral(expo b `mod` n) / nd
+               efac = 2.0 ** exp2
+               b = product xs
+               m1 = mantissa b ** (1 / nd)
+               b2 = BigNum { mantissa=m1 * efac, expo= expo b `div` n }
+
+biggeomean :: [Double] -> Double
+biggeomean xs = bigNumToDouble $ geomeanBig $ map doubleToBigNum xs
