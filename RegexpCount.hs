@@ -4,6 +4,7 @@ import BigNum
 import Data.Ratio
 import Test.QuickCheck
 import Data.List (sort)
+import qualified Data.IntMap.Strict as M
 
 type PopNumber = BigNum -- was Integer
 
@@ -49,12 +50,12 @@ threewaySplitsBN bn xs = th (0:xs ++ [0,0])
                            su=n1+n2+n3
                        th _          = []
                        dbn x y       = promille (divideBN x y)
-    
+
 -- these are 3-way distinctions into arity 2 (first no), arity 1 (second no), arity 0 (1000-no1-no2)
 type PrefixDistribution = [[(Int,Int)]]
 
 -- turns a probability into an 1/1000 Int
-promille :: Double -> Int    
+promille :: Double -> Int
 promille d = round (1000 * d)
 
 -- first parameter: alphabet size, second target expression size
@@ -149,11 +150,11 @@ gAssocExp cs k (x:xs) c = generateArity x c >>= process c
               el <- gAssocExp cs i (lastN (i-1) xs) (ParentOtherBinary (not b))
               er <- gAssocExp cs (k-i-1) (lastN (k-i-2) xs) None
               return (binFunc b el er)
-              
-        
+
+
 lastN n xs = reverse $ take n $ reverse xs
 binFunc True  = Alt
-binFunc False = Cat       
+binFunc False = Cat
 
 generateArity :: DistElem -> Constraint -> Gen Int
 generateArity de ParentUnary           = return 2 -- ok as it is not used for size 2
@@ -168,7 +169,7 @@ perbillionList xs = map f xs
                     where
                     s = sum xs
                     f x = round(bigNumToDouble $ x*1000000000/s)
-                  
+
 data DistElem = DistElem { unaryFreq, binaryFreq :: Int, binarySplits :: [Int] }
 type Distribution = [ DistElem ]
 
@@ -186,7 +187,7 @@ binSplits xs = zipWith f xs (reverse xs)
 
 generateSplit :: [Int] -> Gen Int
 generateSplit xs = frequency (zip xs (map return [1..]))
-               
+
 --------------------------------------------------------------------------------------------------- counting total languages ------
 
 data LangCount = LangCount { tot:: BigNum, swplist :: [(BigNum,BigNum)] } deriving Show
@@ -203,6 +204,7 @@ ladd x y = LangCount { tot = tot x+tot y,
 langSizes :: Int -> [ LangCount ] -- parameter is alphabet size
 langSizes n = x1 : next [x1]
               where
+              fu = makeMap n
               x1 = langInit n
               nb = fromIntegral n
               next xs = let ys=follow xs (reverse (tail xs)) in
@@ -210,7 +212,7 @@ langSizes n = x1 : next [x1]
               follow (x:xs) ys = starCount x `ladd` queryCount x `ladd` binCount xs ys
               binCount [] [] = LangCount { tot = 0, swplist = take (n+1) $ repeat (0,0) }
               binCount (x:xs)(y:ys) = bin1Count x y `ladd` binCount xs ys
-              bin1Count x y = seqCount x y `ladd` altCount x y
+              bin1Count x y = seqCount x y fu `ladd` altCount x y fu
 
 totalRatio, swpRatio :: LangCount -> Double
 totalRatio l = bigNumToDouble (tot l / allexp l)
@@ -227,30 +229,30 @@ queryCount :: LangCount -> LangCount
 queryCount x = LangCount { tot=tot x, swplist = [(y+z,0)|(y,z)<-swplist x] }
 
 starCount :: LangCount -> LangCount
-starCount x = LangCount { tot = tot x + uncurry (+) (last (swplist x)), 
+starCount x = LangCount { tot = tot x + uncurry (+) (last (swplist x)),
                           swplist = init [(y+z,0)|(y,z)<-swplist x] ++ [(0,0)] }
 
-seqCount :: LangCount -> LangCount -> LangCount
-seqCount p1 p2 = LangCount { tot=tot p1*tot p2 + tot p1*nontotewp p2 + nontotewp p1*tot p2,
-                             swplist = [ swpfunc (n-1) | n <- [1..length(swplist p1)]] }
-                 where
-                 nn = ( length (swplist p1) - 1)
-                 swpfunc k = (ewpfunc k,nonewpfunc k+tot p1*snd(swplist p2!!k)+tot p2*snd(swplist p1!!k))
-                 ewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
-                 nonewpfunc 0 = nonewp p1 * nonewp p2 +fst(head(swplist p1))*nontotewp p2 +fst(head(swplist p2))*nontotewp p1   
-                 nonewpfunc n = fst(swplist p1 !! n)*nontotewp p2 + fst(swplist p2!!n)*nontotewp p1
+seqCount :: LangCount -> LangCount -> Func -> LangCount
+seqCount p1 p2 fu = LangCount { tot=tot p1*tot p2 + tot p1*nontotewp p2 + nontotewp p1*tot p2,
+                                swplist = [ swpfunc (n-1) | n <- [1..length(swplist p1)]] }
+                   where
+                   -- nn = ( length (swplist p1) - 1)
+                   swpfunc k = (ewpfunc k,nonewpfunc k+tot p1*snd(swplist p2!!k)+tot p2*snd(swplist p1!!k))
+                   ewpfunc k = sum [ e1*e2*ratToBigNum2(prob2 i1 i2 k fu) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
+                   nonewpfunc 0 = nonewp p1 * nonewp p2 +fst(head(swplist p1))*nontotewp p2 +fst(head(swplist p2))*nontotewp p1
+                   nonewpfunc n = fst(swplist p1 !! n)*nontotewp p2 + fst(swplist p2!!n)*nontotewp p1
 
-altCount p1 p2 = LangCount { tot=tot p1*tp2+tp1*tot p2-tot p1*tot p2,
-                             swplist = [ swpfunc (fromIntegral n-1) | n<- [1..length(swplist p1)]] }
-                 where tp1=allexp p1
-                       tp2=allexp p2
-                       nn = length (swplist p1) - 1
-                       swpfunc k = (ewpfunc k,nonewpfunc k)
-                       ewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=uncurry (+)(swplist p2!!i2) ]
-                                   +
-                                   sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
-                       nonewpfunc k = sum [ e1*e2*ratToBigNum2(prob i1 i2 nn k) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=snd(swplist p2!!i2) ]
-                                  
+altCount p1 p2 fu = LangCount { tot=tot p1*tp2+tp1*tot p2-tot p1*tot p2,
+                                swplist = [ swpfunc (fromIntegral n-1) | n<- [1..length(swplist p1)]] }
+                    where tp1=allexp p1
+                          tp2=allexp p2
+                          -- nn = length (swplist p1) - 1
+                          swpfunc k = (ewpfunc k,nonewpfunc k)
+                          ewpfunc k = sum [ e1*e2*ratToBigNum2(prob2 i1 i2 k fu) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=uncurry (+)(swplist p2!!i2) ]
+                                      +
+                                      sum [ e1*e2*ratToBigNum2(prob2 i1 i2 k fu) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
+                          nonewpfunc k = sum [ e1*e2*ratToBigNum2(prob2 i1 i2 k fu) | i1<-[0..k], i2<-[k-i1..k], let e1=snd(swplist p1!!i1), let e2=snd(swplist p2!!i2) ]
+
 ratToBigNum2 :: Ratio Int -> BigNum
 ratToBigNum2 x = ratToBigNum (fromIntegral(numerator x) % fromIntegral(denominator x))
 
@@ -267,6 +269,22 @@ prob na nb n target | na>n || nb >n || na<0 || nb<0 || target>n || target<0
                     = 1
                     | otherwise
                     = (binom n target * binom target na * binom na (na+nb-target)) % (binom n na*binom n nb)
+
+type Func = M.IntMap(M.IntMap(M.IntMap (Ratio Int)))
+makeMap :: Int -> Func
+makeMap n = M.fromList [ (na,l1 na)|na<-[1..n]]
+            where
+            l1 a = M.fromList [(nb,l2 nb)|nb<-[1..a]]
+                   where
+                   l2 b = M.fromList [(nt,prob a b n nt)|nt<-[a..min n (a+b)]]
+
+prob2 :: Int -> Int -> Int-> Func -> Ratio Int
+prob2 na nb target func | na<nb
+                        = prob2 nb na target func
+                        | nb==0
+                        = 1
+                        | otherwise
+                        = func M.! na M.! nb M.! target
 
 {-
 binom :: Integral a=> a->a->a
@@ -294,20 +312,3 @@ binomialTab = [[ binomialCalc n k | k <- [0..n]] | n <- [0..]]
 
 binom :: Int -> Int -> Int
 binom n k = binomialTab!!n!!k
-
-
-
-              
-               
-
-
-
-                         
-                         
-
-
-
-
-
-
-           

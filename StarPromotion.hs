@@ -48,10 +48,63 @@ catPromotion c i xs = catSigmaStarPromotion c i xs `orOK` catStarPrune c i xs `o
                       singularPrune xs `orOK` cat1Crush c i xs
 
 catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
-                         = crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs `orOK` wholyCrush swx xs
+                         = innercrush swx xs `orOK` crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs
                            where
                            swx = sw i
 catStarPrune c _ xs = innerPrune (c>=OptCxt) xs
+
+
+-- we need swa (cat xs)/=0 and not(all ewp xs) for this to be sound
+innercrush :: Alphabet -> [RE] -> OK [RE]
+innercrush swx xs = kataliftCat (remSig1 swx) xs
+
+-- remove swx^+ from the language, this may (or not) be provided by other alternatives
+wholyCrush :: Alphabet -> [RE] -> OK [RE]
+wholyCrush al1 xs = alcatCrush al1 True xs
+
+remSig1 swx x = if ewp x then remSigOuter swx x else remSigInner swx x
+
+-- remSigOuter removes al1^+ from the language of x, these are (originally) cat-elems of a starred cat
+-- it can also do that for rep-bodies, as the whole thing operates in a RepCxt
+remSigOuter :: Alphabet  -> RE -> OK RE
+remSigOuter al1 (Sym c)    | elemAlpha c al1 -- must be part of an optional expression, can be removed
+                           = changed Emp
+remSigOuter al1 (Alt i xs) | subAlpha (al i) al1
+                           = changed Lam
+                           | otherwise
+                           = okmap alt $ katalift (remSigOuter al1) xs
+remSigOuter al1 (Cat i xs) | subAlpha (al i) al1
+                           = changed Lam -- in case the cat-was the only ewp-alternative
+                           | otherwise
+                           = okmap cat $ alcatCrush al1 False xs
+remSigOuter al1 (Rep x)    = okmap rep (remSigOuter al1 x)
+remSigOuter al1 (Opt x)    = okmap opt $ remSigOuter al1 x
+remSigOuter _ x            = unchanged x
+
+-- here we can remove al1^+ except that we need to keep al1 itself
+remSigInner :: Alphabet -> RE -> OK RE
+remSigInner al1 (Alt i xs) = okmap alt $ katalift (remSigInner al1) xs -- all alternatives are non-ewp
+remSigInner al1 (Cat i xs) | subAlpha (al i) al1
+                           = changed (alpha2Regexp (sw i))
+                           | otherwise
+                           = okmap cat $ alcatCrush al1 (not $ isEmptyAlpha (sw i .&&. al1)) xs
+remSigInner _ x            = unchanged x
+
+-- remove al1^+ from cat-sequence
+-- if b is True then al1 itself needs to be preserved, but in that case xs contains at most one non-ewp element
+alcatCrush :: Alphabet -> Bool -> [RE] -> OK [RE]
+alcatCrush al1 b xs   | null mid || not(null (tail mid))
+                      = unchanged xs
+                      | b && not(ewp m)-- al1 itself needs to be preserved, and m is the one
+                      = f (remSigInner al1 m)
+                      | otherwise
+                      = f (remSigOuter al1 m)
+                        where
+                        f           = okmap (\x->pref++(x:suff))
+                        m           = head mid
+                        pred e      = subAlpha (alpha e) al1
+                        (pre1,suff) = spanEnd pred xs
+                        (pref,mid)  = span pred pre1
 
 innerPrune :: Bool -> [RE] -> OK [RE]
 innerPrune True [x,Rep y] | x==y
@@ -94,12 +147,14 @@ altSigmaStarPromotion i xs |  any (==sigmastar) xs -- most common special case, 
                            |  otherwise
                            =  list2OK xs cands
     where
-    alphabet  = alpha2String (al i)
-    sigmastar = Rep (alt (map Sym alphabet))
+    sigmastar = Rep (alpha2Regexp (al i))
     cands     = [ Rep y: ys2 |
                   (Rep y,ys)<-itemRest xs, let al1=swa y, not(isEmptyAlpha al1),
                   let (ys1,ys2)=partition (\r->subAlpha (alpha r) al1) ys,
                   not $ null ys1 ]
+
+alpha2Regexp :: Alphabet -> RE
+alpha2Regexp al1 = alt [Sym c | c<- alpha2String al1]
 
 starredAlphas :: [RE] -> [Alphabet] -> [Alphabet]
 starredAlphas [] ys         = nubSort ys
@@ -158,7 +213,7 @@ sigmaStarTest cs _       = False
 
 catSigmaStarPromotion :: Cxt-> Info -> [RE] -> OK [RE]
 catSigmaStarPromotion RepCxt i xs   |  sw i==al i
-                                    =  changed [ alt (map Sym (alpha2String $ sw i)) ]
+                                    =  changed [ alpha2Regexp $ sw i ]
                                     |  not (isEmptyAlpha (sw i)) && hasChanged fc
                                     =  fc
                                        where fc = fixCrush (sw i) xs
@@ -232,46 +287,6 @@ crushLeftInCxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
                               = changed $ rep (alt [r,catSegment c ys])
 crushLeftInCxt _ _   e           = unchanged e
 
-isCharSet :: RE -> Bool
-isCharSet (Sym x)    = True
-isCharSet (Alt _ xs) = all isSym xs
-isCharSet _          = False
-
--- removes sigma* from a center expression of a Cat if its prefix/suffix are contained in sigma*
-wholyCrush :: Alphabet -> [RE] -> OK [RE]
-wholyCrush al1 [e,Rep d] | isCharSet e
-                         = okmap (\nd->[e,rep nd]) $ remSig (alpha e) False d
-wholyCrush al1 [Rep d,e] | isCharSet e
-                         = okmap (\nd->[rep nd,e]) $ remSig (alpha e) False d
-wholyCrush al1 xs        = wholyCrush2 al1 xs
-
--- for use inside subexpressions as well
-wholyCrush2 al1 xs   | not (null mid) && null (tail mid) -- mid needs to be a singleton
-                     = okmap (\x->pr++(x:reverse suop)) (remSig al1 (b1&&b2) (head mid))
-                     | otherwise
-                     = unchanged xs
-                     where
-                     pred e      = subAlpha (alpha e) al1
-                     (pr,remain) = span pred xs
-                     (suop,mid)  = span pred (reverse remain)
-                     b1          = all ewp pr
-                     b2          = all ewp suop
-
--- removes al1* from e, but if the boolean is True it must ensure al1 itself remains
--- it will always be False if the other trafos have been exhausted
-remSig :: Alphabet -> Bool -> RE -> OK RE
-remSig al1 b (Sym c)    | not b && elemAlpha c al1
-                        = changed Emp
-remSig al1 b (Alt i xs) = okmap alt $ katalift (remSig al1 (b && not(ew i))) xs
-remSig al1 b (Cat i xs) | not b && subAlpha (al i) al1
-                        = changed Emp
-                        | otherwise
-                        = okmap cat $ wholyCrush2 al1 xs
-remSig al1 b (Rep x)    | subAlpha (alpha x) al1
-                        = changed Emp
-remSig al1 b (Opt x)    = okmap opt $ remSig al1 False x
-remSig _ _ e            = unchanged e
-
 
 charFactor :: Info -> [RE] -> OK [RE]
 charFactor i res =
@@ -316,8 +331,6 @@ refactorSequence b (x:xs) | not (ewp x)
                             (d,ys)     = refactorSequence b xs
 refactorSequence _ []     = error "empty sequence not factorisable"
 
-
-
 -- add the char at the end/beginning, remove it from the other end
 refactorRoll :: RE -> Char -> Bool -> RE
 refactorRoll Emp  _ _       = error "invariant violation in rolling"
@@ -337,7 +350,7 @@ altSigmaStar :: Cxt -> Info -> [RE] -> OK [RE]
 altSigmaStar c i xs |  c/=RepCxt || isEmptyAlpha (sw i)
                     =  unchanged xs
                     |  al i == sw i
-                    =  updateEQ xs (map Sym (alpha2String $ sw i))
+                    =  updateEQ xs (map Sym $ alpha2String $ sw i)
                     |  otherwise
                     =  kataliftAlt (alphaCrush (sw i)) xs
 
@@ -345,13 +358,10 @@ altSigmaStar c i xs |  c/=RepCxt || isEmptyAlpha (sw i)
 -- the re is a subexp of an alt, so if re=sigma' already then re is a symbol
 alphaCrush :: Alphabet -> RE -> OK RE
 alphaCrush cs (Sym c) =  unchanged (Sym c)
-alphaCrush cs re      |  subAlpha alset cs
-                      =  changed (mkAlt (map Sym allst))
+alphaCrush cs re      |  subAlpha (alpha re) cs
+                      =  changed (alpha2Regexp $ swa re)
                       |  otherwise
                       =  fixCrushRE cs re -- removes prefixes/suffixes
-                         where
-                         alset = alpha re
-                         allst = alpha2String (swa re)
 
 fixCrushRE :: Alphabet -> RE -> OK RE
 fixCrushRE cs re@(Cat i xs) = list2OK re [ catSegment re (valOf yso)

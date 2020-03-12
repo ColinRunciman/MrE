@@ -1,7 +1,7 @@
 module Context (Extension(..), Katahom(..), KataPred(..), RecPred(..), RewRule,
   okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
   mkTransform, mkExtension, mkPredExtension, mkHomTrans, extension2trafo,
-  kataliftAlt, katahom, tpr, trg, noChangeRule,
+  kataliftAlt, kataliftCat, katahom, tpr, trg, noChangeRule,
   altSizeBound, catSizeBound, checkWith, degradeTop,
   extensionLtd, extensionCatalogue) where
 
@@ -13,7 +13,6 @@ import Function
 import OK
 import Data.Maybe
 import Data.List
--- import Data.List.Extra (spanEnd)
 
 -- Assumes *any* transformation can improve a Rep-body that
 -- is a Rep or an Opt, or an Opt-body that is an Opt
@@ -494,8 +493,6 @@ symbolFactReduction r c i xs   |  c>NoCxt || ew i || (null cs && null ds)
                                              = [ opt(cat zs) ]
                                    (ms,ds)   = spanEnd isSym rs
                                    (cs,rs)   = span isSym xs
-                                   spanEnd f = (\(x,y)->(reverse y,reverse x)) .
-                                               span f . reverse
                                    (Cat j _) = catSegment (Cat i xs) ms -- catInfo+inherited grade
 
 -- principle: if disjointAltArg x y then minimal(x+y)=minimal x+minimal y

@@ -74,9 +74,28 @@ cat xs   |  any isEmp xs'
 rep :: RE -> RE
 rep Emp      =  Lam
 rep Lam      =  Lam
-rep (Rep x)  =  Rep x
-rep (Opt x)  =  Rep x
-rep x        =  Rep x
+rep x        =  Rep (repbody x) -- new
+--rep (Rep x)  =  Rep x
+--rep (Opt x)  =  Rep x
+--rep x        =  Rep x
+
+repbody :: RE -> RE
+repbody x          | normalRepBody x -- to keep certificates
+                   = x
+                   | swa x == alpha x
+                   = alt (map Sym (alpha2String (alpha x)))
+repbody (Alt i xs) = alt (map repbody xs)
+repbody (Cat i xs) | ew i
+                   = alt (map repbody xs)
+repbody (Rep x) = x
+repbody (Opt x) = repbody x
+repbody x       = x
+
+normalRepBody :: RE -> Bool
+normalRepBody (Sym x)    = True
+normalRepBody (Alt i xs) = ok RepCxt Normal (gr i)
+normalRepBody (Cat i xs) = ok RepCxt Normal (gr i)
+normalRepBody _          = False
 
 opt :: RE -> RE
 opt Emp      =  Lam

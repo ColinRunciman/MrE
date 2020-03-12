@@ -2,7 +2,7 @@ module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered,
    nubMergeMap, nubMerge, foldMerge, nubSort,
    segments, segElemSuf, segsLtd, subsLtd, maxSegsLtd, maxSubsLtd,
-   splits, allSplits, powerSplits, allPowerSplits,
+   splits, allSplits, powerSplits, allPowerSplits, spanEnd,
    itemRest, sublists, isSublistOf,
    subsetRest, intersectSet, unions, unionsMulti, removeFromSet,
    lift2SeqAll ) where
@@ -26,7 +26,7 @@ lift2SeqAll trans xs
 -- segments [x,x'] of xs.
 linkedBy :: (a->a->Bool) -> [a] -> Bool
 linkedBy r (x:y:etc)  =  r x y && linkedBy r (y:etc)
-linkedBy _ _          =  True 
+linkedBy _ _          =  True
 
 linkWith :: (a->a->b) -> [a] -> [b]
 linkWith f (x:y:etc) = f x y : linkWith f (y:etc)
@@ -76,7 +76,7 @@ nubChains = foldr addOne []
             where
             addOne x [] = [[x]]
             addOne x chains@((y:ys):yss) =
-                case compare x y of 
+                case compare x y of
                     LT -> (x:y:ys):yss
                     EQ -> chains
                     GT -> [x]:chains
@@ -271,3 +271,13 @@ unsnoc xs = uns id xs where
             uns f []     = Nothing
             uns f [x]    = Just(f [],x)
             uns f (y:ys) = uns (f.(y:)) ys
+
+-- predefined in Data.List.Extra which we avoid to import
+-- but this is more efficient anyway
+spanEnd :: (a->Bool) -> [a] -> ([a],[a])
+spanEnd p [] = ([],[])
+spanEnd p (x:xs) = add (spanEnd p xs)
+    where
+    add ([],ys) | p x
+                = ([],x:ys)
+    add (ys,zs) = (x:ys,zs)

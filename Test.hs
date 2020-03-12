@@ -19,10 +19,11 @@ import Test.LeanCheck
 import System.Environment
 
 -- This instance lists without repetition all the Emp-free and Lam-free
--- REs over the binary alphabet {a,b} satisfying the RE invariant.
+-- REs over the binary alphabet {a,b,c} satisfying the RE invariant.
+-- smk: change to 3-letter alphabet to test star promotion better
 
 instance Listable RE where
-  tiers  =  [[Sym 'a'], [Sym 'b']] \/
+  tiers  =  [[Sym 'a'], [Sym 'b'], [Sym 'c']] \/
             filterCons1 a alt \/ filterCons1 c cat \/
             filterCons1 r rep \/ filterCons1 o opt
             where
