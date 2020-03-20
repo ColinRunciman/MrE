@@ -51,7 +51,22 @@ catStarPrune RepCxt i xs | not (ew i) && not (isEmptyAlpha swx)
                          = innercrush swx xs `orOK` crushRightWrt swx xs `orOK` crushLeftWrt swx xs `orOK` innerPrune True xs
                            where
                            swx = sw i
+catStarPrune OptCxt i xs | transitiveLift xs && hasChanged xs2
+                         = okmap ((:[]).rep.cat) xs2
+                           where
+                           xs2 = catStarPrune RepCxt i xs
 catStarPrune c _ xs = innerPrune (c>=OptCxt) xs
+
+-- a sufficient, attribute-based condition for the sequence being transitive
+transitiveLift :: [RE] -> Bool
+transitiveLift (x:xs) = isRep x && not(isEmptyAlpha a1) && subAlpha a2 a1 ||
+                        isRep y && not(isEmptyAlpha b1) && subAlpha b2 b1
+                        where
+                        a1 = swa x
+                        b1 = swa y
+                        a2 = al (catInfo xs)
+                        b2 = al (catInfo ys)
+                        Just(ys,y) = unsnoc (x:xs)
 
 
 -- we need swa (cat xs)/=0 and not(all ewp xs) for this to be sound
@@ -217,16 +232,29 @@ catSigmaStarPromotion RepCxt i xs   |  sw i==al i
                                     |  not (isEmptyAlpha (sw i)) && hasChanged fc
                                     =  fc
                                        where fc = fixCrush (sw i) xs
-catSigmaStarPromotion        c i xs | ew i && sw i==cs
+catSigmaStarPromotion        c i xs | sw i /= cs
+                                    = unchanged xs
+                                    | ew i || c==OptCxt
                                     = list2OK xs [ [x] | x<-xs, sigmaStarTest cs x]
+                                    | si i>totalplusSize cs && any (sigmaStarTest cs) xs -- size test ensures decrease
+                                    = changed $ totalplus cs
                                     | otherwise
                                     = unchanged xs
                                       where cs = al i
 
+-- language of non-empty  sequences of chars of the alphabet, as a cat-list
+totalplus :: Alphabet -> [RE]
+totalplus a = [ e1, rep e1] where e1=alpha2Regexp a
+
+-- size of totalplus a
+-- size ((a1+...+an)(a1+...+an)*) = 2*(2*n-1) + 2 = 4*n
+totalplusSize :: Alphabet -> Int
+totalplusSize a = 4*alphaLength a
 
 crushRightWrt :: Alphabet -> [RE] -> OK [RE]
 crushRightWrt al1 []      = unchanged []
-crushRightWrt al1 (re:ps) | isLam nre
+crushRightWrt al1 (re:ps)
+                       | isLam nre
                        = unsafeChanged $ crushRightWrt al1 ps -- greedy
                        | b && not(ewp nre) && singularAlpha al3 && subAlpha al3 al1
                        = unsafeChanged $ okmap (nre:) $ crushRightWrt al3 ps --greedy
@@ -244,8 +272,13 @@ crushRightWrt al1 (re:ps) | isLam nre
                          b   = hasChanged c
 
 crushRightInCxt :: Bool -> Alphabet -> RE -> OK RE
-crushRightInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
-                     = changed Lam
+crushRightInCxt c al1 re | c1 && c2
+                         = changed Lam
+                         | not c1 && c2 && swa re==al1 && size re>=2*alphaLength al1
+                         = changed (alpha2Regexp al1)
+                           where
+                           c1 = c || ewp re
+                           c2 = subAlpha (alpha re) al1
 crushRightInCxt c al1 (Alt i res) = okmap alt $ katalift (crushRightInCxt (c||ew i) al1) res
 crushRightInCxt _ al1 (Cat _ res) = okmap mkCat $ crushRightWrt al1 res
 crushRightInCxt _ al1 (Opt re)    = okmap Opt   $ crushRightInCxt True al1 re
@@ -260,31 +293,36 @@ crushRightInCxt _ _    e          = unchanged e
 crushLeftWrt :: Alphabet -> [RE] -> OK [RE]
 crushLeftWrt al1 [] = unchanged []
 crushLeftWrt al1 xs | isLam ny
-                  = unsafeChanged $ crushLeftWrt al1 ys
-                  | b && not(ewp ny) && singularAlpha al3 && subAlpha al3 al1
-                  = unsafeChanged $ okmap (++ [ny]) $ crushLeftWrt al3 ys
-                  | not b && not(ewp y) && singularAlpha al2 && subAlpha al2 al1
-                  = okmap (++[y]) $ crushLeftWrt al2 ys
-                  | b
-                  = changed (ys ++ [ny])
-                  | otherwise
-                  = unchanged xs
-                    where
-                    Just (ys,y) = unsnoc xs
-                    al2 = alpha y
-                    al3 = alpha ny
-                    c   = crushLeftInCxt False al1 y
-                    ny  = valOf c
-                    b   = hasChanged c
+                    = unsafeChanged $ crushLeftWrt al1 ys
+                    | b && not(ewp ny) && singularAlpha al3 && subAlpha al3 al1
+                    = unsafeChanged $ okmap (++ [ny]) $ crushLeftWrt al3 ys
+                    | not b && not(ewp y) && singularAlpha al2 && subAlpha al2 al1
+                    = okmap (++[y]) $ crushLeftWrt al2 ys
+                    | b
+                    = changed (ys ++ [ny])
+                    | otherwise
+                    = unchanged xs
+                      where
+                      Just (ys,y) = unsnoc xs
+                      al2 = alpha y
+                      al3 = alpha ny
+                      c   = crushLeftInCxt False al1 y
+                      ny  = valOf c
+                      b   = hasChanged c
 
 crushLeftInCxt :: Bool -> Alphabet -> RE -> OK RE
-crushLeftInCxt c al1 re | (c||ewp re) && subAlpha (alpha re) al1
-                     = changed Lam
+crushLeftInCxt c al1 re  | c1 && c2
+                         = changed Lam
+                         | not c1 && c2 && swa re==al1 && size re>=2*alphaLength al1
+                         = changed (alpha2Regexp al1)
+                           where
+                           c1 = c || ewp re
+                           c2 = subAlpha (alpha re) al1
 crushLeftInCxt c al1 (Alt i res) = okmap alt $ katalift (crushLeftInCxt (c||ew i) al1) res
 crushLeftInCxt _ al1 (Cat _ res) = okmap mkCat $ crushLeftWrt al1 res
 crushLeftInCxt _ al1 (Opt re)    = okmap Opt   $ crushLeftInCxt True al1 re
 crushLeftInCxt _ al1 (Rep c@(Cat i (Rep r:ys))) | subAlpha(alpha r) al1
-                              = changed $ rep (alt [r,catSegment c ys])
+                                                = changed $ rep (alt [r,catSegment c ys])
 crushLeftInCxt _ _   e           = unchanged e
 
 

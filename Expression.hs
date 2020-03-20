@@ -74,13 +74,14 @@ cat xs   |  any isEmp xs'
 rep :: RE -> RE
 rep Emp      =  Lam
 rep Lam      =  Lam
-rep x        =  Rep (repbody x) -- new
---rep (Rep x)  =  Rep x
---rep (Opt x)  =  Rep x
---rep x        =  Rep x
+-- rep x        =  Rep (repbody x) -- for the alternative smart construction
+rep (Rep x)  =  Rep x
+rep (Opt x)  =  Rep x
+rep x        =  Rep x
 
+{- alternative smart construction, would do much of the heavy lifting
 repbody :: RE -> RE
-repbody x          | normalRepBody x -- to keep certificates
+repbody x          | normalRepBody x -- to keep certificates, and avoid non-termination
                    = x
                    | swa x == alpha x
                    = alt (map Sym (alpha2String (alpha x)))
@@ -96,6 +97,7 @@ normalRepBody (Sym x)    = True
 normalRepBody (Alt i xs) = ok RepCxt Normal (gr i)
 normalRepBody (Cat i xs) = ok RepCxt Normal (gr i)
 normalRepBody _          = False
+-}
 
 opt :: RE -> RE
 opt Emp      =  Lam
