@@ -23,3 +23,6 @@ effects/*
 effects-u/*
 timings/*
 timings-u/*
+
+# proxies for generated directories
+*proxy.txt
