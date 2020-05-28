@@ -3,6 +3,7 @@ module Main where
 import Data.List (sort)
 import Expression
 import Parameters
+import Parser (readFullExp)
 import System.Environment
 import Data.Time.Clock
 import System.IO.Unsafe (unsafePerformIO)
@@ -25,6 +26,12 @@ instance Eq ITO where
 
 instance Ord ITO where
   (ITO _ t0 _) <= (ITO _ t1 _)  =  t0 <= t1
+
+meanTime :: [ITO] -> Float
+meanTime itos = sum (map tim itos) / fromIntegral (length itos)
+
+showTime :: Float -> String
+showTime f = showFFloat Nothing f ""
 
 asPercentageOf :: Int -> Int -> Float
 x `asPercentageOf` y  =  float (100 * x) / float y
@@ -50,12 +57,6 @@ totalITOs itos = countTotal itos `asPercentageOf` length itos
 totalTime :: [ITO] -> Float
 totalTime itos = sum $ map tim itos
 
-averageTime :: [ITO] -> Float
-averageTime itos = sum (map tim itos) / fromIntegral (length itos)
-
-showTime :: Float -> String
-showTime f = showFFloat Nothing f ""
-
 main = do
   args <- getArgs
   let par = argsToParams args
@@ -77,15 +78,18 @@ verboseContinuation itos p = do
 -- just reporting average time per item and where the input came from
 plainContinuation :: [ITO] -> Parameters -> IO ()
 plainContinuation itos p = do
-    putStrLn $ reportInput (inputsource p) ++ showTime (averageTime itos)
+    putStrLn $ reportInput (inputsource p) ++ showTime (meanTime itos)
 
 process :: Parameters -> String -> ITO
 process p s  =  ITO e t e'
   where
   g  =  trafo p
-  e  =  readBeforeT g s
-  e' =  transFun p e
-  t  =  timeToCompute e e' (sizeForT g e' <= sizeForT g e)
+  e  =  readFullExp s
+  e' =  transFun p $ readBeforeT g s
+  t  =  timeToCompute e e' (e' == e')
+        -- comparison forces evaluation of the e' expression
+        -- but NOT memoised attributes beyond the needs of
+        -- the simplifying transformation
 
 timeToCompute :: RE -> RE -> Bool -> Float
 timeToCompute e0 e1 x  =  unsafePerformIO $ do
