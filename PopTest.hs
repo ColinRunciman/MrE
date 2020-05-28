@@ -42,9 +42,9 @@ process p s  =  ITO e t e'
   e  =  readFullExp s
   e' =  transFun p $ readBeforeT g s
   t  =  timeToCompute e e' (e' == e')
-        -- comparison forces evaluation of the e' expression
-        -- but NOT memoised attributes beyond the needs of
-        -- the simplifying transformation
+        -- the comparison of e' with itself forces its full
+        -- evaluation EXCLUDING Info attributes unneeded
+        -- by the transformation
 
 timeToCompute :: RE -> RE -> Bool -> Float
 timeToCompute e0 e1 x  =  unsafePerformIO $ do

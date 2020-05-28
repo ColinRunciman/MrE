@@ -1,164 +1,218 @@
+# sources of all Haskell modules apart from Main programs
+
+haskellmodules = Alphabet.hs AutIntersect.hs BigNum.hs Catalogue.hs \
+ Comparison.hs Context.hs Derivative.hs Expression.hs Function.hs \
+ Fuse.hs Generator.hs GruberP.hs Info.hs List.hs Museum.hs OK.hs \
+ OneLetterFactorization.hs Parameters.hs Parser.hs PreOrderTrees.hs \
+ Pressing.hs Queue.hs RegexpCount.hs StarPromotion.hs Stellation.hs \
+ SyntaxCatalogue.hs TrafoLimits.hs
+
+# compiling Haskell programs
+
 ifndef OS
-semCreate=CreateSemCatalogue
-synCreate=CreateSynCatalogue
+comparetrafo=CompareTrafo
+createexps=CreateAllExps
+createpops=CreateAllPops
+createsem=CreateSemCatalogue
+createsyn=CreateSynCatalogue
+exptest=ExpTest
+huextract=HUExtract
 mrE=MrE
-effect=Effect
+poptest=PopTest
 reg=Reg
+runallexptests=RunAllExpTests
+runallpoptests=RunAllPopTests
 test=Test
-tim=Tim
-minratios=MinRatios
-effscript=allEffect
-runtimes=RunTimes
-effdata=EffectData
+tabulate=Tabulate
 else
-semCreate=CreateSemCatalogue.exe
-synCreate=CreateSynCatalogue.exe
+comparetrafo=CompareTrafo.exe
+createexps=CreateAllExps.exe
+createpops=CreateAllPops.exe
+createsem=CreateSemCatalogue.exe
+createsyn=CreateSynCatalogue.exe
+exptest=ExpTest.exe
+huextract=HUExtract.exe
 mrE=MrE.exe
-effect=Effect.exe
+poptest=PopTest.exe
 reg=Reg.exe
+runallexptests=RunAllExpTests.exe
+runallpoptests=RunAllPopTests.exe
 test=Test.exe
-tim=Tim.exe
-minratios=MinRatios.exe
-effscript=allEffects.cmd
-runtimes=RunTimes.exe
-effdata=EffectData.exe
+tabulate=Tabulate.exe
 endif
 
-progs: $(semCreate) $(synCreate) $(effect) $(mrE) $(reg) $(test) $(tim) $(minratios)
+compiledprogs = $(comparetrafo) $(createexps) $(createpops) $(createsem) $(createsyn) \
+$(exptest) $(huextract) $(mrE) $(poptest) $(reg) $(runallexptests) $(runallpoptests) \
+$(tabulate) $(test)
 
-$(semCreate): Alphabet.hs Catalogue.hs Comparison.hs Context.hs \
-CreateSemCatalogue.hs Expression.hs Function.hs Fuse.hs Generator.hs \
-Info.hs List.hs OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs OneLetterFactorization.hs Stellation.hs TrafoLimits.hs
-	ghc -O CreateSemCatalogue
+progs: $(compiledprogs)
 
-$(synCreate): Alphabet.hs Comparison.hs Context.hs CreateSynCatalogue.hs \
-Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs Info.hs List.hs \
-OK.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs SyntaxCatalogue.hs OneLetterFactorization.hs Stellation.hs TrafoLimits.hs
-	ghc -O CreateSynCatalogue
+GHC = ghc --make -O
 
-$(effect): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Effect.hs \
-Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs \
-List.hs OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs TrafoLimits.hs semproxy.txt synproxy.txt popproxy.txt
-	ghc -O Effect
+$(comparetrafo): CompareTrafo.hs $(haskellmodules)
+	$(GHC) CompareTrafo.hs
+
+$(createexps): CreateAllExps.hs $(haskellmodules)
+	$(GHC) CreateAllExps.hs
+
+$(createpops): CreateAllPops.hs $(haskellmodules)
+	$(GHC) CreateAllPops.hs
+
+$(createsem): CreateSemCatalogue.hs $(haskellmodules)
+	$(GHC) CreateSemCatalogue.hs
+
+$(createsyn): CreateSynCatalogue.hs $(haskellmodules)
+	$(GHC) CreateSynCatalogue.hs
+
+$(exptest): ExpTest.hs $(haskellmodules)
+	$(GHC) ExpTest.hs
+
+$(huextract): HUExtract.hs $(haskellmodules)
+	$(GHC) HUExtract.hs
+
+$(mrE): MrE.hs $(haskellmodules)
+	$(GHC) MrE.hs
+
+$(poptest): PopTest.hs $(haskellmodules)
+	$(GHC) PopTest.hs
+
+$(reg): Reg.hs $(haskellmodules)
+	$(GHC) Reg.hs
+
+$(runallexptests): RunAllExpTests.hs $(haskellmodules)
+	$(GHC) RunAllExpTests.hs
+
+$(runallpoptests): RunAllPopTests.hs $(haskellmodules)
+	$(GHC) RunAllPopTests.hs
+
+$(tabulate): Tabulate.hs $(haskellmodules)
+	$(GHC) Tabulate.hs
+
+$(test): Test.hs $(haskellmodules)
+	$(GHC) Test.hs
+
+# creating catalogues of small minimal regular expressions
+# with textual proxies for catalogue directories
+
+catalogues: synproxy.txt semproxy.txt
+
+semproxy.txt: $(createsem) synproxy.txt
 ifndef OS
-	chmod +x allEffect
-endif
-
-effproxy.txt: $(effect) $(effscript) popproxy.txt
-ifndef OS
-	./allEffect 100
-else
-	allEffects.cmd 100
-endif
-	echo effects > effproxy.txt
-
-effproxy-u.txt: $(effect) $(effscript) popproxy.txt
-ifndef OS
-	./allEffect 100 -u
-else
-	allEffects.cmd 100 -u
-endif
-	echo effects > effproxy-u.txt
-
-$(mrE): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
-Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs MrE.hs \
-OK.hs Parser.hs PreOrderTrees.hs Pressing.hs Queue.hs \
-StarPromotion.hs Stellation.hs Parameters.hs OneLetterFactorization.hs \
-SyntaxCatalogue.hs TrafoLimits.hs semproxy.txt synproxy.txt popproxy.txt
-	ghc -O MrE
-
-ifndef OS
-popproxy.txt: $(reg) allReg
-	./allReg
-else
-popproxy.txt: $(reg) allReg.cmd
-	allReg.cmd
-endif
-	echo population > popproxy.txt
-
-$(reg): BigNum.hs RegexpCount.hs Reg.hs
-	ghc -O Reg
-ifndef OS
-	chmod +x allReg
-endif
-
-semproxy.txt: $(semCreate) synproxy.txt
-ifndef OS
-	if test -d "semcatalogue" ; then rm semcatalogue/* ; else mkdir semcatalogue ; fi
 	./CreateSemCatalogue
 else
-	semcatalogue.cmd
+	CreateSemCatalogue.exe
 endif
 	echo semcat > semproxy.txt
 
-synproxy.txt: $(synCreate)
+synproxy.txt: $(createsym)
 ifndef OS
-	if test -d "syncatalogue" ; then rm syncatalogue/* ; else mkdir syncatalogue ; fi
 	./CreateSynCatalogue
 else
-	syncatalogue.cmd
+	CreateSynCatalogue.exe
 endif
 	echo syncat > synproxy.txt
 
-$(tim): Alphabet.hs Catalogue.hs Comparison.hs Context.hs Derivative.hs Expression.hs \
-Function.hs Fuse.hs Generator.hs Info.hs List.hs OK.hs PreOrderTrees.hs \
-Pressing.hs Queue.hs StarPromotion.hs Stellation.hs TrafoLimits.hs \
-SyntaxCatalogue.hs Tim.hs Parameters.hs OneLetterFactorization.hs \
-popproxy.txt semproxy.txt synproxy.txt
-	ghc -O Tim
+# generating test data
 
-runTimes.pdf: runTimes.tex runTimesTables.tex
-	pdflatex runTimes.tex
+testdata: popproxy.txt expproxy.txt
 
-runTimesTables.tex: $(runtimes) $(effscript) $(mrE) popproxy.txt effproxy.txt
+popproxy.txt: $(reg) $(createpops)
 ifndef OS
-	./RunTimes > runTimesTables.tex
+	./CreateAllPops
 else
-	RunTimes.exe > runTimesTables.tex
+	CreateAllPops.exe
 endif
-runTimesTablesU.tex: $(runtimes) $(effscript) $(mrE) popproxy.txt effproxy-u.txt
+	echo population > popproxy.txt
+
+expproxy.txt: $(huextract) $(createexps)
 ifndef OS
-	./RunTimes -u > runTimesTablesU.tex
+	./CreateAllExps
 else
-	RunTimes.exe -u > runTimesTablesU.tex
+	CreateAllExps.exe
 endif
+	echo expansion > expproxy.txt
 
-effectDataTables.tex: effproxy.txt $(effect) $(effscript) $(effdata) popproxy.txt
+# running tests and processing results
+
+results: TestResults.pdf
+
+TestResults.pdf: TestResults.tex \
+effectsTables.tex runTimesTables.tex HUeffectsTables.tex minRatiosTables.tex
+	pdflatex TestResults.tex
+
+effectsTables.tex: $(tabulate) popresproxy.txt
 ifndef OS
-	./EffectData > effectDataTables.tex
+	./Tabulate popresults 'for expressions of size' 'Mean percentages output-size / input-size' 1 1.0 > effectsTables.tex
 else
-	EffectData.exe > effectDataTables.tex
+	Tabulate.exe popresults 'for expressions of size' 'Mean percentages output-size / input-size' 1 1.0 > effectsTables.tex
 endif
-effectDataTablesU.tex: effproxy-u.txt $(effect) $(effscript) $(effdata) popproxy.txt
+
+runTimesTables.tex: $(tabulate) popresproxy.txt
 ifndef OS
-	./EffectData -u > effectDataTablesU.tex
+	./Tabulate popresults 'for expressions of size' 'Average simplification times (ms)' 0 1000.0 > runTimesTables.tex
 else
-	EffectData.exe -u > effectDataTablesU.tex
+	Tabulate.exe popresults 'for expressions of size' 'Average simplification times (ms)' 0 1000.0 > runTimesTables.tex
 endif
 
-$(effdata): EffectData.hs ReadTable.hs
-	ghc -O EffectData.hs
+HUeffectsTables.tex: $(tabulate) expresproxy.txt
+ifndef OS
+	./Tabulate expresults 'expanded inputs from minimal originals of size' 'Mean percentages (output size / input size)' 0 1.0 > HUeffectsTables.tex
+else
+	Tabulate.exe expresults 'expanded inputs from minimal originals of size' 'Mean percentages (output size / input size)' 0 1.0 > HUeffectsTables.tex
+endif
 
-$(runtimes): RunTimes.hs ReadTable.hs
-	ghc -O RunTimes.hs
+minRatiosTables.tex: $(tabulate) expresproxy.txt
+ifndef OS
+	./Tabulate expresults 'expanded inputs from minimal originals of size' 'Mean (output size / minimal size)' 1 1.0 > MinRatiosTables.tex
+else
+	Tabulate.exe expresults 'expanded inputs from minimal originals of size' 'Mean (output size / minimal size)' 1 1.0 > MinRatiosTables.tex
+endif
 
-sizeRatios.pdf: sizeRatios.tex sizeRatiosTables.tex
-	pdflatex sizeRatios.tex
+popresproxy.txt: $(poptest) $(runallpoptests) popproxy.txt semproxy.txt synproxy.txt
+ifndef OS
+	./RunAllPopTests
+else
+	RunAllPopTests.exe
+endif
+	echo popres > popresproxy.txt
 
-sizeRatiosTables.tex: sizeRatios $(mrE) popproxy.txt
-	./sizeRatios > sizeRatiosTables.tex
+expresproxy.txt: $(exptest) $(runallexptests) expproxy.txt semproxy.txt synproxy.txt
+ifndef OS
+	./RunAllExpTests
+else
+	RunAllExpTests.exe
+endif
+	echo expres > expresproxy.txt
 
-$(test): List.hs Expression.hs Info.hs Catalogue.hs Context.hs Comparison.hs Fuse.hs \
-Parameters.hs Pressing.hs Stellation.hs StarPromotion.hs SyntaxCatalogue.hs \
-Test.hs TrafoLimits.hs
-	ghc -O Test
+# removing all files derived from repository sources (see .gitignore)
 
-$(minratios): Alphabet.hs AutIntersect.hs Catalogue.hs Comparison.hs Context.hs \
-Derivative.hs Expression.hs Function.hs Fuse.hs Generator.hs GruberP.hs Info.hs List.hs \
-MinRatios.hs Museum.hs OK.hs OneLetterFactorization.hs Parameters.hs Parser.hs \
-PreOrderTrees.hs Pressing.hs Queue.hs StarPromotion.hs Stellation.hs SyntaxCatalogue.hs TrafoLimits.hs
-	ghc -O MinRatios
+clean:
+	rm *.hi *.o
+	rm $(compiledprogs)
+	rm -rf semcatalogue syncatalogue
+	rm -rf populations expansions
+	rm -rf popresults* expresults*
+	rm *Tables*.tex
+	rm *.aux *.log *.pdf
+	rm *proxy.txt
+
+# --------------------------------------------------------------------
+# variant rules for tests with final transformation unlimited by
+# expression size
+
+popresproxy-u.txt: $(poptest) $(runallpoptests) popproxy.txt semproxy.txt synproxy.txt
+ifndef OS
+	./RunAllPopTests 100 -u
+else
+	RunAllPopTests.cmd 100 -u
+endif
+	echo popres > popresproxy-u.txt
+# & similarly for expresproxy-u.txt
+
+runTimesTablesU.tex: $(tabulate) popresproxy-u.txt
+ifndef OS
+	./Tabulate popresults-u 'for expressions of size' 'Unlimited simplification times' 0 1000.0 > runTimesTablesU.tex
+else
+	Tabulate.exe popresults-u 'for expressions of size' 'Unlimited simplification times' 0 1000.0 > runTimesTablesU.tex
+endif
+# & similarly for effectsTablesU.tex, HUeffectsTablesU.tex & minRatiosTablesU.tex

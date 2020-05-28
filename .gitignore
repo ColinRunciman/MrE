@@ -4,12 +4,15 @@
 
 # compiled executables
 *.exe
+CompareTrafo
 CreateSemCatalogue
 CreateSynCatalogue
-Effect
+HUExtract
 MinRatios
 MrE
+PopTest
 Reg
+Tabulate
 Test
 Tim
 
@@ -17,12 +20,24 @@ Tim
 semcatalogue/*
 syncatalogue/*
 
-# generated test data and measured results
+# generated test inputs
 populations/*
-effects/*
-effects-u/*
-timings/*
-timings-u/*
+expansions/*
+
+# results of test measurements
+popresults/*
+popresults-u/*
+
+# generated latex tables, charts or graphs
+effectTables.tex
+effectTablesU.tex
+runTimesTables.tex
+runTimesTablesU.tex
+
+# outputs obtained from latex sources
+*.aux
+*.log
+*.pdf
 
 # proxies for generated directories
 *proxy.txt

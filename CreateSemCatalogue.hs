@@ -1,4 +1,10 @@
+import System.Directory
+import Control.Monad
 import Catalogue
 
-main  =  createForest
+dir   =  "semcatalogue"
 
+main  =  do ex <- doesDirectoryExist dir
+            when ex (removeDirectoryRecursive dir)
+            createDirectory dir
+            createForest
