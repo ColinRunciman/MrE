@@ -29,7 +29,7 @@ expansions/*
 
 # results of test measurements
 popresults/*
-popresults-u/*
+expresults/*
 
 # generated latex tables, charts or graphs
 effectsTables.tex
