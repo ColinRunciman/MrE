@@ -1,5 +1,6 @@
 import Control.Monad
 import System.Directory
+import System.Info
 import System.Process
 
 sizes      =  [7, 8]
@@ -14,10 +15,16 @@ trafos     =  [ ("-g", "Gruber-Gulan")
               , ("-c", "semsearch")
               , ("-y", "synsearch")
               ]
+dir        =  "expresults"
 
-main  =  do ex <- doesDirectoryExist "expresults"
-            when ex (removeDirectoryRecursive "expresults")
-            createDirectory "expresults"
+exptest    =  if System.Info.os == "windows"
+              then "ExpTest.exe"
+              else "./ExpTest"
+
+
+main  =  do ex <- doesDirectoryExist dir
+            when ex (removeDirectoryRecursive dir)
+            createDirectory dir
             mapM_ forTrafo trafos
 
 forTrafo :: (String, String) -> IO ()
@@ -26,7 +33,7 @@ forTrafo (o, g)  =  mapM_ forSize sizes
   forSize s      =  mapM_ forWidth widths
     where
     forWidth w   =  do line <- readProcess
-                                 "./ExpTest"
+                                 exptest
                                  [o, "-S"++show s, "-W"++show w, "-T"++show t]
                                  ""
-                       appendFile ("expresults/"++g) line
+                       appendFile (dir++"/"++g) line

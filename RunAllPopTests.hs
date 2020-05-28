@@ -1,5 +1,6 @@
 import Control.Monad
 import System.Directory
+import System.Info
 import System.Process
 
 sizes      =  [10, 20, 40, 80, 160, 320, 640, 1280, 2560]
@@ -14,10 +15,15 @@ trafos     =  [ ("-g", "Gruber-Gulan")
               , ("-c", "semsearch")
               , ("-y", "synsearch")
               ]
+dir        =  "popresults"
 
-main  =  do ex <- doesDirectoryExist "popresults"
-            when ex (removeDirectoryRecursive "popresults")
-            createDirectory "popresults"
+poptest    =  if System.Info.os == "windows"
+              then "PopTest.exe"
+              else "./PopTest"
+
+main  =  do ex <- doesDirectoryExist dir
+            when ex (removeDirectoryRecursive dir)
+            createDirectory dir
             mapM_ forTrafo trafos
 
 forTrafo :: (String, String) -> IO ()
@@ -26,7 +32,7 @@ forTrafo (o, g)  =  mapM_ forSize sizes
   forSize s      =  mapM_ forWidth widths
     where
     forWidth w   =  do line <- readProcess
-                                 "./PopTest"
+                                 poptest
                                  [o, "-S"++show s, "-W"++show w, "-T"++show t]
                                  ""
-                       appendFile ("popresults/"++g) line
+                       appendFile (dir++"/"++g) line

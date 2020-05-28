@@ -1,10 +1,15 @@
 import Control.Monad
 import System.Directory
+import System.Info
 import System.Process
 
 sizes      =  [7, 8]
 widths     =  [1, 2, 3, 4]
 dir        =  "expansions"
+
+huextract  =  if System.Info.os == "windows"
+              then "HUExtract.exe"
+              else "./HUExtract"
 
 main  =  do ex <- doesDirectoryExist dir
             when ex (removeDirectoryRecursive dir)
@@ -15,7 +20,7 @@ forSize :: Int -> IO ()
 forSize s      =  mapM_ forWidth widths
   where
   forWidth w   =  do res <- readProcess
-                              "./HUExtract"
+                              huextract
                               ["-S"++show s, "-W"++show w]
                               ""
                      appendFile (dir++"/s"++show s++"w"++show w) res
