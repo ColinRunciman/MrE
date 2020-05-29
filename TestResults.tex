@@ -1,15 +1,20 @@
 \documentclass[a4paper]{article}
-\title{MrE: a Regular Expression Simplifier \\ Test Measurements}
+\usepackage[left=2.5cm, right = 2.5cm, top = 2.cm, bottom = 2.cm]{geometry}
+\title{Test Measurements for a Regular Expression Simplifier}
+\author{}
 \begin{document}
+\maketitle
 \section{For randomly generated REs of given size and alphabet}
 \subsection{Mean ratios of output sizes to input sizes (\%)}
 \input{effectsTables.tex}
+\clearpage
 \subsection{Average simplification times}
 \input{runTimesTables.tex}
+\clearpage
 \section{For Hopcroft-Ullman expanded small minimal expressions}
 \subsection{Mean ratios of output sizes to input sizes (\%)}
 \input{HUeffectsTables.tex}
+\clearpage
 \subsection{Mean output sizes as multiples of minimal size}
 \input{minratiosTables.tex}
 \end{document}
-

@@ -20,17 +20,17 @@ type NTable = M.Map Int [Maybe Double]
 type State  = ([Int],NTable)
 
 make2D :: [(Int,Int,Double)] -> State
-make2D trs = (alphalist, M.fromList pmap)
+make2D trs = (sizelist, M.fromList pmap)
              where
-             alphalist  = nubSort [a | (_,a,_) <- trs]
+             sizelist  = nubSort [s | (_,s,_) <- trs]
              pmap = map mapentry $ groupBy (\(x,_,_) (y,_,_) -> x==y) $ sort trs
-             mapentry xs@((s,_,_):_) = (s,formList xs alphalist)
+             mapentry xs@((s,_,_):_) = (s,formList xs sizelist)
              formList [] xs = map (const Nothing) xs
-             formList zs@((_,x,y):xs) (al:als)
-                 | x==al
-                 = Just y : formList xs als
+             formList zs@((_,x,y):xs) (s:ss)
+                 | x==s
+                 = Just y : formList xs ss
                  | otherwise
-                 = Nothing : formList zs als
+                 = Nothing : formList zs ss
 
 readTable:: Int -> String -> IO State
 readTable dataCol filename = do
@@ -38,7 +38,7 @@ readTable dataCol filename = do
     return $ make2D $ map (tripleFrom dataCol . words) (lines s)
 
 tripleFrom :: Int -> [String] -> (Int,Int,Double)
-tripleFrom dataCol (w:s:etc)  =  (read s, read w, read (etc!!dataCol))
+tripleFrom dataCol (w:s:etc)  =  (read w, read s, read (etc!!dataCol))
 
 filenames, trafonames :: [String]
 filenames  = [ "Gruber-Gulan",  "normal",    "fused",         "promoted",
@@ -49,14 +49,13 @@ trafonames = [ "Gruber-Gulan+", "normalise", "+ fuse",        "+ promote",
 tableEntries :: [String] -> String
 tableEntries  =  unwords . intersperse " & "
 
-processDirectory :: String -> Int -> ([NTable] -> String -> Int -> IO()) -> IO()
+processDirectory :: String -> Int -> ([NTable] -> [Int] -> Int -> IO()) -> IO()
 processDirectory dir col pt  =  do
-    statelist <- mapM (readTable col) $ map ((dir ++ "/")++) filenames
-    let alplist = fst (head statelist)
-    let maplist = map snd statelist
-    let sizelist = M.keys (head maplist)
-    let alpString = tableEntries $ map show alplist
-    mapM_ (pt maplist alpString) sizelist
+    statelist     <- mapM (readTable col) $ map ((dir ++ "/")++) filenames
+    let sizelist   = fst (head statelist)
+    let maplist    = map snd statelist
+    let widthlist  = M.keys (head maplist)
+    mapM_ (pt maplist sizelist) widthlist
 
 printFloat :: Maybe Double -> String
 printFloat (Just d) = showFFloat (Just 2) d ""
@@ -68,13 +67,14 @@ putRow scalar (title,ds)  =  do
     putStr $ tableEntries (title : nds)
     putStrLn " \\\\"
 
-putTable :: String -> String -> Double -> [NTable] -> String -> Int -> IO()
-putTable header footer scalar tabs sizes n  =  do
-    putStrLn "\\begin{figure}[h]\\begin{tabular}{rrrrrrrrrr}"
-    putStrLn $ " & \\multicolumn{9}{c}{" ++ header ++ "} \\\\"
-    putStrLn $ sizes ++ " \\\\"
-    mapM_ (putRow scalar) (zip trafonames [ t M.! n | t<-tabs])
+putTable :: String -> String -> Double -> [NTable] -> [Int] -> Int -> IO()
+putTable header footer scalar tabs sizes w  =  do
+    let n  =  length sizes
+    putStrLn $ "\\begin{figure}[ht]\\begin{tabular}{" ++ replicate (1+n) 'r' ++ "}"
+    putStrLn $ " & \\multicolumn{"++show n++"}{c}{" ++ header ++ "} \\\\"
+    putStrLn $ tableEntries ("" : map show sizes) ++ " \\\\"
+    mapM_ (putRow scalar) (zip trafonames [ t M.! w | t<-tabs])
     putStrLn $ "\\end{tabular}\\caption{"
                ++ footer
-               ++ " (alphabet size = " ++ show n ++ ")"
+               ++ " (alphabet size = " ++ show w ++ ")"
                ++ ".}\\end{figure}"
