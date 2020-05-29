@@ -70,7 +70,7 @@ putRow scalar (title,ds)  =  do
 
 putTable :: String -> String -> Double -> [NTable] -> String -> Int -> IO()
 putTable header footer scalar tabs sizes n  =  do
-    putStrLn "\\begin{figure}\\begin{tabular}{rrrrrrrrrr}"
+    putStrLn "\\begin{figure}[h]\\begin{tabular}{rrrrrrrrrr}"
     putStrLn $ " & \\multicolumn{9}{c}{" ++ header ++ "} \\\\"
     putStrLn $ sizes ++ " \\\\"
     mapM_ (putRow scalar) (zip trafonames [ t M.! n | t<-tabs])
