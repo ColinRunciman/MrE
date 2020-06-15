@@ -1,4 +1,5 @@
 import System.Environment
+import System.Directory
 import qualified Data.Map.Strict as M
 import Numeric
 import List (nubSort)
@@ -49,13 +50,17 @@ trafonames = [ "Gruber-Gulan+", "normalise", "+ fuse",        "+ promote",
 tableEntries :: [String] -> String
 tableEntries  =  unwords . intersperse " & "
 
-processDirectory :: String -> Int -> ([NTable] -> [Int] -> Int -> IO()) -> IO()
+processDirectory ::
+    String -> Int -> ([String] -> [NTable] -> [Int] -> Int -> IO()) -> IO()
 processDirectory dir col pt  =  do
-    statelist     <- mapM (readTable col) $ map ((dir ++ "/")++) filenames
-    let sizelist   = fst (head statelist)
-    let maplist    = map snd statelist
-    let widthlist  = M.keys (head maplist)
-    mapM_ (pt maplist sizelist) widthlist
+    dirListing    <- listDirectory dir
+    let ftnames    =  filter (\(f,t) -> f `elem` dirListing) $ zip filenames trafonames
+    let (fs,ts)    =  unzip ftnames
+    statelist     <-  mapM (readTable col) $ map ((dir ++ "/")++) fs
+    let sizelist   =  fst (head statelist)
+    let maplist    =  map snd statelist
+    let widthlist  =  M.keys (head maplist)
+    mapM_ (pt ts maplist sizelist) widthlist
 
 printFloat :: Maybe Double -> String
 printFloat (Just d) = showFFloat (Just 2) d ""
@@ -67,13 +72,13 @@ putRow scalar (title,ds)  =  do
     putStr $ tableEntries (title : nds)
     putStrLn " \\\\"
 
-putTable :: String -> String -> Double -> [NTable] -> [Int] -> Int -> IO()
-putTable header footer scalar tabs sizes w  =  do
+putTable :: String -> String -> Double -> [String] -> [NTable] -> [Int] -> Int -> IO()
+putTable header footer scalar trafos tabs sizes w  =  do
     let n  =  length sizes
     putStrLn $ "\\begin{figure}[ht]\\begin{tabular}{" ++ replicate (1+n) 'r' ++ "}"
     putStrLn $ " & \\multicolumn{"++show n++"}{c}{" ++ header ++ "} \\\\"
     putStrLn $ tableEntries ("" : map show sizes) ++ " \\\\"
-    mapM_ (putRow scalar) (zip trafonames [ t M.! w | t<-tabs])
+    mapM_ (putRow scalar) (zip trafos [ t M.! w | t<-tabs])
     putStrLn $ "\\end{tabular}\\caption{"
                ++ footer
                ++ " (alphabet size = " ++ show w ++ ")"

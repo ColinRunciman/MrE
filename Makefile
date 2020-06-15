@@ -142,30 +142,30 @@ effectsTables.tex runTimesTables.tex HUeffectsTables.tex minRatiosTables.tex
 
 effectsTables.tex: $(tabulate) popresproxy.txt
 ifndef OS
-	./Tabulate popresults "for expressions of size" "Mean percentages output-size / input-size" 1 1.0 > effectsTables.tex
+	./Tabulate popresults "input expressions of size" "Mean percentages output-size / input-size" 1 1.0 > effectsTables.tex
 else
-	Tabulate.exe popresults "for expressions of size" "Mean percentages output-size / input-size" 1 1.0 > effectsTables.tex
+	Tabulate.exe popresults "input expressions of size" "Mean percentages output-size / input-size" 1 1.0 > effectsTables.tex
 endif
 
 runTimesTables.tex: $(tabulate) popresproxy.txt
 ifndef OS
-	./Tabulate popresults "for expressions of size" "Average simplification times (ms)" 0 1000.0 > runTimesTables.tex
+	./Tabulate popresults "input expressions of size" "Average simplification times (ms)" 0 1000.0 > runTimesTables.tex
 else
-	Tabulate.exe popresults "for expressions of size" "Average simplification times (ms)" 0 1000.0 > runTimesTables.tex
+	Tabulate.exe popresults "input expressions of size" "Average simplification times (ms)" 0 1000.0 > runTimesTables.tex
 endif
 
 HUeffectsTables.tex: $(tabulate) expresproxy.txt
 ifndef OS
-	./Tabulate expresults "expanded inputs from minimal originals of size" "Mean percentages (output size / input size)" 0 1.0 > HUeffectsTables.tex
+	./Tabulate expresults "minimal size" "Mean percentages (output size / input size)" 0 1.0 > HUeffectsTables.tex
 else
-	Tabulate.exe expresults "expanded inputs from minimal originals of size" "Mean percentages (output size / input size)" 0 1.0 > HUeffectsTables.tex
+	Tabulate.exe expresults "minimal size" "Mean percentages (output size / input size)" 0 1.0 > HUeffectsTables.tex
 endif
 
 minRatiosTables.tex: $(tabulate) expresproxy.txt
 ifndef OS
-	./Tabulate expresults "expanded inputs from minimal originals of size" "Mean (output size / minimal size)" 1 1.0 > MinRatiosTables.tex
+	./Tabulate expresults "minimal size" "Mean (output size / minimal size)" 1 1.0 > MinRatiosTables.tex
 else
-	Tabulate.exe expresults "expanded inputs from minimal originals of size" "Mean (output size / minimal size)" 1 1.0 > MinRatiosTables.tex
+	Tabulate.exe expresults "minimal size" "Mean (output size / minimal size)" 1 1.0 > MinRatiosTables.tex
 endif
 
 popresproxy.txt: $(poptest) $(runallpoptests) popproxy.txt semproxy.txt synproxy.txt

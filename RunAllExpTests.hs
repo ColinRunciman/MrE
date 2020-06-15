@@ -3,11 +3,10 @@ import System.Directory
 import System.Info
 import System.Process
 
-sizes      =  [7, 8]
-widths     =  [1, 2, 3, 4]
+sizes      =  [7 .. 9]
+widths     =  [1 .. 4]
 t          =  100
-trafos     =  [ ("-g", "Gruber-Gulan")
-              , ("-n", "normal")
+trafos     =  [ ("-n", "normal")
               , ("-f", "fused")
               , ("-l", "promoted")
               , ("-p", "pressed")
