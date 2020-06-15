@@ -8,17 +8,20 @@ and libraries (version 8.6 or later) installed.
 
 3. A Makefile specifies how to compile and run programs to obtain
 test data and measured test results, filed in subdirectories.
+So check that you have 'make' installed.
 
-4. The Test program performs a basic validation check: the simplifier
-gives output expressions are equivalent to inputs and no larger.
-It needs the Haskell testing package 'leancheck'.
+4. The Test program performs a basic validation check: expressions
+produced as outputs by the simplifier are equivalent to those
+supplied to it as inputs, and no larger.  The Test program requires
+the Haskell testing package 'leancheck'.
 
 5. To build everything, and to run all measured tests, the command
 
   $ make results
 
 should (after 30 minutes or so) produce a series of tables in the
-file TestResults.pdf.
+file TestResults.pdf.  Tables are generated as latex sources, so
+check that you have 'pdflatex' installed.
 
 6. The Haskell sources (*.hs) are lightly commented.  Typically a
 source file contains an overall short paragraph of explanation near
