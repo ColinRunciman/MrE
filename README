@@ -1,3 +1,11 @@
+MrE Regular Expression Simplifier (c) 2020 by Stefan Kahrs & Colin Runciman
+
+The material in this MrE repository is licensed under a Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International License.
+
+You should find a copy of the license in the LICENSE file.
+If not, see <http://creativecommons.org/licenses/by-nc-sa/4.0/>.
+
 1. This directory contains mostly Haskell programs and modules
 implementing a regular-expression simplifier, and various ways of
 checking, testing and measuring it.
@@ -19,7 +27,7 @@ the Haskell testing package 'leancheck'.
 
   $ make results
 
-should (after 30 minutes or so) produce a series of tables in the
+should (after 30-60 minutes) produce a series of tables in the
 file TestResults.pdf.  Tables are generated as latex sources, so
 check that you have 'pdflatex' installed.
 
@@ -29,7 +37,10 @@ the top, and some brief explanatory remarks among the declarations
 of datatypes and functions.
 
 7. For a fuller discussion of how the simplifier works, and the
-results it gives, see the paper:
+results it gives, see our paper:
 
-  "Simplifying Regular Expressions Further"
-  Stefan Kahrs & Colin Runciman, 2020.
+  "Simplifying Regular Expressions Further",
+  submitted for publication 2020.
+
+Stefan Kahrs, University of Kent (S.M.Kahrs@kent.ac.uk)
+Colin Runciman, University of York (Colin.Runciman@york.ac.uk)
