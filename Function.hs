@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module Function (kernel,fixBy,claim,justIf,(===>)) where
 
 kernel :: Eq b => (a->b) -> a -> a -> Bool

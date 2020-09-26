@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 import Data.List (isPrefixOf)
 import Test.QuickCheck
 import System.Environment

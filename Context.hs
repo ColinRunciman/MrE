@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module Context (Extension(..), Katahom(..), KataPred(..), RecPred(..), RewRule,
   okGradeCxt, gradeMinimal, gradeMinimalCxt, minimalAssert, upgradeRE, contextFunction,
   mkTransform, mkExtension, mkPredExtension, mkHomTrans, extension2trafo,

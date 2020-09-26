@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module List (
    snoc, unsnoc, linkWith, plural, ordered, strictlyOrdered,
    nubMergeMap, nubMerge, foldMerge, nubSort,

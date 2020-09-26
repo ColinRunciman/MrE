@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 -- Test that all MrE transformations are valid in the sense that they
 -- give results equivalent to their inputs, and no larger than their inputs.
 -- A command-line argument specifies the number of test expressions to be

@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module Comparison (
   (===), (<<==), (====), istransitive, eqr, subExpr, strictSubExpr,
   sublang, compRE, (&&&), sizeOrder, pickMin, pickMinList, catalogueMinList ) where

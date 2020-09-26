@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module Expression (
   RE(..), HomTrans(..), HomInfo(..), KatahomGeneral(..), Renaming,
   isEmp, isLam, isSym, isCat, isAlt, isRep, isOpt, unAlt, unCat, unOpt, unRep,

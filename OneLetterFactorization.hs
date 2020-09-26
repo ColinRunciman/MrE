@@ -1,3 +1,6 @@
+-- Copyright: (c) 2020 Stefan Kahrs & Colin Runciman
+-- License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+
 module OneLetterFactorization (altFactor1,cat1Crush) where
 import Alphabet
 import Info
