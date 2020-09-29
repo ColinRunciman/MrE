@@ -1,9 +1,0 @@
-# sizes="10 20 30 40 50 100 250 500 1000 10000"
-sizes="10 20 40 80 160 320 640 1280 2560"
-asizes="1 2 3 4 8 16"
-if test -d "populations" ; then rm populations/* ; else mkdir populations ; fi
-for i in $sizes
-do for j in $asizes
-do ./Reg -S${i} -W${j} -Q1000 > "populations/s${i}w${j}"
-done
-done
