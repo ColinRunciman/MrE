@@ -26,7 +26,7 @@ main  = do  args      <-  getArgs
             let (n,w)  =  case inputsource p of
                           Nothing -> (7,2)
                           Just pf -> (ofsize pf, width pf)
-            input     <-  readFile ("expansions/S"++show n++"W"++show w)
+            input     <-  readFile ("expansions/s"++show n++"w"++show w)
             let ios    =  map (process p) (lines input)
             putStr $ reportInput (inputsource p)
             putStrLn $ ratiosFor n ios

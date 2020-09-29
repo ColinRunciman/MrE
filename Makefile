@@ -45,7 +45,10 @@ compiledprogs = $(comparetrafo) $(createexps) $(createpops) $(createsem) $(creat
 $(exptest) $(huextract) $(mrE) $(poptest) $(reg) $(runallexptests) $(runallpoptests) \
 $(tabulate) $(test)
 
-progs: $(compiledprogs)
+# the simplification program itself is MrE
+# it may need to look expressions up in catalogues
+
+simplifier: $(mrE) catalogues
 
 GHC = ghc --make -O
 
@@ -133,6 +136,13 @@ endif
 	echo expansion > expproxy.txt
 
 # running tests and processing results
+
+correctnesscheck: $(test)
+ifndef OS
+	./Test 100000
+else
+	Test.exe 100000
+endif
 
 results: TestResults.pdf
 
