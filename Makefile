@@ -197,6 +197,7 @@ endif
 # removing all files derived from repository sources (see .gitignore)
 
 clean:
+ifndef OS
 	rm *.hi *.o
 	rm $(compiledprogs)
 	rm -rf semcatalogue syncatalogue
@@ -205,6 +206,19 @@ clean:
 	rm *Tables*.tex
 	rm *.aux *.log *.pdf
 	rm *proxy.txt
+else
+	del /q *.hi *.o
+	del /q $(compiledprogs)
+	del /q semcatalogue\* syncatalogue\*
+	rmdir /q semcatalogue syncatalogue
+	del /q populations\* expansions\*
+	rmdir /q populations expansions
+	del /q popresults\* expresults\*
+	rmdir /q popresults expresults
+	del /q *Tables*.tex
+	del /q *.aux *.log *.pdf
+	del /q *.proxy.txt
+endif
 
 # --------------------------------------------------------------------
 # variant rules for tests with final transformation unlimited by
