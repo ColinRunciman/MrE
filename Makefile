@@ -107,7 +107,7 @@ else
 endif
 	echo semcat > semproxy.txt
 
-synproxy.txt: $(createsym)
+synproxy.txt: $(createsyn)
 ifndef OS
 	./CreateSynCatalogue
 else
