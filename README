@@ -18,8 +18,8 @@ QuickCheck library; others use the LeanCheck library.  If these are not
 included in your Haskell installation you may be able to add them using the
 Cabal tool, like this:
 $ cabal update
-$ cabal install quickcheck --lib
-$ cabal install leancheck --lib
+$ cabal v1-install quickcheck --lib
+$ cabal v1-install leancheck --lib
 
 4. A Makefile specifies how to build the simplifier and how to obtain test
 data and measured test results, filed in subdirectories.  So check that you
