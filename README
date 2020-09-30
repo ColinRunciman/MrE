@@ -13,44 +13,51 @@ measuring it.
 "darwin", "linux" or "windows", with the ghc Haskell compiler and libraries
 (version 8.6 or later) installed.
 
-3. A Makefile specifies how to build the simplifier and how to obtain test
+3. As noted in following paragraphs, some test-related programs use the
+QuickCheck library; others use the LeanCheck library.  If these are not
+included in your Haskell installation you may be able to add them using the
+Cabal tool, like this:
+$ cabal update
+$ cabal install quickcheck --lib
+$ cabal install leancheck --lib
+
+4. A Makefile specifies how to build the simplifier and how to obtain test
 data and measured test results, filed in subdirectories.  So check that you
 have 'make' installed.
 
-4. A 'make' command with no arguments is equivalent to 'make simplifier'.
+5. A 'make' command with no arguments is equivalent to 'make simplifier'.
 It compiles the MrE executable, and it also compiles and runs programs to
-generate the synactic and semantic catalogues MrE may need.
+generate the syntactic and semantic catalogues MrE may need.
 
-5. The command 'make testdata' compiles and runs programs to generate in
-the 'populations' directory random sample populations of expressions of
-given sizes, and in the 'expansions' directory samples of expanded
-equivalents of known minimal expressions.  (These files are examples of MrE
-inputs.)
+6. The command 'make testdata' (requiring QuickCheck) runs programs to
+generate in the 'populations' directory random sample populations of
+expressions of given sizes, and in the 'expansions' directory samples of
+expanded equivalents of known minimal expressions.  These files are
+examples of MrE inputs.
 
-6. Without command-line arguments MrE reads each line of the standard input
+7. Without command-line arguments MrE reads each line of the standard input
 as a regular expression, and writes a simplified equivalent to standard output.
 For greater simplifying power, at the cost of longer simplification times,
-try one of the options -p (press), -y (lookup in synactic catalogue) or
+try one of the options -p (press), -y (lookup in the syntactic catalogue) or
 -c (lookup in the semantic catalogue).
 
-7. The command 'make correctnesscheck' compiles and runs a program to
-check, for a large number of test expressions and for each of the
-simplifying transformations, that expressions produced as outputs by are
-equivalent to those supplied to it as inputs, and no larger.  The Haskell
-testing package 'leancheck' ia required.
+8. The command 'make correctnesscheck' (requiring LeanCheck) compiles and
+runs a program to check, for a large number of test expressions and for
+each of the simplifying transformations, that output expressions are
+equivalent to input expressions, and no larger.
 
-8. The command 'make results' builds and runs everything required to
-generate results of various measured tests of effectiveness & performance.
-After 30 minutes or more it should produce a series of tables in the file
-TestResults.pdf.  Tables are generated as latex sources, so check that you
-have 'pdflatex' installed.
+9. The command 'make results' (requiring QuickCheck) builds and runs
+various programs to generate results of measured tests of effectiveness &
+performance.  After 30 minutes or more it should produce a series of tables
+in the file TestResults.pdf.  Tables are generated as latex sources, so
+check that you have 'pdflatex' installed.
 
-9. The Haskell sources (*.hs) are lightly commented.  Typically a source
+10. The Haskell sources (*.hs) are lightly commented.  Typically a source
 file contains an overall short paragraph of explanation near the top, and
 some brief explanatory remarks among the declarations of datatypes and
 functions.
 
-10. For a fuller discussion of how the simplifier works, and the results it
+11. For a fuller discussion of how the simplifier works, and the results it
 gives, see our paper:
 
   "Simplifying Regular Expressions Further",
