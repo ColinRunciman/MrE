@@ -4,7 +4,6 @@
 import Info
 import Expression
 import AutIntersect
-import Data.List.Split
 import System.Environment
 import Data.List (maximum)
 import Catalogue (treeSizes,treeFileName,sigmaFor)

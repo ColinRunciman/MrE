@@ -7,11 +7,11 @@ import System.Environment
 import Data.Time.Clock
 import System.IO.Unsafe (unsafePerformIO)
 import Numeric
+import BigNum
 import Expression
 import Parameters
 import Parser
 import GruberP
-import Data.List.Split
 import Text.Printf
 import Control.Monad
 
@@ -75,6 +75,6 @@ main = do
     ++
     showTime (meanTime itos)    
     ++ "\t" ++
-    showDouble (100.0 * geomean (map geomean $ chunksOf 20 ratios))
+    showDouble (100.0 * biggeomean ratios)
   let average  =  (fromIntegral (sum outsizes) / fromIntegral n) :: Double
   when (verbose p) $ putStrLn $ showDouble average
