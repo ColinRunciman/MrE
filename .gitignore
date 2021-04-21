@@ -44,3 +44,5 @@ minRatiosTables.tex
 
 # proxies for generated directories
 *proxy.txt
+HUsize.hs
+AutIntersect2.hs

@@ -252,7 +252,7 @@ seqCount p1 p2 fu = LangCount { tot=tot p1*tot p2 + tot p1*nontotewp p2 + nontot
                    swpfunc k | k==nn -- do not count sequences with tot, as these are totp now
                              = (ewpfunc k,nonewpfunc k)
                              | otherwise
-                             = (ewpfunc k,nonewpfunc k+tot p1*snd(swplist p2!!k)+tot p2*snd(swplist p1!!k))
+                             = (ewpfunc k,nonewpfunc k+tot p1*fst(swplist p2!!k)+tot p2*fst(swplist p1!!k))
                    ewpfunc k = sum [ e1*e2*ratToBigNum2(prob2 i1 i2 k fu) | i1<-[0..k], i2<-[k-i1..k], let e1=fst(swplist p1!!i1), let e2=fst(swplist p2!!i2) ]
                    nonewpfunc 0 = nonewp p1 * nonewp p2 +fst(head(swplist p1))*nontotewp p2 +fst(head(swplist p2))*nontotewp p1
                    nonewpfunc n = fst(swplist p1 !! n)*nontotewp p2 + fst(swplist p2!!n)*nontotewp p1
